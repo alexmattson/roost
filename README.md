@@ -139,9 +139,21 @@ corrected to match it, never the reverse.
 | Recorded late | sold date corrected to the register time |
 | Untagged POS sale, probable match | aligns date, price and commission — **selection only** |
 
-Three ways to apply: **Fix** on a single row, tick rows and **Resolve selected**, or **Resolve
-all exact**. "All" deliberately means all *exact* matches — a probable pairing rests on a
-heuristic, so it never goes in a bulk action and has to be picked by hand.
+Every row carries a **Match** chip saying how far the systems can be trusted to agree:
+
+- **exact** — matched on inventory number in both systems, so the correction is certain
+- **probable** — inferred from a matching price and time; worth checking before applying
+- **manual** — no automatic fix, this one needs a person
+
+Two ways to apply: **Fix** on a single row, or tick rows and **Resolve selected**. The table
+filters by severity, match and kind, and the checkbox in the header selects every fixable row
+currently in view — so narrowing to *exact* and selecting all is the deliberate way to clear a
+batch. Bulk actions only ever touch visible rows, and a selection is dropped when a filter
+hides it, so nothing off-screen can be edited. Selecting a probable match is allowed, but the
+confirmation says how many of the batch rest on one.
+
+The Review tab carries a badge with the number of anomalies in range, turning red when any are
+high severity, so it is visible from any mode.
 
 A single row's **Fix** applies straight away: it is one deliberate click on one item, and the
 exact change is already printed beneath the finding. Bulk actions confirm first, listing every

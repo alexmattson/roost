@@ -31,8 +31,12 @@ const state = {
   quail: null,
   quailSales: [],
   fixable: [],
+  visibleFixable: [],
+  findingsTotal: 0,
+  findingsShown: 0,
   selected: new Set(),
   pendingConfirm: null,
+  findingFilters: { severity: 'all', match: 'all', type: 'all' },
   applying: false,
   venueList: { stores: [], booths: [] },
   // Per-mode date ranges, so switching modes never rewrites another mode's window.
@@ -143,8 +147,16 @@ function applyPreset(preset) {
 }
 
 function renderModes() {
+  // The anomaly count rides on the Review button so it is visible from any mode.
+  const count = state.findingsTotal || 0;
+  const urgent = (state.recon && state.recon.findings.some((f) => f.severity === 'high')) || false;
   $('#modes').innerHTML = MODES
-    .map((m) => `<button data-mode="${m.id}" class="${state.mode === m.id ? 'active' : ''}">${m.label}</button>`)
+    .map((m) => {
+      const badge = m.id === 'review' && count
+        ? ` <span class="mode-badge${urgent ? ' urgent' : ''}" title="${count} anomal${count === 1 ? 'y' : 'ies'} in range">${count > 99 ? '99+' : count}</span>`
+        : '';
+      return `<button data-mode="${m.id}" class="${state.mode === m.id ? 'active' : ''}">${m.label}${badge}</button>`;
+    })
     .join('');
   $$('#modes button').forEach((btn) => {
     btn.onclick = () => selectMode(btn.dataset.mode);
@@ -708,6 +720,22 @@ const FINDING_LABELS = {
 
 const findingKey = (f, i) => `${f.type}|${(f.item && f.item.id) || (f.quail && f.quail.id) || i}`;
 
+/** How much to trust an automatic fix for this row: drives the chip and bulk actions. */
+const matchOf = (entry) => (entry.plan ? entry.plan.confidence : 'manual');
+
+const MATCH_HINT = {
+  exact: 'Matched on inventory number in both systems, so the correction is certain.',
+  probable: 'Inferred from a matching price and time. Worth a look before applying.',
+  manual: 'No automatic fix — this one needs a person.'
+};
+
+function visibleFindings(entries) {
+  const f = state.findingFilters;
+  return entries.filter((e) => (f.severity === 'all' || e.finding.severity === f.severity)
+    && (f.match === 'all' || matchOf(e) === f.match)
+    && (f.type === 'all' || e.finding.type === f.type));
+}
+
 /** Renders the diff a plan would write, so nothing is applied unseen. */
 function planPreview(entry) {
   return entry.plan.changes
@@ -715,9 +743,25 @@ function planPreview(entry) {
     .join(' · ');
 }
 
+/** Only offers kinds that actually occur, so the list can't suggest empty filters. */
+function renderTypeFilter(entries) {
+  const sel = $('#f-type');
+  const present = [...new Set(entries.map((e) => e.finding.type))]
+    .sort((a, b) => (FINDING_LABELS[a] || a).localeCompare(FINDING_LABELS[b] || b));
+  const wanted = ['all', ...present].join('|');
+  if (sel.dataset.built === wanted) return;
+  sel.dataset.built = wanted;
+  sel.innerHTML = '<option value="all">All kinds</option>'
+    + present.map((t) => `<option value="${esc(t)}">${esc(FINDING_LABELS[t] || t)}</option>`).join('');
+  if (![...sel.options].some((o) => o.value === state.findingFilters.type)) {
+    state.findingFilters.type = 'all';
+  }
+  sel.value = state.findingFilters.type;
+}
+
 function renderFixBar() {
   const bar = $('#fix-bar');
-  if (!state.fixable.length) { bar.hidden = true; return; }
+  if (!state.findingsTotal) { bar.hidden = true; return; }
   bar.hidden = false;
 
   if (state.pendingConfirm) {
@@ -743,23 +787,21 @@ function renderFixBar() {
     return;
   }
 
-  const exact = state.fixable.filter((e) => e.plan.confidence === CONFIDENCE.exact);
-  const chosen = state.fixable.filter((e) => state.selected.has(e.key));
+  /* Bulk actions act on what the filters leave on screen, so narrowing to a
+   * severity or a kind and hitting "resolve" does what it looks like it does.
+   * Select-all in the header plus this button covers what a separate
+   * "resolve all exact" used to do, and the match filter makes that selection
+   * explicit rather than implied by a button label. */
+  const shown = state.visibleFixable;
+  const chosen = shown.filter((e) => state.selected.has(e.key));
+  const filtered = state.findingsShown < state.findingsTotal;
   bar.className = 'fix-bar';
   bar.innerHTML = `
-    <span class="count"><b>${state.fixable.length}</b> fixable · <b>${chosen.length}</b> selected</span>
-    <button class="fix-btn link" id="fix-select-all">Select all exact</button>
+    <span class="count"><b>${shown.length}</b> fixable${filtered ? ' in view' : ''} · <b>${chosen.length}</b> selected</span>
     <button class="fix-btn link" id="fix-clear"${chosen.length ? '' : ' disabled'}>Clear</button>
-    <button class="fix-btn" id="fix-selected"${chosen.length ? '' : ' disabled'}>Resolve selected</button>
-    <button class="fix-btn primary" id="fix-all"${exact.length ? '' : ' disabled'}>Resolve all exact (${exact.length})</button>`;
-  $('#fix-select-all').onclick = () => {
-    for (const e of exact) state.selected.add(e.key);
-    renderReconcile();
-  };
+    <button class="fix-btn primary" id="fix-selected"${chosen.length ? '' : ' disabled'}>Resolve selected${chosen.length ? ` (${chosen.length})` : ''}</button>`;
   $('#fix-clear').onclick = () => { state.selected.clear(); renderReconcile(); };
   $('#fix-selected').onclick = () => confirmPlans(chosen, 'Resolve selected');
-  // "All" deliberately means all *exact* matches; probable pairings must be picked by hand.
-  $('#fix-all').onclick = () => confirmPlans(exact, 'Resolve all exact');
 }
 
 /**
@@ -820,7 +862,11 @@ function renderReconcile() {
     empty($('#c-findings'), 'No POS data to compare');
     $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
     state.fixable = [];
+    state.visibleFixable = [];
+    state.findingsTotal = 0;
+    state.findingsShown = 0;
     $('#fix-bar').hidden = true;
+    renderModes();               // otherwise the badge keeps a stale count
     return;
   }
   const r = reconcile(state.items, state.quailSales, { start: state.start, end: state.end });
@@ -830,9 +876,19 @@ function renderReconcile() {
   const ctx = buildVenueContext(state.venueInfo);
   const entries = r.findings.map((f, i) => ({ key: findingKey(f, i), finding: f, plan: planResolution(f, ctx) }));
   const byKey = new Map(entries.map((e) => [e.key, e]));
+  state.findingsTotal = entries.length;
   state.fixable = entries.filter((e) => e.plan);
-  // Drop selections whose finding no longer exists after a re-render.
-  for (const key of [...state.selected]) if (!byKey.has(key)) state.selected.delete(key);
+
+  renderTypeFilter(entries);
+  const visible = visibleFindings(entries);
+  state.findingsShown = visible.length;
+  state.visibleFixable = visible.filter((e) => e.plan);
+
+  /* Selections are dropped when a row leaves the view, so a bulk action can never
+   * reach something the filters are hiding. */
+  const visibleKeys = new Set(visible.map((e) => e.key));
+  for (const key of [...state.selected]) if (!visibleKeys.has(key)) state.selected.delete(key);
+  renderModes();
 
   const high = r.findings.filter((f) => f.severity === 'high').length;
   $('#kpis-recon').innerHTML = [
@@ -853,14 +909,24 @@ function renderReconcile() {
     colorFor: (row) => (/disagree|unknown|unsold/i.test(row.label) ? PALETTE.red : PALETTE.brass)
   });
 
-  $('#t-findings').innerHTML = table(entries, [
+  const pickable = state.visibleFixable;
+  const allPicked = pickable.length > 0 && pickable.every((e) => state.selected.has(e.key));
+
+  $('#t-findings').innerHTML = table(visible, [
     {
-      title: '',
+      title: `<input type="checkbox" id="pick-all"${allPicked ? ' checked' : ''}`
+        + `${pickable.length ? '' : ' disabled'} title="Select every fixable row in view">`,
       cls: () => 'pick',
       render: (e) => (e.plan
-        ? `<input type="checkbox" data-key="${esc(e.key)}"${state.selected.has(e.key) ? ' checked' : ''}
-             title="Select for bulk resolve">`
+        ? `<input type="checkbox" data-key="${esc(e.key)}"${state.selected.has(e.key) ? ' checked' : ''}>`
         : '')
+    },
+    {
+      title: 'Match',
+      render: (e) => {
+        const m = matchOf(e);
+        return `<span class="pill ${m}" title="${esc(MATCH_HINT[m])}">${m}</span>`;
+      }
     },
     { title: 'Severity', render: (e) => `<span class="pill ${e.finding.severity}">${e.finding.severity}</span>` },
     { title: 'What', render: (e) => esc(FINDING_LABELS[e.finding.type] || e.finding.type) },
@@ -877,9 +943,24 @@ function renderReconcile() {
       cls: () => 'act',
       render: (e) => (e.plan ? `<button class="fix-btn" data-fix="${esc(e.key)}">Fix</button>` : '')
     }
-  ], 'No anomalies in this range — the two systems agree.');
+  ], state.findingsTotal
+    ? 'No anomalies match these filters.'
+    : 'No anomalies in this range — the two systems agree.');
 
-  $$('#t-findings input[type="checkbox"]').forEach((box) => {
+  const pickAll = $('#pick-all');
+  if (pickAll) {
+    const some = pickable.some((e) => state.selected.has(e.key));
+    pickAll.indeterminate = some && !allPicked;
+    pickAll.onchange = () => {
+      for (const e of pickable) {
+        if (pickAll.checked) state.selected.add(e.key);
+        else state.selected.delete(e.key);
+      }
+      renderReconcile();
+    };
+  }
+
+  $$('#t-findings tbody input[type="checkbox"]').forEach((box) => {
     box.onchange = () => {
       if (box.checked) state.selected.add(box.dataset.key);
       else state.selected.delete(box.dataset.key);
@@ -1261,6 +1342,12 @@ async function init() {
     render();
   };
   $('#item-search').oninput = renderItems;
+  ['severity', 'match', 'type'].forEach((key) => {
+    $('#f-' + key).onchange = (e) => {
+      state.findingFilters[key] = e.target.value;
+      renderReconcile();
+    };
+  });
   $('#pos-search').oninput = renderPosLedger;
   $('#pos-method').onchange = renderPosLedger;
   $('#item-filter').onchange = renderItems;

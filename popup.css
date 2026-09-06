@@ -245,6 +245,16 @@ body.expanded .table-scroll { max-height: none; }
 .modes button:hover { color: var(--text); }
 .modes button.active { color: var(--text); border-bottom-color: var(--brass); }
 
+.mode-badge {
+  display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 1px;
+  border-radius: 999px; font-size: 9.5px; font-weight: 700; line-height: 15px;
+  text-align: center; vertical-align: 1px;
+  background: var(--pill-bg); color: var(--muted);
+}
+.mode-badge.urgent { background: rgba(248,113,113,.18); color: var(--red); }
+.modes button.active .mode-badge { background: rgba(240,180,41,.18); color: var(--brass); }
+.modes button.active .mode-badge.urgent { background: rgba(248,113,113,.2); color: var(--red); }
+
 /* ---------------------------------------------------------------- tabs */
 
 .tabs {
@@ -394,6 +404,17 @@ td.name { max-width: 152px; min-width: 120px; white-space: nowrap; overflow: hid
 .pill.sold { background: rgba(52,211,153,.14); color: var(--green); }
 .pill.hold { background: rgba(240,180,41,.13); color: var(--brass); }
 .pill.high { background: rgba(248,113,113,.16); color: var(--red); }
+.pill.exact { background: rgba(52,211,153,.15); color: var(--green); }
+.pill.probable { background: rgba(240,180,41,.16); color: var(--brass); }
+.pill.manual { background: var(--pill-bg); color: var(--faint); }
+
+.finding-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 8px;
+  font-size: 10.5px; color: var(--faint);
+}
+.finding-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+th.pick input[type="checkbox"] { vertical-align: middle; }
 .pill.medium { background: rgba(240,180,41,.16); color: var(--brass); }
 .pill.low { background: rgba(96,165,250,.14); color: var(--blue); }
 .finding-detail { color: var(--text); }
