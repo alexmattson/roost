@@ -4,6 +4,7 @@ import { normalize, analyze, dataBounds, listVenues, shortId, UNASSIGNED, DAY } 
 import { normalizeQuailSales, analyzeQuail } from './lib/quail.js';
 import { reconcile } from './lib/reconcile.js';
 import { planResolution, buildVenueContext, CONFIDENCE } from './lib/resolve.js';
+import { buildLedger, rentForRange } from './lib/ledger.js';
 import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
@@ -30,6 +31,10 @@ const state = {
   venueInfo: { stores: {}, booths: {} },
   quail: null,
   quailSales: [],
+  // Raw Sandpiper rows stay in `items` for Review; every figure elsewhere reads
+  // `ledger`, which is those rows with register truth applied.
+  ledger: [],
+  ledgerSummary: null,
   fixable: [],
   visibleFixable: [],
   findingsTotal: 0,
@@ -52,7 +57,8 @@ const MODES = [
   {
     id: 'analyze',
     label: 'Analyze',
-    presets: [['30d', '30D'], ['90d', '90D'], ['6m', '6M'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    presets: [['today', 'Today'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['ytd', 'YTD'],
+      ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
     // Analysis reads best against the whole history; shorter windows are a
     // deliberate narrowing rather than the starting point.
     defaultPreset: 'all',
@@ -60,15 +66,6 @@ const MODES = [
       ['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'],
       ['catalog', 'Catalog'], ['venues', 'Venues']
     ]
-  },
-  {
-    id: 'daily',
-    label: 'Daily',
-    presets: [['today', 'Today'], ['7d', '7D'], ['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['custom', 'Custom']],
-    // Landing on "Today" shows an empty screen on any day without a sale, so the
-    // presets read shortest-first but the mode opens on a window with data in it.
-    defaultPreset: '30d',
-    tabs: [['daily', 'Daily']]
   },
   {
     id: 'review',
@@ -142,8 +139,10 @@ function applyPreset(preset) {
   state.end = preset === 'today' || preset === '7d' || preset === 'month'
     ? endOfDay(Date.now())
     : end;
-  $('#from').value = toInput(start);
-  $('#to').value = toInput(end);
+  // Show the range actually in force: filling these from `end` left "Today"
+  // displaying a window that ran to the last dated record in the data.
+  $('#from').value = toInput(state.start);
+  $('#to').value = toInput(state.end);
 }
 
 function renderModes() {
@@ -229,7 +228,7 @@ function repaintCharts() {
   if (!state.stats) return;
   renderCharts(state.stats);
   renderVenues(state.stats);
-  renderDaily();
+  renderPosCharts();
 }
 
 function renderPresets() {
@@ -253,33 +252,64 @@ function renderPresets() {
 
 function kpi(label, value, sub, opts = {}) {
   const cls = opts.sign ? signClass(opts.signValue != null ? opts.signValue : 0) : '';
+  // A compact label like "$4.8k" can hide up to $200, which is no use when two
+  // cards are meant to be compared, so the exact figure is always one hover away.
+  const exact = opts.exact != null ? ` title="${esc(opts.exact)}"` : '';
   return `<div class="kpi" style="--accent:${opts.accent || 'transparent'}">
     <div class="kpi-label">${label}</div>
-    <div class="kpi-value ${cls}">${value}</div>
+    <div class="kpi-value ${cls}"${exact}>${value}</div>
     <div class="kpi-sub">${sub || '&nbsp;'}</div>
   </div>`;
 }
 
+
 function renderKpis(s) {
+  const rentInfo = state.rentInfo || { cents: 0, full: 0, partial: false };
+  const q = state.quailStats;
+  const bottom = s.sales.profit - rentInfo.cents;
+  const rentCover = rentInfo.cents > 0 ? s.sales.profit / rentInfo.cents : null;
+
+  /* One ladder, top to bottom: what came in, what the store took, what the stock
+   * cost, what is actually left. Every figure reads from the same ledger. */
   $('#kpis').innerHTML = [
-    kpi('Net revenue', money(s.sales.net, { compact: true }),
-      `${int(s.counts.sold)} sold · gross ${money(s.sales.gross, { compact: true })}`, { accent: PALETTE.blue }),
-    kpi('Realized profit', money(s.sales.profit, { compact: true }),
-      `${pct(s.sales.margin)} margin · ${pct(s.sales.roi)} ROI`,
-      { accent: s.sales.profit >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: s.sales.profit }),
+    kpi('Takings', money(s.sales.gross, { compact: true }),
+      `${int(s.counts.sold)} sold in range`,
+      { accent: PALETTE.blue, exact: money(s.sales.gross) }),
+    kpi('After commission', money(s.sales.net, { compact: true }),
+      `less ${money(s.sales.commissions, { compact: true })} commission`,
+      { exact: money(s.sales.net) }),
+    kpi('After cost of goods', money(s.sales.profit, { compact: true }),
+      `less ${money(s.sales.cogs, { compact: true })} of stock · ${pct(s.sales.margin)} margin`,
+      { sign: true, signValue: s.sales.profit, exact: money(s.sales.profit) }),
+    kpi('Bottom line', money(bottom, { compact: true }),
+      rentInfo.partial
+        ? `less rent ${money(rentInfo.cents, { compact: true })} of ${money(rentInfo.full, { compact: true })} so far`
+        : `less rent ${money(rentInfo.cents, { compact: true })}`,
+      { accent: bottom >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: bottom,
+        exact: money(bottom) }),
+
     kpi('Inventory at cost', money(s.inventory.cost, { compact: true }),
-      `${int(s.inventory.units)} items on hand`, { accent: PALETTE.purple }),
+      `${int(s.inventory.units)} items on hand`,
+      { accent: PALETTE.purple, exact: money(s.inventory.cost) }),
     kpi('Potential profit', money(s.inventory.potentialProfit, { compact: true }),
       `on ${money(s.inventory.ask, { compact: true })} of asking price`,
-      { accent: PALETTE.brass, sign: true, signValue: s.inventory.potentialProfit }),
+      { accent: PALETTE.brass, sign: true, signValue: s.inventory.potentialProfit,
+        exact: money(s.inventory.potentialProfit) }),
     kpi('Spent on buying', money(s.buying.spend, { compact: true }),
-      `${int(s.buying.units)} acquired · avg ${money(s.buying.avgCost, { compact: true })}`),
+      `${int(s.buying.units)} acquired · avg ${money(s.buying.avgCost, { compact: true })}`,
+      { exact: money(s.buying.spend) }),
     kpi('Sell-through', pct(s.velocity.sellThrough),
       `${int(s.counts.sold)} of ${int(s.counts.sold + s.counts.onHand)} available`),
-    kpi('Avg days to sell', days(s.sales.avgDays),
-      `median ${days(s.sales.medianDays)}`),
-    kpi('Typical markup', s.inventory.avgMarkup ? `${s.inventory.avgMarkup.toFixed(1)}×` : '—',
-      `commission ${pct(s.inventory.commissionRate, 0)}`)
+
+    kpi('Rent covered', pct(rentCover, 0),
+      rentInfo.partial ? 'profit against rent so far' : 'profit against rent for this window',
+      { accent: rentCover >= 1 ? PALETTE.green : PALETTE.brass }),
+    kpi('Selling days', q ? `${int(q.activeDays)} / ${int(q.totalDays)}` : '—',
+      q && q.activeDays ? `avg ${money(q.avgPerActiveDay, { compact: true })} per selling day` : 'from the register'),
+    kpi('Avg basket', q ? money(q.avgBasketValue, { compact: true }) : '—',
+      q ? `${q.avgBasketUnits.toFixed(2)} items · ${pct(q.multiItemRate, 0)} multi-item` : ''),
+    kpi('Since last sale', q && q.daysSinceLastSale != null ? days(q.daysSinceLastSale) : '—',
+      q && q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '')
   ].join('');
 
   $('#kpis-sales').innerHTML = [
@@ -379,12 +409,35 @@ function renderHealth(s) {
     `Every $1 of cost returned <b>${s.sales.roi != null ? (1 + s.sales.roi).toFixed(2) : '—'}</b> in this range`,
     pct(s.sales.roi));
 
+  // Register-only sales carry no cost basis, so profit is optimistic by whatever
+  // that stock actually cost. Worth saying rather than quietly flattering the number.
+  const led = state.ledgerSummary;
+  if (led) {
+    add(led.costUnknown ? 'warn' : 'good',
+      led.costUnknown
+        ? `<b>${int(led.costUnknown)}</b> sale(s) rang up with no Sandpiper record, so profit ignores their cost`
+        : 'Every sale counted has a cost basis behind it',
+      led.costUnknown ? 'profit is optimistic' : 'costs complete');
+    add(led.corrected ? 'warn' : 'good',
+      led.corrected
+        ? `<b>${int(led.corrected)}</b> sale(s) use register values where Sandpiper disagreed`
+        : 'Sandpiper matches the register on every sale',
+      led.corrected ? 'see Anomalies' : 'in step');
+  }
+
   $('#health').innerHTML = rows.map((r) => `
     <div class="health-row">
       <span class="health-icon" style="background:${color[r.tone]}"></span>
       <span class="health-text">${r.text}</span>
       <span class="health-val" style="color:${color[r.tone]}">${r.val}</span>
     </div>`).join('');
+}
+
+/** One reconciled set of sales for every figure outside the Review tab. */
+function rebuildLedger() {
+  const built = buildLedger(state.items, state.quailSales, buildVenueContext(state.venueInfo));
+  state.ledger = built.items;
+  state.ledgerSummary = built.summary;
 }
 
 /* ---------------------------------------------------------------- venues */
@@ -524,65 +577,48 @@ function renderVenues(s) {
 
 /* ------------------------------------------------------- daily (Quail POS) */
 
-/**
- * Booth rent covering the selected window, prorated across partial months.
- * The window is clamped to now: charging a whole month's rent against a
- * month that is three days old makes a healthy booth look like a failing one.
- */
-function rentForRange(start, end) {
-  if (!state.quail || !state.quail.rent) return { cents: 0, partial: false, full: 0 };
-  const now = Date.now();
-  const effectiveEnd = Math.min(end, now);
-  let accrued = 0;
-  let full = 0;
-  for (const row of state.quail.rent) {
-    const [y, m] = row.month.split('-').map(Number);
-    const monthStart = new Date(y, m - 1, 1).getTime();
-    const monthEnd = new Date(y, m, 0, 23, 59, 59, 999).getTime();
-    const span = monthEnd - monthStart;
-    const whole = Math.min(end, monthEnd) - Math.max(start, monthStart);
-    if (whole > 0) full += row.cents * (whole / span);
-    const elapsed = Math.min(effectiveEnd, monthEnd) - Math.max(start, monthStart);
-    if (elapsed > 0) accrued += row.cents * (elapsed / span);
-  }
-  return { cents: Math.round(accrued), full: Math.round(full), partial: end > now && Math.round(full) > Math.round(accrued) };
+/** Quail's booth id for the selected venue, or null when nothing is scoped. */
+function scopedBoothExternalId() {
+  if (state.venue.kind !== 'booth' || !state.venue.id) return null;
+  const info = state.venueInfo.booths && state.venueInfo.booths[state.venue.id];
+  return info && info.externalId != null ? info.externalId : null;
 }
 
-function renderDaily() {
+/** Rent for the window, narrowed to the selected booth so it matches the sales beside it. */
+function currentRent() {
+  const rows = (state.quail && state.quail.rent) || [];
+  const boothId = scopedBoothExternalId();
+  const scoped = boothId == null ? rows : rows.filter((r) => r.boothId === boothId);
+  return rentForRange(scoped, state.start, state.end);
+}
+
+/** POS rows for the selected venue, so Daily's charts match the rest of the app. */
+function scopedQuailSales() {
+  const boothId = scopedBoothExternalId();
+  if (boothId == null) return state.quailSales;
+  return state.quailSales.filter((s) => s.boothId === boothId);
+}
+
+/**
+ * The register-side charts. Money figures live in the KPI ladder above, which
+ * reads the shared ledger; these need Quail's clock times, which only the POS has.
+ */
+function renderPosCharts() {
   const note = $('#quail-note');
   if (!state.quailSales.length) {
-    note.hidden = false;
-    note.innerHTML = state.meta && state.meta.quailError
-      ? `No point-of-sale data: ${esc(state.meta.quailError)}`
-      : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.';
-    $('#kpis-daily').innerHTML = '';
+    if (note) {
+      note.hidden = false;
+      note.innerHTML = state.meta && state.meta.quailError
+        ? `No point-of-sale data: ${esc(state.meta.quailError)}`
+        : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.';
+    }
     ['#c-daily', '#c-dow', '#c-hour', '#c-methods'].forEach((sel) => empty($(sel), 'No POS data'));
     $('#t-recent').innerHTML = '';
     return;
   }
-  note.hidden = true;
-
-  const rentInfo = rentForRange(state.start, state.end);
-  const q = analyzeQuail(state.quailSales, { start: state.start, end: state.end, rentCents: rentInfo.cents });
-  state.quailStats = q;
-
-  $('#kpis-daily').innerHTML = [
-    kpi('Takings', money(q.gross, { compact: true }), `${int(q.units)} items · ${int(q.transactions)} sales`, { accent: PALETTE.blue }),
-    kpi('After commission', money(q.net, { compact: true }), `less ${money(q.consignment, { compact: true })} commission`),
-    kpi('After rent', money(q.netAfterRent, { compact: true }),
-      rentInfo.partial
-        ? `rent ${money(q.rent, { compact: true })} accrued of ${money(rentInfo.full, { compact: true })}`
-        : `rent ${money(q.rent, { compact: true })} for this window`,
-      { accent: q.netAfterRent >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: q.netAfterRent }),
-    kpi('Rent covered', pct(q.rentCoverage, 0),
-      rentInfo.partial ? 'against rent accrued so far' : (q.rentCoverage >= 1 ? 'rent is paid for' : 'not yet covered'),
-      { accent: q.rentCoverage >= 1 ? PALETTE.green : PALETTE.brass }),
-    kpi('Selling days', `${int(q.activeDays)} / ${int(q.totalDays)}`, `avg ${money(q.avgPerActiveDay, { compact: true })} per selling day`),
-    kpi('Best day', q.bestDay ? q.bestDay.label : '—', q.bestDay ? money(q.bestDay.gross, { compact: true }) : ''),
-    kpi('Avg basket', money(q.avgBasketValue, { compact: true }), `${q.avgBasketUnits.toFixed(2)} items · ${pct(q.multiItemRate, 0)} multi-item`),
-    kpi('Since last sale', q.daysSinceLastSale == null ? '—' : days(q.daysSinceLastSale),
-      q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '')
-  ].join('');
+  if (note) note.hidden = true;
+  const q = state.quailStats;
+  if (!q) return;
 
   const dailySeries = [{ name: 'Takings', color: PALETTE.blue, values: q.days.map((d) => d.gross) }];
   barChart($('#c-daily'), {
@@ -610,10 +646,10 @@ function renderDaily() {
     { title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
     { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Paid', render: (r) => esc(r.method) }
-  ], 'No sales in this range');
+  ], 'No register sales in this range');
 }
 
-/** Searchable transaction-level view of the POS records. */
+/** Searchable transaction-level view of the register records. */
 function renderPosLedger() {
   const note = $('#quail-note-3');
   if (note) note.hidden = state.quailSales.length > 0;
@@ -636,7 +672,7 @@ function renderPosLedger() {
 
   const q = $('#pos-search').value.trim().toLowerCase();
   const method = methodSelect.value;
-  let rows = state.quailSales.filter((s) => s.soldAt >= state.start && s.soldAt <= state.end);
+  let rows = scopedQuailSales().filter((s) => s.soldAt >= state.start && s.soldAt <= state.end);
   if (method !== 'all') rows = rows.filter((s) => s.method === method);
   if (q) rows = rows.filter((s) => s.desc.toLowerCase().includes(q) || String(s.inv).toLowerCase().includes(q));
   rows.sort((a, b) => b.soldAt - a.soldAt);
@@ -652,7 +688,7 @@ function renderPosLedger() {
     { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Paid', render: (r) => esc(r.method) },
     { title: 'Txn', num: true, render: (r) => (r.transactionId == null ? '—' : String(r.transactionId)) }
-  ], 'No POS sales in this range')
+  ], 'No register sales in this range')
     + (rows.length > shown.length ? `<div class="empty-row">Showing first ${shown.length} of ${rows.length}</div>` : '');
 }
 
@@ -833,6 +869,7 @@ async function applyPlans(entries) {
     if (res.items) {
       state.items = normalize(res.items);
       state.venueList = listVenues(state.items);
+      rebuildLedger();
     }
     state.selected.clear();
     state.pendingConfirm = null;
@@ -1132,7 +1169,7 @@ function renderItems() {
   const q = $('#item-search').value.trim().toLowerCase();
   const filter = $('#item-filter').value;
 
-  let rows = state.items.filter((i) => {
+  let rows = state.ledger.filter((i) => {
     const acq = i.acquired == null || (i.acquired >= state.start && i.acquired <= state.end);
     const sld = i.sold != null && i.sold >= state.start && i.sold <= state.end;
     const held = i.acquired != null && i.acquired <= state.end && (i.sold == null || i.sold > state.end);
@@ -1186,8 +1223,12 @@ function render() {
     state.start = fromInput($('#from').value);
     state.end = endOfDay(fromInput($('#to').value));
   }
-  const s = analyze(state.items, { start: state.start, end: state.end }, state.venue.kind === 'all' ? null : state.venue);
+  const s = analyze(state.ledger, { start: state.start, end: state.end }, state.venue.kind === 'all' ? null : state.venue);
   state.stats = s;
+  state.rentInfo = currentRent();
+  state.quailStats = state.quailSales.length
+    ? analyzeQuail(scopedQuailSales(), { start: state.start, end: state.end, rentCents: state.rentInfo.cents })
+    : null;
   refreshPalette();
 
   renderKpis(s);
@@ -1195,7 +1236,7 @@ function render() {
   renderTables(s);
   renderHealth(s);
   renderVenues(s);
-  renderDaily();
+  renderPosCharts();
   renderReconcile();
   renderPosLedger();
   renderItems();
@@ -1229,6 +1270,7 @@ function loadInto(res) {
   if (res.venues) state.venueInfo = res.venues;
   state.quail = res.quail || state.quail;
   state.quailSales = state.quail ? normalizeQuailSales(state.quail.sales) : [];
+  rebuildLedger();
   state.venueList = listVenues(state.items);
   if (state.venue.kind !== 'all') {
     const pool = state.venue.kind === 'store' ? state.venueList.stores : state.venueList.booths;

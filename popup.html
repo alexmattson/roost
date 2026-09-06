@@ -69,7 +69,16 @@
     </div>
 
     <section class="tab-panel active" data-panel="overview">
+      <div class="note" id="quail-note" hidden></div>
       <div class="kpi-grid" id="kpis"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Daily takings</h2>
+          <span class="hint">Actual point-of-sale times, including days with no sales</span>
+        </div>
+        <div class="chart-box" id="c-daily"></div>
+        <div class="legend-inline" id="l-daily"></div>
+      </div>
       <div class="card">
         <div class="card-head">
           <h2>Cumulative net profit</h2>
@@ -99,6 +108,38 @@
         </div>
         <div class="chart-box" id="c-flow"></div>
         <div class="legend-inline" id="l-flow"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>By day of week</h2>
+            <div class="toggle" id="dow-mode" title="Averaged per occurrence of that weekday">
+              <button data-mode="money" class="active">$</button>
+              <button data-mode="units">Units</button>
+            </div>
+          </div>
+          <div class="chart-box" id="c-dow"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>By hour</h2>
+            <div class="toggle" id="hour-mode" title="Totals for each hour of the day">
+              <button data-mode="money">$</button>
+              <button data-mode="units" class="active">Units</button>
+            </div>
+          </div>
+          <div class="chart-box" id="c-hour"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Payment mix</h2></div>
+          <div class="chart-box" id="c-methods"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Recent sales</h2><span class="hint">Newest first</span></div>
+          <div id="t-recent" class="table-scroll"></div>
+        </div>
       </div>
     </section>
 
@@ -201,50 +242,6 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-panel="daily">
-      <div class="note" id="quail-note" hidden></div>
-      <div class="kpi-grid" id="kpis-daily"></div>
-      <div class="card">
-        <div class="card-head">
-          <h2>Daily takings</h2>
-          <span class="hint">Actual point-of-sale times, including days with no sales</span>
-        </div>
-        <div class="chart-box" id="c-daily"></div>
-        <div class="legend-inline" id="l-daily"></div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head">
-            <h2>By day of week</h2>
-            <div class="toggle" id="dow-mode" title="Averaged per occurrence of that weekday">
-              <button data-mode="money" class="active">$</button>
-              <button data-mode="units">Units</button>
-            </div>
-          </div>
-          <div class="chart-box" id="c-dow"></div>
-        </div>
-        <div class="card">
-          <div class="card-head">
-            <h2>By hour</h2>
-            <div class="toggle" id="hour-mode" title="Totals for each hour of the day">
-              <button data-mode="money">$</button>
-              <button data-mode="units" class="active">Units</button>
-            </div>
-          </div>
-          <div class="chart-box" id="c-hour"></div>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head"><h2>Payment mix</h2></div>
-          <div class="chart-box" id="c-methods"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Recent sales</h2><span class="hint">Newest first</span></div>
-          <div id="t-recent" class="table-scroll"></div>
-        </div>
-      </div>
-    </section>
 
     <section class="tab-panel" data-panel="review">
       <div class="note">

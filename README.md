@@ -61,19 +61,15 @@ The split is by the kind of question a view answers, not by which system the dat
 
 | Mode | Tabs | Kind of question |
 | --- | --- | --- |
-| **Analyze** | Overview · Sales · Inventory · Catalog · Venues | aggregate, ranged — "how is the business doing" |
-| **Daily** | *(single page)* | operational — "what happened, and when do we sell" |
+| **Analyze** | Overview · Sales · Inventory · Catalog · Venues | "how is the business doing" — Overview carries the money ladder and the register's daily view |
 | **Review** | *(single page)* | a task list — "what needs fixing" |
 | **Records** | Items · POS sales | lookup — "find this specific thing" |
 
-Presets follow the mode: Daily offers Today/7D/30D/This month, Analyze offers 30D through
-All time.
+Presets follow the mode: Analyze offers Today through All time, Records only the longer windows.
 
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
 switching back restores what that mode was showing, custom ranges included. Defaults on a fresh
-open are All time for Analyze and Review, 30D for Daily, 90D for Records. Daily deliberately
-opens on 30D rather than Today, since landing on Today shows an empty screen on any day without
-a sale.
+open are All time for Analyze and Review, 90D for Records.
 
 Your last mode, and the last tab within each mode, are remembered.
 
@@ -106,6 +102,34 @@ Two things Quail knows that Sandpiper cannot:
 **Units warning:** Quail mixes units inside one object. `listPrice`, `salePrice` and
 `discountAmount` are dollars; `taxAmount`, `consignmentAmount` and `cardFeeAmount` are cents.
 `lib/quail.js` converts everything to cents at the boundary.
+
+### One set of numbers
+
+Sandpiper and Quail each know something the other does not, so neither is a complete account:
+the register knows what was charged, what commission came off and when the customer bought;
+Sandpiper knows what the stock cost. `lib/ledger.js` overlays register truth onto the inventory
+records, pairs untagged register sales with their Sandpiper counterpart, and adds any sale the
+register saw that Sandpiper has not recorded. Every figure in the app reads that one ledger, so
+two views cannot disagree about the same window.
+
+The raw Sandpiper rows are kept untouched for the Review tab, whose job is precisely to show
+where the two systems differ.
+
+Money is reported as a ladder, and each step names what it subtracts:
+
+| | |
+| --- | --- |
+| **Takings** | what the register rang up |
+| **After commission** | less the store's cut and card fees |
+| **After cost of goods** | less what the stock cost |
+| **Bottom line** | less booth rent — the number that is actually left |
+
+Rent comes from Quail and Sandpiper has no field for it, so before this the profit figures were
+overstated by a fixed monthly cost. Sales the register saw but Sandpiper has never recorded have
+no cost basis, which would flatter profit; the Review tab counts them rather than hiding it.
+
+Compact labels like `$4.8k` can hide up to $200, so every money KPI carries its exact value in a
+tooltip.
 
 ### Reconciliation
 
