@@ -65,6 +65,50 @@ Every number respects the selected date range, using the rule that matches the m
 
 The ⤢ button opens the same dashboard full-width in a tab.
 
+### Quail (point of sale)
+
+Sandpiper tracks inventory; **Quail** (`vendor.quailhq.com`) is the POS the stores actually
+sell through, and the two are joined by `externalId`/`externalService` on the Sandpiper store
+and booth records. Pressing **Fetch latest data** pulls both.
+
+Quail authenticates separately: `Authorization: Basic base64(<vendor email>:<session id>)`,
+both halves read from its cookies. A missing Quail session is reported but never blocks an
+inventory sync.
+
+Two things Quail knows that Sandpiper cannot:
+
+- **When a sale actually happened.** Sandpiper's `sold` is when the sale was keyed in, typically
+  hours later and in batches (76% of sampled sales land within two minutes of another). Quail's
+  timestamps are the real register times, which is what makes the **Daily** tab meaningful —
+  daily takings including dead days, day of week averaged per occurrence, hour of day, basket
+  size and payment mix.
+- **Booth rent.** A fixed monthly cost Sandpiper has no field for, so every Sandpiper profit
+  figure is overstated by it. The Daily tab reports takings after commission *and* rent. Rent is
+  prorated to the elapsed part of the window — charging a full month against a three-day-old
+  month would make a healthy booth look like a failing one.
+
+**Units warning:** Quail mixes units inside one object. `listPrice`, `salePrice` and
+`discountAmount` are dollars; `taxAmount`, `consignmentAmount` and `cardFeeAmount` are cents.
+`lib/quail.js` converts everything to cents at the boundary.
+
+### Reconciliation
+
+The **Reconcile** tab joins the two systems on inventory number and reports what disagrees:
+
+| Finding | Meaning |
+| --- | --- |
+| Sold in Quail, unknown to Sandpiper | POS sale with an inventory number Sandpiper has never seen |
+| Sold in Quail, still unsold in Sandpiper | Inventory and potential profit are overstated |
+| Sold in Sandpiper, no Quail record | Sold elsewhere, or outside the fetched Quail window |
+| Untagged POS sale, probable match | Rang up without a tag; matched to a Sandpiper sale on price and time |
+| Sale price / commission disagrees | The two systems recorded different numbers |
+| Recorded late | Entered more than three days after it sold |
+| Duplicate inventory number | Sandpiper reuses numbers, making any join ambiguous |
+
+An untagged POS sale and an unrecorded Sandpiper sale at the same price within two days are
+reported as **one** probable pairing rather than two separate anomalies. The tab also checks
+our own arithmetic against Quail's monthly `booth-summary4` statement.
+
 ### Stores and booths
 
 Sandpiper stamps a store and booth onto an item **only when it sells** (`inBooth` is unused),

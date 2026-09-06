@@ -375,6 +375,12 @@ td.name { max-width: 152px; min-width: 120px; white-space: nowrap; overflow: hid
 }
 .pill.sold { background: rgba(52,211,153,.14); color: var(--green); }
 .pill.hold { background: rgba(240,180,41,.13); color: var(--brass); }
+.pill.high { background: rgba(248,113,113,.16); color: var(--red); }
+.pill.medium { background: rgba(240,180,41,.16); color: var(--brass); }
+.pill.low { background: rgba(96,165,250,.14); color: var(--blue); }
+.finding-detail { color: var(--text); }
+.finding-note { color: var(--faint); font-size: 10.5px; margin-top: 2px; }
+td.wrap { white-space: normal; max-width: 420px; }
 .table-scroll { max-height: 380px; overflow: auto; }
 #t-items td, #t-items th { padding: 5px 4px; }
 .table-scroll::-webkit-scrollbar { width: 9px; }

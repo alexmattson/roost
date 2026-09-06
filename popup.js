@@ -1,6 +1,8 @@
 /* Sandpiper Analytics — popup controller. */
 
 import { normalize, analyze, dataBounds, listVenues, shortId, UNASSIGNED, DAY } from './lib/analytics.js';
+import { normalizeQuailSales, analyzeQuail } from './lib/quail.js';
+import { reconcile } from './lib/reconcile.js';
 import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
@@ -20,6 +22,8 @@ const state = {
   venue: { kind: 'all', id: null },
   venueNames: {},
   venueInfo: { stores: {}, booths: {} },
+  quail: null,
+  quailSales: [],
   venueList: { stores: [], booths: [] },
   itemSort: { key: 'acquired', dir: -1 }
 };
@@ -367,6 +371,196 @@ function renderVenues(s) {
   });
 }
 
+/* ------------------------------------------------------- daily (Quail POS) */
+
+/**
+ * Booth rent covering the selected window, prorated across partial months.
+ * The window is clamped to now: charging a whole month's rent against a
+ * month that is three days old makes a healthy booth look like a failing one.
+ */
+function rentForRange(start, end) {
+  if (!state.quail || !state.quail.rent) return { cents: 0, partial: false, full: 0 };
+  const now = Date.now();
+  const effectiveEnd = Math.min(end, now);
+  let accrued = 0;
+  let full = 0;
+  for (const row of state.quail.rent) {
+    const [y, m] = row.month.split('-').map(Number);
+    const monthStart = new Date(y, m - 1, 1).getTime();
+    const monthEnd = new Date(y, m, 0, 23, 59, 59, 999).getTime();
+    const span = monthEnd - monthStart;
+    const whole = Math.min(end, monthEnd) - Math.max(start, monthStart);
+    if (whole > 0) full += row.cents * (whole / span);
+    const elapsed = Math.min(effectiveEnd, monthEnd) - Math.max(start, monthStart);
+    if (elapsed > 0) accrued += row.cents * (elapsed / span);
+  }
+  return { cents: Math.round(accrued), full: Math.round(full), partial: end > now && Math.round(full) > Math.round(accrued) };
+}
+
+function renderDaily() {
+  const note = $('#quail-note');
+  if (!state.quailSales.length) {
+    note.hidden = false;
+    note.innerHTML = state.meta && state.meta.quailError
+      ? `No point-of-sale data: ${esc(state.meta.quailError)}`
+      : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.';
+    $('#kpis-daily').innerHTML = '';
+    ['#c-daily', '#c-dow', '#c-hour', '#c-methods'].forEach((sel) => empty($(sel), 'No POS data'));
+    $('#t-recent').innerHTML = '';
+    return;
+  }
+  note.hidden = true;
+
+  const rentInfo = rentForRange(state.start, state.end);
+  const q = analyzeQuail(state.quailSales, { start: state.start, end: state.end, rentCents: rentInfo.cents });
+  state.quailStats = q;
+
+  $('#kpis-daily').innerHTML = [
+    kpi('Takings', money(q.gross, { compact: true }), `${int(q.units)} items · ${int(q.transactions)} sales`, { accent: PALETTE.blue }),
+    kpi('After commission', money(q.net, { compact: true }), `less ${money(q.consignment, { compact: true })} commission`),
+    kpi('After rent', money(q.netAfterRent, { compact: true }),
+      rentInfo.partial
+        ? `rent ${money(q.rent, { compact: true })} accrued of ${money(rentInfo.full, { compact: true })}`
+        : `rent ${money(q.rent, { compact: true })} for this window`,
+      { accent: q.netAfterRent >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: q.netAfterRent }),
+    kpi('Rent covered', pct(q.rentCoverage, 0),
+      rentInfo.partial ? 'against rent accrued so far' : (q.rentCoverage >= 1 ? 'rent is paid for' : 'not yet covered'),
+      { accent: q.rentCoverage >= 1 ? PALETTE.green : PALETTE.brass }),
+    kpi('Selling days', `${int(q.activeDays)} / ${int(q.totalDays)}`, `avg ${money(q.avgPerActiveDay, { compact: true })} per selling day`),
+    kpi('Best day', q.bestDay ? q.bestDay.label : '—', q.bestDay ? money(q.bestDay.gross, { compact: true }) : ''),
+    kpi('Avg basket', money(q.avgBasketValue, { compact: true }), `${q.avgBasketUnits.toFixed(2)} items · ${pct(q.multiItemRate, 0)} multi-item`),
+    kpi('Since last sale', q.daysSinceLastSale == null ? '—' : days(q.daysSinceLastSale),
+      q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '')
+  ].join('');
+
+  const dailySeries = [{ name: 'Takings', color: PALETTE.blue, values: q.days.map((d) => d.gross) }];
+  barChart($('#c-daily'), {
+    labels: q.days.map((d) => d.label),
+    series: dailySeries,
+    height: 180,
+    tipFormat: (v, ser, i) => `${money(v)} · ${int(q.days[i].units)} items`
+  });
+  legend($('#l-daily'), dailySeries);
+
+  barChart($('#c-dow'), {
+    labels: q.dayOfWeek.map((d) => d.label),
+    series: [{ name: 'Avg takings', color: PALETTE.brass, values: q.dayOfWeek.map((d) => d.avgGross) }],
+    height: 170,
+    tipFormat: (v, ser, i) => `${money(v)} avg · ${int(q.dayOfWeek[i].units)} items over ${q.dayOfWeek[i].occurrences} ${q.dayOfWeek[i].label}s`
+  });
+
+  const active = q.hours.filter((h) => h.units > 0);
+  const lo = active.length ? Math.max(0, active[0].hour - 1) : 8;
+  const hi = active.length ? Math.min(23, active[active.length - 1].hour + 1) : 20;
+  const window = q.hours.slice(lo, hi + 1);
+  barChart($('#c-hour'), {
+    labels: window.map((h) => h.label),
+    series: [{ name: 'Items', color: PALETTE.purple, values: window.map((h) => h.units) }],
+    height: 170,
+    integerY: true,
+    yFormat: (v) => int(v),
+    tipFormat: (v, ser, i) => `${int(v)} items · ${money(window[i].gross)}`
+  });
+
+  donut($('#c-methods'), {
+    height: 158,
+    centerValue: money(q.gross, { compact: true }),
+    centerLabel: 'takings',
+    segments: q.methods.map((m) => ({ label: m.method, value: m.gross })),
+    format: (v) => money(v, { compact: true })
+  });
+
+  $('#t-recent').innerHTML = table(q.recent, [
+    { title: 'When', render: (r) => new Date(r.soldAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { title: 'Item', render: (r) => `<span class="inv">${esc(r.inv || '—')}</span>${esc(r.desc)}`, cls: () => 'name' },
+    { title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
+    { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Paid', render: (r) => esc(r.method) }
+  ], 'No sales in this range');
+}
+
+/* ----------------------------------------------------------- reconciliation */
+
+const FINDING_LABELS = {
+  'quail-sale-missing-in-sandpiper': 'Sold in Quail, unknown to Sandpiper',
+  'sold-in-quail-not-in-sandpiper': 'Sold in Quail, still unsold in Sandpiper',
+  'sandpiper-sale-missing-in-quail': 'Sold in Sandpiper, no Quail record',
+  'probable-untagged-match': 'Untagged POS sale, probable match',
+  'quail-sale-untagged': 'POS sale with no inventory tag',
+  'price-mismatch': 'Sale price disagrees',
+  'commission-mismatch': 'Commission disagrees',
+  'late-entry': 'Recorded late',
+  'duplicate-inventory-number': 'Duplicate inventory number'
+};
+
+function renderReconcile() {
+  if (!state.quailSales.length) {
+    $('#kpis-recon').innerHTML = '';
+    empty($('#c-findings'), 'No POS data to compare');
+    $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
+    $('#t-statements').innerHTML = '';
+    return;
+  }
+  const r = reconcile(state.items, state.quailSales, { start: state.start, end: state.end });
+  state.recon = r;
+
+  const high = r.findings.filter((f) => f.severity === 'high').length;
+  $('#kpis-recon').innerHTML = [
+    kpi('Matched sales', pct(r.totals.matchRate, 0), `${int(r.totals.matched)} of ${int(r.totals.quailSales)} POS sales`,
+      { accent: r.totals.matchRate === 1 ? PALETTE.green : PALETTE.brass }),
+    kpi('Needs attention', int(high), high ? 'high-severity findings' : 'nothing serious',
+      { accent: high ? PALETTE.red : PALETTE.green }),
+    kpi('Gross difference', money(r.totals.grossDelta, { compact: true }), 'Sandpiper minus Quail',
+      { sign: true, signValue: -Math.abs(r.totals.grossDelta) || 0 }),
+    kpi('Total findings', int(r.findings.length), `${int(r.totals.sandpiperSales)} Sandpiper / ${int(r.totals.quailSales)} Quail sales`)
+  ].join('');
+
+  hbar($('#c-findings'), {
+    rows: Object.entries(r.byType)
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => ({ label: FINDING_LABELS[type] || type, value: count })),
+    format: (v) => int(v),
+    colorFor: (row) => (/disagree|unknown|unsold/i.test(row.label) ? PALETTE.red : PALETTE.brass)
+  });
+
+  $('#t-findings').innerHTML = table(r.findings, [
+    { title: 'Severity', render: (f) => `<span class="pill ${f.severity}">${f.severity}</span>` },
+    { title: 'What', render: (f) => esc(FINDING_LABELS[f.type] || f.type) },
+    { title: 'When', render: (f) => (f.soldAt ? new Date(f.soldAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—') },
+    {
+      title: 'Detail',
+      cls: () => 'wrap',
+      render: (f) => `<div class="finding-detail">${esc(f.detail)}</div>`
+        + (f.note ? `<div class="finding-note">${esc(f.note)}</div>` : '')
+    }
+  ], 'No anomalies in this range — the two systems agree.');
+
+  // Quail's own monthly statement against the same months computed from line items.
+  const statements = (state.quail.statements || []).filter((st) => st.totalSales != null);
+  $('#t-statements').innerHTML = table(statements, [
+    { title: 'Month', render: (st) => esc(st.month) },
+    { title: 'Quail sales', num: true, render: (st) => money(st.totalSales, { compact: true }) },
+    { title: 'Ours', num: true, render: (st) => money(ourMonthGross(st), { compact: true }) },
+    {
+      title: 'Δ',
+      num: true,
+      render: (st) => money(ourMonthGross(st) - st.totalSales, { compact: true }),
+      cls: (st) => (Math.abs(ourMonthGross(st) - st.totalSales) > 2 ? 'neg' : 'pos')
+    },
+    { title: 'Adjustments', num: true, render: (st) => money(st.totalAdjustments || 0, { compact: true }) }
+  ], 'No statements fetched');
+}
+
+function ourMonthGross(st) {
+  return state.quailSales
+    .filter((s) => s.boothId === st.boothId)
+    .filter((s) => {
+      const d = new Date(s.soldAt);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === st.month;
+    })
+    .reduce((a, s) => a + s.price, 0);
+}
+
 /* --------------------------------------------------------------- charts */
 
 function legend(el, series) {
@@ -582,6 +776,8 @@ function render() {
   renderTables(s);
   renderHealth(s);
   renderVenues(s);
+  renderDaily();
+  renderReconcile();
   renderItems();
 
   const fmt = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -611,6 +807,8 @@ function send(type, payload = {}) {
 function loadInto(res) {
   state.items = normalize(res.items || []);
   if (res.venues) state.venueInfo = res.venues;
+  state.quail = res.quail || state.quail;
+  state.quailSales = state.quail ? normalizeQuailSales(state.quail.sales) : [];
   state.venueList = listVenues(state.items);
   if (state.venue.kind !== 'all') {
     const pool = state.venue.kind === 'store' ? state.venueList.stores : state.venueList.booths;
@@ -652,7 +850,8 @@ async function refresh() {
     if (v.errors && v.errors.length) {
       banner(`Synced ${int(res.meta.count)} items, but ${v.errors.length} venue lookup(s) failed: ${v.errors[0]}`, 'info');
     } else {
-      banner(`Synced ${int(res.meta.count)} items${venuePart}.`, 'ok');
+      const posPart = res.quail ? ` · ${int(res.quail.sales.length)} POS sales` : '';
+      banner(`Synced ${int(res.meta.count)} items${venuePart}${posPart}.`, 'ok');
       setTimeout(() => banner(''), 3200);
     }
   } catch (e) {
@@ -675,6 +874,7 @@ function initTabs() {
       if (state.stats) {
         renderCharts(state.stats);
         renderVenues(state.stats);
+        renderDaily();
       }
     };
   });
@@ -724,7 +924,7 @@ async function init() {
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      if (state.stats) { renderCharts(state.stats); renderVenues(state.stats); }
+      if (state.stats) { renderCharts(state.stats); renderVenues(state.stats); renderDaily(); }
     }, 140);
   });
 
