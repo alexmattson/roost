@@ -230,36 +230,26 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-panel="anomalies">
+    <section class="tab-panel" data-panel="review">
       <div class="note">
         Compares Sandpiper's inventory records against Quail's point-of-sale records,
         joined on inventory number. Neither side is authoritative alone: Quail knows what
         actually rang up and when, Sandpiper knows cost and intended price.
       </div>
       <div class="kpi-grid" id="kpis-recon"></div>
-      <div class="card">
-        <div class="card-head"><h2>Findings by type</h2></div>
-        <div class="chart-box" id="c-findings"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Findings by type</h2></div>
+          <div class="chart-box" id="c-findings"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Data quality</h2><span class="hint">Sandpiper records only</span></div>
+          <div id="health" class="health"></div>
+        </div>
       </div>
       <div class="card">
         <div class="card-head"><h2>Anomalies</h2><span class="hint">Most severe first</span></div>
         <div id="t-findings" class="table-scroll"></div>
-      </div>
-    </section>
-
-    <section class="tab-panel" data-panel="statements">
-      <div class="note">Quail's own monthly statement against the same months totalled from its line items. A non-zero difference means adjustments, layaway, or a sale we did not see.</div>
-      <div class="card">
-        <div class="card-head"><h2>Statement check</h2><span class="hint">Our maths vs Quail's</span></div>
-        <div id="t-statements" class="table-scroll"></div>
-      </div>
-    </section>
-
-    <section class="tab-panel" data-panel="quality">
-      <div class="note">Checks on the Sandpiper records themselves, separate from the Quail comparison.</div>
-      <div class="card">
-        <div class="card-head"><h2>Health checks</h2></div>
-        <div id="health" class="health"></div>
       </div>
     </section>
 

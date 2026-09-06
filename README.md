@@ -60,7 +60,7 @@ The split is by the kind of question a view answers, not by which system the dat
 | --- | --- | --- |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | aggregate, ranged — "how is the business doing" |
 | **Daily** | Today · Patterns | operational — "what happened, and when do we sell" |
-| **Review** | Anomalies · Statements · Data quality | a task list — "what needs fixing" |
+| **Review** | *(single page)* | a task list — "what needs fixing" |
 | **Records** | Items · POS sales | lookup — "find this specific thing" |
 
 Presets follow the mode: Daily offers Today/7D/30D/This month, Analyze offers 30D through
@@ -79,7 +79,8 @@ sell through, and the two are joined by `externalId`/`externalService` on the Sa
 and booth records. Pressing **Fetch latest data** pulls both.
 
 Quail authenticates separately: `Authorization: Basic base64(<vendor email>:<session id>)`,
-both halves read from its cookies. A missing Quail session is reported but never blocks an
+both halves read from its cookies. Each refresh pulls booth terms, line-item sales, and one
+rent call per calendar month. A missing Quail session is reported but never blocks an
 inventory sync.
 
 Two things Quail knows that Sandpiper cannot:
@@ -113,8 +114,8 @@ The **Reconcile** tab joins the two systems on inventory number and reports what
 | Duplicate inventory number | Sandpiper reuses numbers, making any join ambiguous |
 
 An untagged POS sale and an unrecorded Sandpiper sale at the same price within two days are
-reported as **one** probable pairing rather than two separate anomalies. The tab also checks
-our own arithmetic against Quail's monthly `booth-summary4` statement.
+reported as **one** probable pairing rather than two separate anomalies. Data-quality checks on
+the Sandpiper records themselves sit on the same page, since both are things to act on.
 
 ### Stores and booths
 

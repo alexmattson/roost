@@ -279,7 +279,6 @@ async function fetchQuail(items) {
 
   const sales = [];
   const rent = [];
-  const statements = [];
   const months = monthsBetween(from, to);
 
   for (const booth of boothList) {
@@ -293,17 +292,13 @@ async function fetchQuail(items) {
       errors.push(`booth ${id} items: ${e.message}`);
     }
 
-    // Rent and the official statement are month-scoped, so they need one call each.
-    const perMonth = await Promise.allSettled(months.flatMap((m) => [
+    // Rent is month-scoped, so it needs one call per month.
+    const perMonth = await Promise.allSettled(months.map((m) =>
       apiRequest(`${QUAIL_HOST}/api/portal/rent?booth=${id}&start=${m.start}&end=${m.end}&tz=${tzParam}`, auth)
-        .then((v) => ({ kind: 'rent', boothId: id, month: m.key, cents: Math.round(Number(v) || 0) })),
-      apiRequest(`${QUAIL_HOST}/api/portal/booth-summary4?booth=${id}&start=${m.start}&end=${m.end}&tz=${tzParam}`, auth)
-        .then((v) => ({ kind: 'statement', boothId: id, month: m.key, ...(v || {}) }))
-    ]));
+        .then((v) => ({ boothId: id, month: m.key, cents: Math.round(Number(v) || 0) }))));
     for (const r of perMonth) {
-      if (r.status !== 'fulfilled') { errors.push(String(r.reason && r.reason.message || r.reason)); continue; }
-      if (r.value.kind === 'rent') rent.push(r.value);
-      else statements.push(r.value);
+      if (r.status === 'fulfilled') rent.push(r.value);
+      else errors.push(String(r.reason && r.reason.message || r.reason));
     }
   }
 
@@ -311,7 +306,7 @@ async function fetchQuail(items) {
     + `${months.length} month(s) of rent` + (errors.length ? `, ${errors.length} error(s)` : ''));
 
   return {
-    sales, booths: boothList, rent, statements, errors,
+    sales, booths: boothList, rent, errors,
     email: q.email, tz, range: { start, end }, fetchedAt: Date.now()
   };
 }

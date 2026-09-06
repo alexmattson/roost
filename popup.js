@@ -57,7 +57,7 @@ const MODES = [
     id: 'review',
     label: 'Review',
     presets: [['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
-    tabs: [['anomalies', 'Anomalies'], ['statements', 'Statements'], ['quality', 'Data quality']]
+    tabs: [['review', 'Review']]
   },
   {
     id: 'records',
@@ -648,7 +648,6 @@ function renderReconcile() {
     $('#kpis-recon').innerHTML = '';
     empty($('#c-findings'), 'No POS data to compare');
     $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
-    $('#t-statements').innerHTML = '';
     return;
   }
   const r = reconcile(state.items, state.quailSales, { start: state.start, end: state.end });
@@ -684,31 +683,6 @@ function renderReconcile() {
         + (f.note ? `<div class="finding-note">${esc(f.note)}</div>` : '')
     }
   ], 'No anomalies in this range — the two systems agree.');
-
-  // Quail's own monthly statement against the same months computed from line items.
-  const statements = (state.quail.statements || []).filter((st) => st.totalSales != null);
-  $('#t-statements').innerHTML = table(statements, [
-    { title: 'Month', render: (st) => esc(st.month) },
-    { title: 'Quail sales', num: true, render: (st) => money(st.totalSales, { compact: true }) },
-    { title: 'Ours', num: true, render: (st) => money(ourMonthGross(st), { compact: true }) },
-    {
-      title: 'Δ',
-      num: true,
-      render: (st) => money(ourMonthGross(st) - st.totalSales, { compact: true }),
-      cls: (st) => (Math.abs(ourMonthGross(st) - st.totalSales) > 2 ? 'neg' : 'pos')
-    },
-    { title: 'Adjustments', num: true, render: (st) => money(st.totalAdjustments || 0, { compact: true }) }
-  ], 'No statements fetched');
-}
-
-function ourMonthGross(st) {
-  return state.quailSales
-    .filter((s) => s.boothId === st.boothId)
-    .filter((s) => {
-      const d = new Date(s.soldAt);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === st.month;
-    })
-    .reduce((a, s) => a + s.price, 0);
 }
 
 /* --------------------------------------------------------------- charts */
