@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sandpiper Analytics</title>
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#bg)"/>
+        <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#2a2113"/><stop offset="100%" stop-color="#12141a"/>
+        </linearGradient></defs>
+        <rect x="7"  y="17" width="4" height="8"  rx="1.4" fill="#f0b429"/>
+        <rect x="14" y="12" width="4" height="13" rx="1.4" fill="#fbd38d"/>
+        <rect x="21" y="7"  width="4" height="18" rx="1.4" fill="#34d399"/>
+      </svg>
+      <div class="brand-text">
+        <h1>Sandpiper Analytics</h1>
+        <p id="subline">Loading…</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="theme-toggle" class="icon-btn" title="Switch between light and dark">
+        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="expand" class="icon-btn" title="Open full dashboard in a tab">
+        <svg viewBox="0 0 24 24"><path d="M9 3H3v6M3 3l7 7M15 21h6v-6M21 21l-7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="refresh" class="btn primary">
+        <svg class="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="refresh-label">Fetch latest data</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <div class="rangebar">
+    <div class="chips" id="presets"></div>
+    <select id="venue" class="venue-select" aria-label="Store or booth">
+      <option value="all">All venues</option>
+    </select>
+    <div class="custom-range">
+      <input type="date" id="from" aria-label="From date">
+      <span class="dash">→</span>
+      <input type="date" id="to" aria-label="To date">
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="sales">Sales</button>
+    <button data-tab="inventory">Inventory</button>
+    <button data-tab="catalog">Catalog</button>
+    <button data-tab="venues">Venues</button>
+    <button data-tab="items">Items</button>
+  </nav>
+
+  <main id="main">
+    <div id="empty-state" class="empty-state hidden">
+      <h3>No data yet</h3>
+      <p>Make sure you are signed in to app.sandpiperhq.com, then hit <b>Fetch latest data</b> to pull your full inventory and build the dashboard.</p>
+    </div>
+    <!-- OVERVIEW -->
+    <section class="tab-panel active" data-panel="overview">
+      <div class="kpi-grid" id="kpis"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Cumulative net profit</h2>
+          <span class="hint">Revenue after commission &amp; fees, minus item cost</span>
+        </div>
+        <div class="chart-box" id="c-cumulative"></div>
+        <div class="legend-inline" id="l-cumulative"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Revenue vs. cost of goods</h2></div>
+          <div class="chart-box" id="c-revenue"></div>
+          <div class="legend-inline" id="l-revenue"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Where the money sits</h2><span class="hint">At cost</span></div>
+          <div class="chart-box" id="c-capital"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>Buying vs. selling</h2>
+            <div class="toggle" id="flow-mode" title="Cash out on new stock vs. cash in from sales">
+              <button data-mode="money" class="active">$</button>
+              <button data-mode="units">Units</button>
+            </div>
+          </div>
+          <div class="chart-box" id="c-flow"></div>
+          <div class="legend-inline" id="l-flow"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Health checks</h2></div>
+          <div id="health" class="health"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SALES -->
+    <section class="tab-panel" data-panel="sales">
+      <div class="kpi-grid" id="kpis-sales"></div>
+      <div class="card">
+        <div class="card-head"><h2>Net profit by period</h2><span class="hint">Bars below zero are losses</span></div>
+        <div class="chart-box" id="c-profit"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Cost vs. sale price</h2><span class="hint">Every sale in range</span></div>
+          <div class="chart-box" id="c-scatter"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Time to sell</h2><span class="hint">Days from acquisition</span></div>
+          <div class="chart-box" id="c-speed"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Top profit makers</h2></div>
+          <div id="t-top"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Sold at a loss</h2></div>
+          <div id="t-loss"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section class="tab-panel" data-panel="inventory">
+      <div class="kpi-grid" id="kpis-inv"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Inventory aging</h2><span class="hint">Capital at cost by age</span></div>
+          <div class="chart-box" id="c-aging"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Asking-price bands</h2><span class="hint">Units on hand</span></div>
+          <div class="chart-box" id="c-bands"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Oldest unsold items</h2></div>
+          <div id="t-slow"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Biggest capital bets</h2><span class="hint">Unsold, by cost</span></div>
+          <div id="t-bets"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATALOG -->
+    <section class="tab-panel" data-panel="catalog">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Profit by category</h2></div>
+          <div class="chart-box" id="c-cat-profit"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Sell-through by category</h2></div>
+          <div class="chart-box" id="c-cat-sell"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Category breakdown</h2><span class="hint">Categories inferred from item descriptions</span></div>
+        <div id="t-cats" class="table-scroll"></div>
+      </div>
+    </section>
+
+    <!-- VENUES -->
+    <section class="tab-panel" data-panel="venues">
+      <div class="note" id="venue-note">
+        Sandpiper records a store and booth only when an item <b>sells</b>, so these figures
+        cover sales. Unsold stock can't be attributed to a venue.
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Net revenue by booth</h2></div>
+          <div class="chart-box" id="c-booth-rev"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Revenue share by store</h2></div>
+          <div class="chart-box" id="c-store-share"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Net revenue by booth over time</h2><span class="hint">Top 5 booths</span></div>
+        <div class="chart-box" id="c-booth-time"></div>
+        <div class="legend-inline" id="l-booth-time"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Stores</h2><span class="hint">Click a name to rename it</span></div>
+        <div id="t-stores" class="table-scroll"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Booths</h2><span class="hint">Click a name to rename it</span></div>
+        <div id="t-booths" class="table-scroll"></div>
+      </div>
+    </section>
+
+    <!-- ITEMS -->
+    <section class="tab-panel" data-panel="items">
+      <div class="card">
+        <div class="card-head">
+          <h2>All items</h2>
+          <div class="table-controls">
+            <input type="search" id="item-search" placeholder="Search description or #…">
+            <select id="item-filter">
+              <option value="all">All items</option>
+              <option value="onhand">Unsold only</option>
+              <option value="sold">Sold only</option>
+              <option value="loss">Sold at a loss</option>
+              <option value="noprice">Missing asking price</option>
+            </select>
+          </div>
+        </div>
+        <div id="t-items" class="table-scroll"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="footnote">—</span>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
