@@ -40,6 +40,8 @@
 
   <div id="banner" class="banner hidden"></div>
 
+  <nav class="modes" id="modes"></nav>
+
   <div class="rangebar">
     <div class="chips" id="presets"></div>
     <select id="venue" class="venue-select" aria-label="Store or booth">
@@ -52,23 +54,14 @@
     </div>
   </div>
 
-  <nav class="tabs" id="tabs">
-    <button data-tab="overview" class="active">Overview</button>
-    <button data-tab="sales">Sales</button>
-    <button data-tab="inventory">Inventory</button>
-    <button data-tab="catalog">Catalog</button>
-    <button data-tab="venues">Venues</button>
-    <button data-tab="daily">Daily</button>
-    <button data-tab="reconcile">Reconcile</button>
-    <button data-tab="items">Items</button>
-  </nav>
+  <nav class="tabs" id="tabs"></nav>
 
   <main id="main">
     <div id="empty-state" class="empty-state hidden">
       <h3>No data yet</h3>
       <p>Make sure you are signed in to app.sandpiperhq.com, then hit <b>Fetch latest data</b> to pull your full inventory and build the dashboard.</p>
     </div>
-    <!-- OVERVIEW -->
+
     <section class="tab-panel active" data-panel="overview">
       <div class="kpi-grid" id="kpis"></div>
       <div class="card">
@@ -90,26 +83,19 @@
           <div class="chart-box" id="c-capital"></div>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head">
-            <h2>Buying vs. selling</h2>
-            <div class="toggle" id="flow-mode" title="Cash out on new stock vs. cash in from sales">
-              <button data-mode="money" class="active">$</button>
-              <button data-mode="units">Units</button>
-            </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Buying vs. selling</h2>
+          <div class="toggle" id="flow-mode" title="Cash out on new stock vs. cash in from sales">
+            <button data-mode="money" class="active">$</button>
+            <button data-mode="units">Units</button>
           </div>
-          <div class="chart-box" id="c-flow"></div>
-          <div class="legend-inline" id="l-flow"></div>
         </div>
-        <div class="card">
-          <div class="card-head"><h2>Health checks</h2></div>
-          <div id="health" class="health"></div>
-        </div>
+        <div class="chart-box" id="c-flow"></div>
+        <div class="legend-inline" id="l-flow"></div>
       </div>
     </section>
 
-    <!-- SALES -->
     <section class="tab-panel" data-panel="sales">
       <div class="kpi-grid" id="kpis-sales"></div>
       <div class="card">
@@ -138,7 +124,6 @@
       </div>
     </section>
 
-    <!-- INVENTORY -->
     <section class="tab-panel" data-panel="inventory">
       <div class="kpi-grid" id="kpis-inv"></div>
       <div class="grid-2">
@@ -163,7 +148,6 @@
       </div>
     </section>
 
-    <!-- CATALOG -->
     <section class="tab-panel" data-panel="catalog">
       <div class="grid-2">
         <div class="card">
@@ -181,7 +165,6 @@
       </div>
     </section>
 
-    <!-- VENUES -->
     <section class="tab-panel" data-panel="venues">
       <div class="note" id="venue-note">
         Sandpiper records a store and booth only when an item <b>sells</b>, so these figures
@@ -212,8 +195,7 @@
       </div>
     </section>
 
-    <!-- DAILY (Quail POS) -->
-    <section class="tab-panel" data-panel="daily">
+    <section class="tab-panel" data-panel="today">
       <div class="note" id="quail-note" hidden></div>
       <div class="kpi-grid" id="kpis-daily"></div>
       <div class="card">
@@ -224,6 +206,14 @@
         <div class="chart-box" id="c-daily"></div>
         <div class="legend-inline" id="l-daily"></div>
       </div>
+      <div class="card">
+        <div class="card-head"><h2>Recent sales</h2><span class="hint">Newest first</span></div>
+        <div id="t-recent" class="table-scroll"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="patterns">
+      <div class="note" id="quail-note-2" hidden></div>
       <div class="grid-2">
         <div class="card">
           <div class="card-head"><h2>By day of week</h2><span class="hint">Avg per occurrence</span></div>
@@ -234,35 +224,22 @@
           <div class="chart-box" id="c-hour"></div>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head"><h2>Payment mix</h2></div>
-          <div class="chart-box" id="c-methods"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Recent sales</h2><span class="hint">Newest first</span></div>
-          <div id="t-recent" class="table-scroll"></div>
-        </div>
+      <div class="card">
+        <div class="card-head"><h2>Payment mix</h2></div>
+        <div class="chart-box" id="c-methods"></div>
       </div>
     </section>
 
-    <!-- RECONCILE -->
-    <section class="tab-panel" data-panel="reconcile">
+    <section class="tab-panel" data-panel="anomalies">
       <div class="note">
         Compares Sandpiper's inventory records against Quail's point-of-sale records,
         joined on inventory number. Neither side is authoritative alone: Quail knows what
         actually rang up and when, Sandpiper knows cost and intended price.
       </div>
       <div class="kpi-grid" id="kpis-recon"></div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head"><h2>Findings by type</h2></div>
-          <div class="chart-box" id="c-findings"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Statement check</h2><span class="hint">Our maths vs Quail's</span></div>
-          <div id="t-statements" class="table-scroll"></div>
-        </div>
+      <div class="card">
+        <div class="card-head"><h2>Findings by type</h2></div>
+        <div class="chart-box" id="c-findings"></div>
       </div>
       <div class="card">
         <div class="card-head"><h2>Anomalies</h2><span class="hint">Most severe first</span></div>
@@ -270,7 +247,22 @@
       </div>
     </section>
 
-    <!-- ITEMS -->
+    <section class="tab-panel" data-panel="statements">
+      <div class="note">Quail's own monthly statement against the same months totalled from its line items. A non-zero difference means adjustments, layaway, or a sale we did not see.</div>
+      <div class="card">
+        <div class="card-head"><h2>Statement check</h2><span class="hint">Our maths vs Quail's</span></div>
+        <div id="t-statements" class="table-scroll"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="quality">
+      <div class="note">Checks on the Sandpiper records themselves, separate from the Quail comparison.</div>
+      <div class="card">
+        <div class="card-head"><h2>Health checks</h2></div>
+        <div id="health" class="health"></div>
+      </div>
+    </section>
+
     <section class="tab-panel" data-panel="items">
       <div class="card">
         <div class="card-head">
@@ -287,6 +279,20 @@
           </div>
         </div>
         <div id="t-items" class="table-scroll"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="pos">
+      <div class="note" id="quail-note-3" hidden></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Point-of-sale ledger</h2>
+          <div class="table-controls">
+            <input type="search" id="pos-search" placeholder="Search description or #…">
+            <select id="pos-method"><option value="all">All payments</option></select>
+          </div>
+        </div>
+        <div id="t-pos" class="table-scroll"></div>
       </div>
     </section>
   </main>

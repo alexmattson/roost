@@ -14,6 +14,8 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 const state = {
   items: [],
   meta: null,
+  mode: 'analyze',
+  tab: 'overview',
   preset: 'all',
   start: null,
   end: null,
@@ -28,10 +30,44 @@ const state = {
   itemSort: { key: 'acquired', dir: -1 }
 };
 
-const PRESETS = [
-  ['30d', '30D'], ['90d', '90D'], ['6m', '6M'], ['ytd', 'YTD'],
-  ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']
+/* Modes group views by the kind of question they answer: analysis is ranged and
+ * aggregate, Daily is operational, Review is a task list, Records is lookup.
+ * Each mode carries its own preset ranges — Daily wants days, Analyze wants
+ * months — but never overrides a range the user set explicitly. */
+const MODES = [
+  {
+    id: 'analyze',
+    label: 'Analyze',
+    presets: [['30d', '30D'], ['90d', '90D'], ['6m', '6M'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    tabs: [
+      ['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'],
+      ['catalog', 'Catalog'], ['venues', 'Venues']
+    ]
+  },
+  {
+    id: 'daily',
+    label: 'Daily',
+    presets: [['today', 'Today'], ['7d', '7D'], ['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['custom', 'Custom']],
+    // Landing on "Today" shows an empty screen on any day without a sale, so the
+    // presets read shortest-first but the mode opens on a window with data in it.
+    defaultPreset: '30d',
+    tabs: [['today', 'Today'], ['patterns', 'Patterns']]
+  },
+  {
+    id: 'review',
+    label: 'Review',
+    presets: [['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    tabs: [['anomalies', 'Anomalies'], ['statements', 'Statements'], ['quality', 'Data quality']]
+  },
+  {
+    id: 'records',
+    label: 'Records',
+    presets: [['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    tabs: [['items', 'Items'], ['pos', 'POS sales']]
+  }
 ];
+
+const modeById = (id) => MODES.find((m) => m.id === id) || MODES[0];
 
 /* --------------------------------------------------------------- helpers */
 
@@ -72,17 +108,83 @@ function applyPreset(preset) {
     case '6m': { const d = new Date(); d.setMonth(d.getMonth() - 6); start = startOfDay(d.getTime()); break; }
     case '12m': { const d = new Date(); d.setFullYear(d.getFullYear() - 1); start = startOfDay(d.getTime()); break; }
     case 'ytd': start = new Date(now.getFullYear(), 0, 1).getTime(); break;
+    case 'today': start = startOfDay(Date.now()); break;
+    case '7d': start = startOfDay(Date.now() - 7 * DAY); break;
+    case 'month': start = new Date(now.getFullYear(), now.getMonth(), 1).getTime(); break;
     case 'custom': return; // inputs drive the range
     default: start = startOfDay(bounds.min);
   }
   state.start = start;
-  state.end = end;
+  // Ranges anchored to now shouldn't run past it, or "today" spans the whole dataset.
+  state.end = preset === 'today' || preset === '7d' || preset === 'month'
+    ? endOfDay(Date.now())
+    : end;
   $('#from').value = toInput(start);
   $('#to').value = toInput(end);
 }
 
+function renderModes() {
+  $('#modes').innerHTML = MODES
+    .map((m) => `<button data-mode="${m.id}" class="${state.mode === m.id ? 'active' : ''}">${m.label}</button>`)
+    .join('');
+  $$('#modes button').forEach((btn) => {
+    btn.onclick = () => selectMode(btn.dataset.mode);
+  });
+}
+
+function renderTabs() {
+  const mode = modeById(state.mode);
+  const strip = $('#tabs');
+  strip.innerHTML = mode.tabs
+    .map(([id, label]) => `<button data-tab="${id}" class="${state.tab === id ? 'active' : ''}">${label}</button>`)
+    .join('');
+  // A single-tab mode has nothing to choose, so the strip only adds noise.
+  strip.hidden = mode.tabs.length < 2;
+  $$('#tabs button').forEach((btn) => {
+    btn.onclick = () => selectTab(btn.dataset.tab);
+  });
+  $$('.tab-panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === state.tab));
+}
+
+function selectTab(tabId) {
+  state.tab = tabId;
+  try {
+    localStorage.setItem('sp_tab_' + state.mode, tabId);
+  } catch (e) { /* nav state is a convenience only */ }
+  renderTabs();
+  hideTip();
+  repaintCharts();
+}
+
+function selectMode(modeId) {
+  const mode = modeById(modeId);
+  state.mode = modeId;
+  let remembered = null;
+  try {
+    remembered = localStorage.getItem('sp_tab_' + modeId);
+    localStorage.setItem('sp_mode', modeId);
+  } catch (e) { /* nav state is a convenience only */ }
+  const valid = mode.tabs.some(([id]) => id === remembered);
+  state.tab = valid ? remembered : mode.tabs[0][0];
+  // Keep an explicit custom range; otherwise fall back to this mode's first preset.
+  if (state.preset !== 'custom' && !mode.presets.some(([k]) => k === state.preset)) {
+    applyPreset(mode.defaultPreset || mode.presets[0][0]);
+  }
+  renderModes();
+  renderPresets();
+  renderTabs();
+  render();
+}
+
+function repaintCharts() {
+  if (!state.stats) return;
+  renderCharts(state.stats);
+  renderVenues(state.stats);
+  renderDaily();
+}
+
 function renderPresets() {
-  $('#presets').innerHTML = PRESETS
+  $('#presets').innerHTML = modeById(state.mode).presets
     .map(([k, label]) => `<button class="chip ${state.preset === k ? 'active' : ''}" data-preset="${k}">${label}</button>`)
     .join('');
   $$('#presets .chip').forEach((btn) => {
@@ -398,6 +500,11 @@ function rentForRange(start, end) {
 }
 
 function renderDaily() {
+  const note2 = $('#quail-note-2');
+  if (note2) {
+    note2.hidden = state.quailSales.length > 0;
+    if (!state.quailSales.length) note2.textContent = 'No point-of-sale data yet.';
+  }
   const note = $('#quail-note');
   if (!state.quailSales.length) {
     note.hidden = false;
@@ -477,6 +584,49 @@ function renderDaily() {
     { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Paid', render: (r) => esc(r.method) }
   ], 'No sales in this range');
+}
+
+/** Searchable transaction-level view of the POS records. */
+function renderPosLedger() {
+  const note = $('#quail-note-3');
+  if (note) note.hidden = state.quailSales.length > 0;
+  if (!state.quailSales.length) {
+    if (note) {
+      note.innerHTML = state.meta && state.meta.quailError
+        ? `No point-of-sale data: ${esc(state.meta.quailError)}`
+        : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.';
+    }
+    $('#t-pos').innerHTML = '';
+    return;
+  }
+
+  const methodSelect = $('#pos-method');
+  const methods = [...new Set(state.quailSales.map((s) => s.method))].sort();
+  if (methodSelect.options.length !== methods.length + 1) {
+    methodSelect.innerHTML = '<option value="all">All payments</option>'
+      + methods.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  }
+
+  const q = $('#pos-search').value.trim().toLowerCase();
+  const method = methodSelect.value;
+  let rows = state.quailSales.filter((s) => s.soldAt >= state.start && s.soldAt <= state.end);
+  if (method !== 'all') rows = rows.filter((s) => s.method === method);
+  if (q) rows = rows.filter((s) => s.desc.toLowerCase().includes(q) || String(s.inv).toLowerCase().includes(q));
+  rows.sort((a, b) => b.soldAt - a.soldAt);
+
+  const shown = rows.slice(0, 500);
+  $('#t-pos').innerHTML = table(shown, [
+    { title: 'When', render: (r) => new Date(r.soldAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { title: '#', render: (r) => esc(r.inv || '—') },
+    { title: 'Item', render: (r) => esc(r.desc), cls: () => 'name' },
+    { title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
+    { title: 'Tax', num: true, render: (r) => money(r.tax, { compact: true }) },
+    { title: 'Commission', num: true, render: (r) => money(-r.consignment, { compact: true }) },
+    { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Paid', render: (r) => esc(r.method) },
+    { title: 'Txn', num: true, render: (r) => (r.transactionId == null ? '—' : String(r.transactionId)) }
+  ], 'No POS sales in this range')
+    + (rows.length > shown.length ? `<div class="empty-row">Showing first ${shown.length} of ${rows.length}</div>` : '');
 }
 
 /* ----------------------------------------------------------- reconciliation */
@@ -778,6 +928,7 @@ function render() {
   renderVenues(s);
   renderDaily();
   renderReconcile();
+  renderPosLedger();
   renderItems();
 
   const fmt = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -865,19 +1016,20 @@ async function refresh() {
 
 /* ------------------------------------------------------------------ init */
 
-function initTabs() {
-  $$('#tabs button').forEach((btn) => {
-    btn.onclick = () => {
-      $$('#tabs button').forEach((b) => b.classList.toggle('active', b === btn));
-      $$('.tab-panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === btn.dataset.tab));
-      hideTip();
-      if (state.stats) {
-        renderCharts(state.stats);
-        renderVenues(state.stats);
-        renderDaily();
-      }
-    };
-  });
+function initNav() {
+  let mode = null;
+  try {
+    mode = localStorage.getItem('sp_mode');
+  } catch (e) { /* fall through to the default mode */ }
+  state.mode = MODES.some((m) => m.id === mode) ? mode : MODES[0].id;
+  const active = modeById(state.mode);
+  let tab = null;
+  try {
+    tab = localStorage.getItem('sp_tab_' + state.mode);
+  } catch (e) { /* fall through to the first tab */ }
+  state.tab = active.tabs.some(([id]) => id === tab) ? tab : active.tabs[0][0];
+  renderModes();
+  renderTabs();
 }
 
 async function init() {
@@ -885,7 +1037,7 @@ async function init() {
     document.body.classList.add('expanded');
     $('#expand').style.display = 'none';
   }
-  initTabs();
+  initNav();
   renderPresets();
 
   $('#refresh').onclick = refresh;
@@ -915,6 +1067,8 @@ async function init() {
     render();
   };
   $('#item-search').oninput = renderItems;
+  $('#pos-search').oninput = renderPosLedger;
+  $('#pos-method').onchange = renderPosLedger;
   $('#item-filter').onchange = renderItems;
   ['#from', '#to'].forEach((sel) => {
     $(sel).onchange = () => { state.preset = 'custom'; renderPresets(); render(); };
@@ -923,9 +1077,7 @@ async function init() {
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      if (state.stats) { renderCharts(state.stats); renderVenues(state.stats); renderDaily(); }
-    }, 140);
+    resizeTimer = setTimeout(repaintCharts, 140);
   });
 
   try {

@@ -51,17 +51,24 @@ Every number respects the selected date range, using the rule that matches the m
   average discount off asking price, markup multiple, aging buckets, price bands, and
   per-category performance (categories are inferred from item descriptions)
 
-### Tabs
+### Navigation
 
-- **Venues** — per-store and per-booth performance: units, gross, commission, net, profit,
-  margin, avg sale, median days to sell and revenue share, plus revenue by booth over time
-- **Overview** — headline KPIs, cumulative profit, revenue vs. cost of goods, capital split,
-  buying vs. selling (with a **$ / Units** toggle — dollars is cash flow: spend on new stock
-  against net received from sales), health checks
-- **Sales** — profit by period, cost vs. sale price scatter with break-even line, time-to-sell, best and worst items
-- **Inventory** — aging, price bands, oldest unsold items, biggest capital bets
-- **Catalog** — profit and sell-through by category
-- **Items** — every item, searchable, filterable and sortable
+Four **modes** sit above the filter bar, each with its own tabs and its own range presets.
+The split is by the kind of question a view answers, not by which system the data came from:
+
+| Mode | Tabs | Kind of question |
+| --- | --- | --- |
+| **Analyze** | Overview · Sales · Inventory · Catalog · Venues | aggregate, ranged — "how is the business doing" |
+| **Daily** | Today · Patterns | operational — "what happened, and when do we sell" |
+| **Review** | Anomalies · Statements · Data quality | a task list — "what needs fixing" |
+| **Records** | Items · POS sales | lookup — "find this specific thing" |
+
+Presets follow the mode: Daily offers Today/7D/30D/This month, Analyze offers 30D through
+All time. Switching modes only changes the range if the current preset isn't offered by the
+new mode, and never overrides a custom range you set by hand. Daily deliberately opens on 30D
+rather than Today, since landing on Today shows an empty screen on any day without a sale.
+
+Your last mode, and the last tab within each mode, are remembered.
 
 The ⤢ button opens the same dashboard full-width in a tab.
 
