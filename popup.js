@@ -701,10 +701,17 @@ function renderFixBar() {
   $('#fix-all').onclick = () => confirmPlans(exact, 'Resolve all exact');
 }
 
+/**
+ * Bulk actions confirm first, because you cannot see every change they would
+ * make. A single row's Fix does not: the exact change is already printed under
+ * the finding, so a second click on a panel elsewhere in the card is friction
+ * that makes the button look broken.
+ */
 function confirmPlans(entries, label) {
   if (!entries.length) return;
   state.pendingConfirm = { entries, label };
   renderFixBar();
+  $('#fix-bar').scrollIntoView({ block: 'nearest' });
 }
 
 async function applyPlans(entries) {
@@ -726,10 +733,14 @@ async function applyPlans(entries) {
     }
     state.selected.clear();
     state.pendingConfirm = null;
+    // Name what changed for a single fix; a bulk run just reports the count.
+    const single = entries.length === 1 ? entries[0].plan : null;
     banner(
       failed.length
         ? `Updated ${int(res.applied)} of ${int(entries.length)}. ${failed.length} failed: ${failed[0].error}`
-        : `Updated ${int(res.applied)} item${res.applied === 1 ? '' : 's'} in Sandpiper.`,
+        : single
+          ? `Updated #${single.inv}: ${single.summary}`
+          : `Updated ${int(res.applied)} item${res.applied === 1 ? '' : 's'} in Sandpiper.`,
       failed.length ? 'error' : 'ok'
     );
     if (!failed.length) setTimeout(() => banner(''), 3200);
@@ -817,7 +828,11 @@ function renderReconcile() {
   $$('#t-findings button[data-fix]').forEach((btn) => {
     btn.onclick = () => {
       const entry = byKey.get(btn.dataset.fix);
-      if (entry && entry.plan) confirmPlans([entry], 'Resolve one');
+      if (!entry || !entry.plan || state.applying) return;
+      btn.disabled = true;
+      btn.textContent = '…';
+      // One row, one deliberate click, change already shown: apply it directly.
+      applyPlans([entry]);
     };
   });
   renderFixBar();

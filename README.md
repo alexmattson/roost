@@ -135,14 +135,19 @@ Three ways to apply: **Fix** on a single row, tick rows and **Resolve selected**
 all exact**. "All" deliberately means all *exact* matches — a probable pairing rests on a
 heuristic, so it never goes in a bulk action and has to be picked by hand.
 
-Nothing is written without a confirmation step that lists every field with its before and after
-value. Edits are applied one at a time so a partial failure stops somewhere understandable, and
-the local cache is updated in place as each succeeds, so resolved findings disappear
-immediately without a full re-sync.
+A single row's **Fix** applies straight away: it is one deliberate click on one item, and the
+exact change is already printed beneath the finding. Bulk actions confirm first, listing every
+field with its before and after value, because you cannot see all of their changes at once.
+Edits are applied one at a time so a partial failure stops somewhere understandable, and the
+local cache updates in place as each succeeds, so resolved findings disappear immediately
+without a full re-sync.
 
 `POST /api/items/v2/<accountId>/edit` replaces the whole item rather than patching it, so each
 payload starts from the untouched API row with only the planned fields overlaid — that is why
-the raw rows are cached alongside the normalised ones.
+the raw rows are cached alongside the normalised ones. A successful edit answers **204 No
+Content**, so responses are read as text and an empty body is treated as success; parsing it as
+JSON unconditionally would report a successful write as a failure *and* trigger the in-page
+fallback to write a second time.
 
 ### Stores and booths
 

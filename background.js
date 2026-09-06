@@ -108,7 +108,25 @@ async function requestDirect(url, authorization, { method = 'GET', body = null }
     err.status = res.status;
     throw err;
   }
-  return res.json();
+  return parseBody(res);
+}
+
+/**
+ * A successful edit answers 204 No Content, so calling res.json() unconditionally
+ * throws on a request that actually worked — and, worse, made the caller retry
+ * through the in-page fallback and write a second time.
+ */
+async function parseBody(res) {
+  if (res.status === 204) return null;
+  const text = await res.text();
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const err = new Error(`Sandpiper returned a non-JSON body (${res.status}).`);
+    err.status = res.status;
+    throw err;
+  }
 }
 
 /**
@@ -137,7 +155,15 @@ async function requestViaPage(url, authorization, { method = 'GET', body = null 
           body: payload ? JSON.stringify(payload) : undefined
         });
         if (!r.ok) return { ok: false, error: `Sandpiper API returned ${r.status} ${r.statusText}` };
-        return { ok: true, data: await r.json() };
+        // 204 on a successful edit: an empty body is a success, not a parse error.
+        if (r.status === 204) return { ok: true, data: null };
+        const text = await r.text();
+        if (!text.trim()) return { ok: true, data: null };
+        try {
+          return { ok: true, data: JSON.parse(text) };
+        } catch (parseError) {
+          return { ok: false, error: `Sandpiper returned a non-JSON body (${r.status}).` };
+        }
       } catch (e) {
         return { ok: false, error: e.message };
       }
