@@ -1,4 +1,4 @@
-/* Sandpiper Analytics — popup controller. */
+/* Roost — popup controller. */
 
 import { normalize, analyze, dataBounds, listVenues, shortId, UNASSIGNED, DAY } from './lib/analytics.js';
 import { normalizeQuailSales, analyzeQuail } from './lib/quail.js';
@@ -1250,7 +1250,7 @@ async function init() {
   if (!pong || !pong.ok || pong.build !== expected) {
     const running = pong && pong.build ? `build ${pong.build}` : 'an older build';
     banner(`The background service worker is running ${running}, but this popup is ${expected}. `
-      + 'Open chrome://extensions and click the reload (\u21bb) icon on Sandpiper Analytics.', 'error');
+      + 'Open chrome://extensions and click the reload (\u21bb) icon on Roost.', 'error');
   }
 
   const cached = await send('getCache');

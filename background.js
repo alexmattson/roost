@@ -1,11 +1,11 @@
-/* Sandpiper Analytics — service worker.
+/* Roost — service worker.
  * Owns auth (session cookie -> bearer token + account id) and the API fetch,
  * so a long request survives the popup being closed. */
 
 // Compared against the manifest version by the popup to detect a stale worker.
 // MV3 caches the service worker: popup files reload on every open, this file does
 // not, so an un-reloaded extension silently runs old logic here.
-const BUILD = '1.3.0';
+const BUILD = '1.4.0';
 
 const API_HOST = 'https://app.sandpiperhq.com';
 const SESSION_COOKIE = 'sandpiper_s';
@@ -245,7 +245,7 @@ async function fetchVenues(authorization, accountId) {
     errors.push(`booths: ${boothRes.reason && boothRes.reason.message || boothRes.reason}`);
   }
 
-  console.log(`[Sandpiper Analytics] venues: ${Object.keys(stores).length} store(s), ` +
+  console.log(`[Roost] venues: ${Object.keys(stores).length} store(s), ` +
     `${Object.keys(booths).length} booth(s)` + (errors.length ? ` — ${errors.join('; ')}` : ''));
   return { stores, booths, errors, fetchedAt: Date.now() };
 }
@@ -331,7 +331,7 @@ async function fetchQuail(items) {
     }
   }
 
-  console.log(`[Sandpiper Analytics] quail: ${sales.length} sale(s) across ${boothList.length} booth(s), `
+  console.log(`[Roost] quail: ${sales.length} sale(s) across ${boothList.length} booth(s), `
     + `${months.length} month(s) of rent` + (errors.length ? `, ${errors.length} error(s)` : ''));
 
   return {
@@ -385,7 +385,7 @@ async function applyEdits(plans) {
 
   const applied = results.filter((r) => r.ok).length;
   if (applied) await chrome.storage.local.set({ [STORE.items]: items });
-  console.log(`[Sandpiper Analytics] applied ${applied}/${plans.length} edit(s)`);
+  console.log(`[Roost] applied ${applied}/${plans.length} edit(s)`);
   return { results, applied, items };
 }
 
@@ -413,7 +413,7 @@ async function fetchItems() {
     quail = await fetchQuail(items);
   } catch (e) {
     quailError = e.message || String(e);
-    console.log(`[Sandpiper Analytics] quail unavailable: ${quailError}`);
+    console.log(`[Roost] quail unavailable: ${quailError}`);
   }
 
   const meta = {

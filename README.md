@@ -1,4 +1,7 @@
-# Sandpiper Analytics
+# Roost
+
+A Chrome extension that gives Sandpiper the analytics it doesn't have, and reconciles it
+against the Quail point-of-sale records behind the stores your stock sells through.
 
 A Chrome extension that adds the analytics dashboard Sandpiper doesn't have. It pulls your
 full item list from the Sandpiper API using your existing logged-in session, caches it
@@ -190,9 +193,9 @@ when the extension was installed. Click the reload (↻) icon on the extension's
 worker's build doesn't match the manifest version.
 
 **Watching the requests.** Service worker fetches never appear in the Sandpiper page's Network
-tab — only in the worker's own inspector (`chrome://extensions` → Sandpiper Analytics →
+tab — only in the worker's own inspector (`chrome://extensions` → Roost →
 *Inspect views: service worker*). Note the console only captures logs emitted while it's open,
-so open it before hitting fetch. Each sync logs a `[Sandpiper Analytics]` line with the venue
+so open it before hitting fetch. Each sync logs a `[Roost]` line with the venue
 counts it resolved, and the popup banner reports the same thing without any DevTools.
 
 ## Notes
