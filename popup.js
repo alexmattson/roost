@@ -3,6 +3,7 @@
 import { normalize, analyze, dataBounds, listVenues, shortId, UNASSIGNED, DAY } from './lib/analytics.js';
 import { normalizeQuailSales, analyzeQuail } from './lib/quail.js';
 import { reconcile } from './lib/reconcile.js';
+import { planResolution, buildVenueContext, CONFIDENCE } from './lib/resolve.js';
 import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
@@ -26,6 +27,10 @@ const state = {
   venueInfo: { stores: {}, booths: {} },
   quail: null,
   quailSales: [],
+  fixable: [],
+  selected: new Set(),
+  pendingConfirm: null,
+  applying: false,
   venueList: { stores: [], booths: [] },
   itemSort: { key: 'acquired', dir: -1 }
 };
@@ -638,15 +643,124 @@ const FINDING_LABELS = {
   'duplicate-inventory-number': 'Duplicate inventory number'
 };
 
+/* --------------------------------------------------------- resolve flows */
+
+const findingKey = (f, i) => `${f.type}|${(f.item && f.item.id) || (f.quail && f.quail.id) || i}`;
+
+/** Renders the diff a plan would write, so nothing is applied unseen. */
+function planPreview(entry) {
+  return entry.plan.changes
+    .map((c) => `<span class="confirm-change">${esc(c.label)} <b>${esc(c.displayFrom == null ? '—' : String(c.displayFrom))}</b> → <b>${esc(c.display)}</b></span>`)
+    .join(' · ');
+}
+
+function renderFixBar() {
+  const bar = $('#fix-bar');
+  if (!state.fixable.length) { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  if (state.pendingConfirm) {
+    const { entries, label } = state.pendingConfirm;
+    const probable = entries.filter((e) => e.plan.confidence === CONFIDENCE.probable).length;
+    bar.className = 'fix-bar confirm';
+    bar.innerHTML = `
+      <div class="confirm-head">${label}: ${entries.length} item${entries.length === 1 ? '' : 's'} will be updated in Sandpiper</div>
+      <div class="confirm-list">
+        ${entries.map((e) => `<div class="confirm-row">
+            <span class="inv">${esc(e.plan.inv || '—')}</span>
+            <span>${planPreview(e)}</span>
+          </div>`).join('')}
+      </div>
+      <div class="confirm-actions">
+        ${probable ? `<span class="confirm-warn">${probable} of these rest on a probable match, not an exact one.</span>` : '<span class="confirm-warn"></span>'}
+        <button class="fix-btn" id="fix-cancel">Cancel</button>
+        <button class="fix-btn primary" id="fix-apply">${state.applying ? 'Applying…' : `Apply ${entries.length} edit${entries.length === 1 ? '' : 's'}`}</button>
+      </div>`;
+    $('#fix-cancel').onclick = () => { state.pendingConfirm = null; renderFixBar(); };
+    $('#fix-apply').onclick = () => applyPlans(entries);
+    if (state.applying) $('#fix-apply').disabled = true;
+    return;
+  }
+
+  const exact = state.fixable.filter((e) => e.plan.confidence === CONFIDENCE.exact);
+  const chosen = state.fixable.filter((e) => state.selected.has(e.key));
+  bar.className = 'fix-bar';
+  bar.innerHTML = `
+    <span class="count"><b>${state.fixable.length}</b> fixable · <b>${chosen.length}</b> selected</span>
+    <button class="fix-btn link" id="fix-select-all">Select all exact</button>
+    <button class="fix-btn link" id="fix-clear"${chosen.length ? '' : ' disabled'}>Clear</button>
+    <button class="fix-btn" id="fix-selected"${chosen.length ? '' : ' disabled'}>Resolve selected</button>
+    <button class="fix-btn primary" id="fix-all"${exact.length ? '' : ' disabled'}>Resolve all exact (${exact.length})</button>`;
+  $('#fix-select-all').onclick = () => {
+    for (const e of exact) state.selected.add(e.key);
+    renderReconcile();
+  };
+  $('#fix-clear').onclick = () => { state.selected.clear(); renderReconcile(); };
+  $('#fix-selected').onclick = () => confirmPlans(chosen, 'Resolve selected');
+  // "All" deliberately means all *exact* matches; probable pairings must be picked by hand.
+  $('#fix-all').onclick = () => confirmPlans(exact, 'Resolve all exact');
+}
+
+function confirmPlans(entries, label) {
+  if (!entries.length) return;
+  state.pendingConfirm = { entries, label };
+  renderFixBar();
+}
+
+async function applyPlans(entries) {
+  state.applying = true;
+  renderFixBar();
+  try {
+    const res = await send('applyEdits', {
+      plans: entries.map((e) => ({
+        itemId: e.plan.itemId,
+        changes: e.plan.changes.map((c) => ({ field: c.field, to: c.to }))
+      }))
+    });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The edit request failed.');
+
+    const failed = res.results.filter((r) => !r.ok);
+    if (res.items) {
+      state.items = normalize(res.items);
+      state.venueList = listVenues(state.items);
+    }
+    state.selected.clear();
+    state.pendingConfirm = null;
+    banner(
+      failed.length
+        ? `Updated ${int(res.applied)} of ${int(entries.length)}. ${failed.length} failed: ${failed[0].error}`
+        : `Updated ${int(res.applied)} item${res.applied === 1 ? '' : 's'} in Sandpiper.`,
+      failed.length ? 'error' : 'ok'
+    );
+    if (!failed.length) setTimeout(() => banner(''), 3200);
+    render();
+  } catch (e) {
+    banner(e.message, 'error');
+  } finally {
+    state.applying = false;
+    renderFixBar();
+  }
+}
+
 function renderReconcile() {
   if (!state.quailSales.length) {
     $('#kpis-recon').innerHTML = '';
     empty($('#c-findings'), 'No POS data to compare');
     $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
+    state.fixable = [];
+    $('#fix-bar').hidden = true;
     return;
   }
   const r = reconcile(state.items, state.quailSales, { start: state.start, end: state.end });
   state.recon = r;
+
+  // Pair every finding with the edit that would settle it, if one exists.
+  const ctx = buildVenueContext(state.venueInfo);
+  const entries = r.findings.map((f, i) => ({ key: findingKey(f, i), finding: f, plan: planResolution(f, ctx) }));
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  state.fixable = entries.filter((e) => e.plan);
+  // Drop selections whose finding no longer exists after a re-render.
+  for (const key of [...state.selected]) if (!byKey.has(key)) state.selected.delete(key);
 
   const high = r.findings.filter((f) => f.severity === 'high').length;
   $('#kpis-recon').innerHTML = [
@@ -667,17 +781,46 @@ function renderReconcile() {
     colorFor: (row) => (/disagree|unknown|unsold/i.test(row.label) ? PALETTE.red : PALETTE.brass)
   });
 
-  $('#t-findings').innerHTML = table(r.findings, [
-    { title: 'Severity', render: (f) => `<span class="pill ${f.severity}">${f.severity}</span>` },
-    { title: 'What', render: (f) => esc(FINDING_LABELS[f.type] || f.type) },
-    { title: 'When', render: (f) => (f.soldAt ? new Date(f.soldAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—') },
+  $('#t-findings').innerHTML = table(entries, [
+    {
+      title: '',
+      cls: () => 'pick',
+      render: (e) => (e.plan
+        ? `<input type="checkbox" data-key="${esc(e.key)}"${state.selected.has(e.key) ? ' checked' : ''}
+             title="Select for bulk resolve">`
+        : '')
+    },
+    { title: 'Severity', render: (e) => `<span class="pill ${e.finding.severity}">${e.finding.severity}</span>` },
+    { title: 'What', render: (e) => esc(FINDING_LABELS[e.finding.type] || e.finding.type) },
+    { title: 'When', render: (e) => (e.finding.soldAt ? new Date(e.finding.soldAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—') },
     {
       title: 'Detail',
       cls: () => 'wrap',
-      render: (f) => `<div class="finding-detail">${esc(f.detail)}</div>`
-        + (f.note ? `<div class="finding-note">${esc(f.note)}</div>` : '')
+      render: (e) => `<div class="finding-detail">${esc(e.finding.detail)}</div>`
+        + (e.plan ? `<div class="finding-note">Fix: ${esc(e.plan.summary)}</div>`
+                  : (e.finding.note ? `<div class="finding-note">${esc(e.finding.note)}</div>` : ''))
+    },
+    {
+      title: '',
+      cls: () => 'act',
+      render: (e) => (e.plan ? `<button class="fix-btn" data-fix="${esc(e.key)}">Fix</button>` : '')
     }
   ], 'No anomalies in this range — the two systems agree.');
+
+  $$('#t-findings input[type="checkbox"]').forEach((box) => {
+    box.onchange = () => {
+      if (box.checked) state.selected.add(box.dataset.key);
+      else state.selected.delete(box.dataset.key);
+      renderFixBar();
+    };
+  });
+  $$('#t-findings button[data-fix]').forEach((btn) => {
+    btn.onclick = () => {
+      const entry = byKey.get(btn.dataset.fix);
+      if (entry && entry.plan) confirmPlans([entry], 'Resolve one');
+    };
+  });
+  renderFixBar();
 }
 
 /* --------------------------------------------------------------- charts */

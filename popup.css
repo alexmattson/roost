@@ -412,6 +412,51 @@ td.wrap { white-space: normal; max-width: 420px; }
 .table-controls input:focus, .table-controls select:focus { outline: none; border-color: var(--brass-dim); }
 .empty-row { color: var(--faint); padding: 18px; text-align: center; font-size: 12px; }
 
+/* ------------------------------------------------------------ fix flows */
+
+.fix-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
+  background: var(--panel-2); border: 1px solid var(--border);
+}
+.fix-bar .count { font-size: 11.5px; color: var(--muted); margin-right: auto; }
+.fix-bar .count b { color: var(--text); font-weight: 620; }
+.fix-btn {
+  padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--text); font: inherit; font-size: 11.5px;
+  font-weight: 570; cursor: pointer;
+}
+.fix-btn:hover:not([disabled]) { background: var(--btn-hover); }
+.fix-btn[disabled] { opacity: .45; cursor: default; }
+.fix-btn.primary {
+  background: linear-gradient(180deg, #f7c948, #dfa018); color: #221a06;
+  border-color: #b8830f; font-weight: 650;
+}
+.fix-btn.primary:hover:not([disabled]) { filter: brightness(1.07); }
+.fix-btn.danger { border-color: rgba(248,113,113,.5); color: var(--red); }
+.fix-btn.link {
+  border-color: transparent; background: none; color: var(--muted);
+  text-decoration: underline; padding: 4px 4px;
+}
+.fix-btn.link:hover { color: var(--text); background: none; }
+
+.confirm { flex-direction: column; align-items: stretch; gap: 8px; }
+.confirm-head { font-size: 12px; font-weight: 620; }
+.confirm-list {
+  max-height: 168px; overflow: auto; font-size: 11px; display: flex;
+  flex-direction: column; gap: 5px; padding-right: 4px;
+}
+.confirm-row { display: flex; gap: 8px; align-items: baseline; }
+.confirm-row .inv { flex: none; }
+.confirm-change { color: var(--muted); }
+.confirm-change b { color: var(--text); font-weight: 600; }
+.confirm-actions { display: flex; gap: 8px; align-items: center; }
+.confirm-warn { font-size: 11px; color: var(--brass); margin-right: auto; }
+
+td.pick, th.pick { width: 26px; text-align: center; }
+td.act, th.act { width: 46px; text-align: right; }
+input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0; }
+
 /* -------------------------------------------------------------- health */
 
 .note {

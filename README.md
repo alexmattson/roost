@@ -117,6 +117,33 @@ An untagged POS sale and an unrecorded Sandpiper sale at the same price within t
 reported as **one** probable pairing rather than two separate anomalies. Data-quality checks on
 the Sandpiper records themselves sit on the same page, since both are things to act on.
 
+### Resolving anomalies
+
+Where a finding can be settled by correcting Sandpiper, the fix is offered inline. Quail is
+treated as the register of record: it knows what was actually charged and when, so Sandpiper is
+corrected to match it, never the reverse.
+
+| Finding | Fix written |
+| --- | --- |
+| Sold in Quail, still unsold in Sandpiper | sold date, price, commission, card fees, booth and store |
+| Sale price disagrees | sold price |
+| Commission disagrees | commission |
+| Recorded late | sold date corrected to the register time |
+| Untagged POS sale, probable match | aligns date, price and commission — **selection only** |
+
+Three ways to apply: **Fix** on a single row, tick rows and **Resolve selected**, or **Resolve
+all exact**. "All" deliberately means all *exact* matches — a probable pairing rests on a
+heuristic, so it never goes in a bulk action and has to be picked by hand.
+
+Nothing is written without a confirmation step that lists every field with its before and after
+value. Edits are applied one at a time so a partial failure stops somewhere understandable, and
+the local cache is updated in place as each succeeds, so resolved findings disappear
+immediately without a full re-sync.
+
+`POST /api/items/v2/<accountId>/edit` replaces the whole item rather than patching it, so each
+payload starts from the untouched API row with only the planned fields overlaid — that is why
+the raw rows are cached alongside the normalised ones.
+
 ### Stores and booths
 
 Sandpiper stamps a store and booth onto an item **only when it sells** (`inBooth` is unused),

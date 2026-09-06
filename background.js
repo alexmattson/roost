@@ -5,7 +5,7 @@
 // Compared against the manifest version by the popup to detect a stale worker.
 // MV3 caches the service worker: popup files reload on every open, this file does
 // not, so an un-reloaded extension silently runs old logic here.
-const BUILD = '1.2.0';
+const BUILD = '1.3.0';
 
 const API_HOST = 'https://app.sandpiperhq.com';
 const SESSION_COOKIE = 'sandpiper_s';
@@ -209,7 +209,10 @@ async function fetchVenues(authorization, accountId) {
         name: v.name || null,
         storeId: v.storeId || null,
         // Sent as hundredths of a percent: 1500 => 15%.
-        consignmentRate: typeof v.consignmentRate === 'number' ? v.consignmentRate / 10000 : null
+        consignmentRate: typeof v.consignmentRate === 'number' ? v.consignmentRate / 10000 : null,
+        // Quail's own id for this booth, so a POS sale can be mapped back to it.
+        externalId: v.externalId != null ? v.externalId : null,
+        externalService: v.externalService || null
       };
     }
   } else {
@@ -311,6 +314,55 @@ async function fetchQuail(items) {
   };
 }
 
+const editUrl = (accountId) => `${API_HOST}/api/items/v2/${accountId}/edit`;
+
+/**
+ * Applies planned edits to live inventory, one at a time. Sequential on purpose:
+ * a partial failure should stop somewhere understandable rather than leave a
+ * scattered, half-applied batch.
+ *
+ * Each payload is the full item row with the planned fields overlaid, because the
+ * edit endpoint replaces the record rather than patching it.
+ */
+async function applyEdits(plans) {
+  const session = await readSession();
+  const accountId = await resolveAccountId(session);
+  const auth = `Bearer ${session.token}`;
+  const url = editUrl(accountId);
+
+  const cache = await chrome.storage.local.get(STORE.items);
+  const items = cache[STORE.items] || [];
+  const byId = new Map(items.map((r) => [r.id, r]));
+
+  const results = [];
+  for (const plan of plans) {
+    const raw = byId.get(plan.itemId);
+    if (!raw) {
+      results.push({ itemId: plan.itemId, ok: false, error: 'Item is no longer in the local cache.' });
+      continue;
+    }
+    const payload = { ...raw };
+    for (const c of plan.changes || []) payload[c.field] = c.to;
+    // Sandpiper returns these as fractional seconds; send plain integers back.
+    for (const field of ['acquired', 'sold']) {
+      if (typeof payload[field] === 'number') payload[field] = Math.round(payload[field]);
+    }
+    try {
+      await apiRequest(url, auth, { method: 'POST', body: payload });
+      // Keep the cache honest so the dashboard reflects the write immediately.
+      Object.assign(raw, payload);
+      results.push({ itemId: plan.itemId, ok: true });
+    } catch (e) {
+      results.push({ itemId: plan.itemId, ok: false, error: e.message || String(e) });
+    }
+  }
+
+  const applied = results.filter((r) => r.ok).length;
+  if (applied) await chrome.storage.local.set({ [STORE.items]: items });
+  console.log(`[Sandpiper Analytics] applied ${applied}/${plans.length} edit(s)`);
+  return { results, applied, items };
+}
+
 async function fetchItems() {
   const session = await readSession();
   const accountId = await resolveAccountId(session);
@@ -378,6 +430,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         case 'getCache':
           sendResponse({ ok: true, ...(await readCache()) });
           break;
+        case 'applyEdits': {
+          if (!Array.isArray(msg.plans) || !msg.plans.length) {
+            sendResponse({ ok: false, error: 'Nothing to apply.' });
+            break;
+          }
+          sendResponse({ ok: true, ...(await applyEdits(msg.plans)) });
+          break;
+        }
         case 'ping':
           sendResponse({ ok: true, build: BUILD });
           break;
