@@ -32,6 +32,8 @@ const state = {
   pendingConfirm: null,
   applying: false,
   venueList: { stores: [], booths: [] },
+  // Per-mode date ranges, so switching modes never rewrites another mode's window.
+  ranges: {},
   itemSort: { key: 'acquired', dir: -1 }
 };
 
@@ -44,6 +46,9 @@ const MODES = [
     id: 'analyze',
     label: 'Analyze',
     presets: [['30d', '30D'], ['90d', '90D'], ['6m', '6M'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    // Analysis reads best against the whole history; shorter windows are a
+    // deliberate narrowing rather than the starting point.
+    defaultPreset: 'all',
     tabs: [
       ['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'],
       ['catalog', 'Catalog'], ['venues', 'Venues']
@@ -62,6 +67,8 @@ const MODES = [
     id: 'review',
     label: 'Review',
     presets: [['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    // An anomaly does not stop mattering because it is old, so surface all of them.
+    defaultPreset: 'all',
     tabs: [['review', 'Review']]
   },
   {
@@ -73,6 +80,10 @@ const MODES = [
 ];
 
 const modeById = (id) => MODES.find((m) => m.id === id) || MODES[0];
+const defaultPresetFor = (id) => {
+  const mode = modeById(id);
+  return mode.defaultPreset || mode.presets[0][0];
+};
 
 /* --------------------------------------------------------------- helpers */
 
@@ -161,8 +172,15 @@ function selectTab(tabId) {
   repaintCharts();
 }
 
+/** Stashes the range the mode being left was showing. */
+function rememberRange() {
+  if (!state.mode || state.start == null) return;
+  state.ranges[state.mode] = { preset: state.preset, start: state.start, end: state.end };
+}
+
 function selectMode(modeId) {
   const mode = modeById(modeId);
+  rememberRange();
   state.mode = modeId;
   let remembered = null;
   try {
@@ -171,10 +189,21 @@ function selectMode(modeId) {
   } catch (e) { /* nav state is a convenience only */ }
   const valid = mode.tabs.some(([id]) => id === remembered);
   state.tab = valid ? remembered : mode.tabs[0][0];
-  // Keep an explicit custom range; otherwise fall back to this mode's first preset.
-  if (state.preset !== 'custom' && !mode.presets.some(([k]) => k === state.preset)) {
-    applyPreset(mode.defaultPreset || mode.presets[0][0]);
+
+  /* Each mode owns its range. Carrying one across meant Review inherited whatever
+   * Analyze happened to be showing whenever both offered that preset, so a mode's
+   * own default only ever applied by accident. */
+  const saved = state.ranges[modeId];
+  if (saved) {
+    state.preset = saved.preset;
+    state.start = saved.start;
+    state.end = saved.end;
+    $('#from').value = toInput(saved.start);
+    $('#to').value = toInput(saved.end);
+  } else {
+    applyPreset(defaultPresetFor(modeId));
   }
+
   renderModes();
   renderPresets();
   renderTabs();
@@ -1095,7 +1124,8 @@ function loadInto(res) {
   renderVenueSelector();
   state.meta = res.meta || null;
   if (!state.items.length) { showEmptyState(); return false; }
-  if (state.start == null) applyPreset('all');
+  // First paint must honour the restored mode's default, not a fixed range.
+  if (state.start == null) applyPreset(defaultPresetFor(state.mode));
   renderPresets();
   render();
   return true;

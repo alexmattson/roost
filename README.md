@@ -64,9 +64,13 @@ The split is by the kind of question a view answers, not by which system the dat
 | **Records** | Items · POS sales | lookup — "find this specific thing" |
 
 Presets follow the mode: Daily offers Today/7D/30D/This month, Analyze offers 30D through
-All time. Switching modes only changes the range if the current preset isn't offered by the
-new mode, and never overrides a custom range you set by hand. Daily deliberately opens on 30D
-rather than Today, since landing on Today shows an empty screen on any day without a sale.
+All time.
+
+**Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
+switching back restores what that mode was showing, custom ranges included. Defaults on a fresh
+open are All time for Analyze and Review, 30D for Daily, 90D for Records. Daily deliberately
+opens on 30D rather than Today, since landing on Today shows an empty screen on any day without
+a sale.
 
 Your last mode, and the last tab within each mode, are remembered.
 
