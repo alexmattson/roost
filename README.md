@@ -59,7 +59,7 @@ The split is by the kind of question a view answers, not by which system the dat
 | Mode | Tabs | Kind of question |
 | --- | --- | --- |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | aggregate, ranged — "how is the business doing" |
-| **Daily** | Today · Patterns | operational — "what happened, and when do we sell" |
+| **Daily** | *(single page)* | operational — "what happened, and when do we sell" |
 | **Review** | *(single page)* | a task list — "what needs fixing" |
 | **Records** | Items · POS sales | lookup — "find this specific thing" |
 

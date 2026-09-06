@@ -51,7 +51,7 @@ const MODES = [
     // Landing on "Today" shows an empty screen on any day without a sale, so the
     // presets read shortest-first but the mode opens on a window with data in it.
     defaultPreset: '30d',
-    tabs: [['today', 'Today'], ['patterns', 'Patterns']]
+    tabs: [['daily', 'Daily']]
   },
   {
     id: 'review',
@@ -500,11 +500,6 @@ function rentForRange(start, end) {
 }
 
 function renderDaily() {
-  const note2 = $('#quail-note-2');
-  if (note2) {
-    note2.hidden = state.quailSales.length > 0;
-    if (!state.quailSales.length) note2.textContent = 'No point-of-sale data yet.';
-  }
   const note = $('#quail-note');
   if (!state.quailSales.length) {
     note.hidden = false;
