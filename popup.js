@@ -35,6 +35,7 @@ const state = {
   // `ledger`, which is those rows with register truth applied.
   ledger: [],
   ledgerSummary: null,
+  badge: { count: 0, urgent: false },
   fixable: [],
   visibleFixable: [],
   findingsTotal: 0,
@@ -70,8 +71,10 @@ const MODES = [
   {
     id: 'review',
     label: 'Review',
-    presets: [['30d', '30D'], ['month', 'This month'], ['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
-    // An anomaly does not stop mattering because it is old, so surface all of them.
+    /* No range picker at all: reconciliation exists to prove the two systems
+     * agree, and a window can only hide a disagreement that is still live. */
+    presets: [],
+    fullRange: true,
     defaultPreset: 'all',
     tabs: [['review', 'Review']]
   },
@@ -118,7 +121,7 @@ function banner(msg, kind = 'info') {
 
 function applyPreset(preset) {
   state.preset = preset;
-  const bounds = dataBounds(state.items);
+  const bounds = dataBounds(state.ledger.length ? state.ledger : state.items);
   const end = endOfDay(Math.max(Date.now(), bounds.max));
   const now = new Date();
   let start;
@@ -147,8 +150,8 @@ function applyPreset(preset) {
 
 function renderModes() {
   // The anomaly count rides on the Review button so it is visible from any mode.
-  const count = state.findingsTotal || 0;
-  const urgent = (state.recon && state.recon.findings.some((f) => f.severity === 'high')) || false;
+  const count = (state.badge && state.badge.count) || 0;
+  const urgent = (state.badge && state.badge.urgent) || false;
   $('#modes').innerHTML = MODES
     .map((m) => {
       const badge = m.id === 'review' && count
@@ -189,6 +192,7 @@ function selectTab(tabId) {
 /** Stashes the range the mode being left was showing. */
 function rememberRange() {
   if (!state.mode || state.start == null) return;
+  if (modeById(state.mode).fullRange) return;   // nothing was chosen, so nothing to restore
   state.ranges[state.mode] = { preset: state.preset, start: state.start, end: state.end };
 }
 
@@ -207,8 +211,10 @@ function selectMode(modeId) {
   /* Each mode owns its range. Carrying one across meant Review inherited whatever
    * Analyze happened to be showing whenever both offered that preset, so a mode's
    * own default only ever applied by accident. */
-  const saved = state.ranges[modeId];
-  if (saved) {
+  const saved = mode.fullRange ? null : state.ranges[modeId];
+  if (mode.fullRange) {
+    applyPreset('all');
+  } else if (saved) {
     state.preset = saved.preset;
     state.start = saved.start;
     state.end = saved.end;
@@ -231,7 +237,15 @@ function repaintCharts() {
   renderPosCharts();
 }
 
+function renderRangeControls() {
+  const full = !!modeById(state.mode).fullRange;
+  $('#presets').hidden = full;
+  document.querySelector('.custom-range').hidden = full;
+  $('#range-note').hidden = !full;
+}
+
 function renderPresets() {
+  renderRangeControls();
   $('#presets').innerHTML = modeById(state.mode).presets
     .map(([k, label]) => `<button class="chip ${state.preset === k ? 'active' : ''}" data-preset="${k}">${label}</button>`)
     .join('');
@@ -438,6 +452,19 @@ function rebuildLedger() {
   const built = buildLedger(state.items, state.quailSales, buildVenueContext(state.venueInfo));
   state.ledger = built.items;
   state.ledgerSummary = built.summary;
+
+  /* The badge counts what Review will actually show, which is always everything.
+   * Deriving it from the current range made it read 1 while Analyze was narrowed
+   * to today and 7 the moment you clicked through. Range-independent, so this is
+   * computed once per sync rather than on every render. */
+  const bounds = dataBounds(state.ledger.length ? state.ledger : state.items);
+  const full = state.quailSales.length
+    ? reconcile(state.items, state.quailSales, { start: bounds.min, end: Math.max(Date.now(), bounds.max) })
+    : { findings: [] };
+  state.badge = {
+    count: full.findings.length,
+    urgent: full.findings.some((f) => f.severity === 'high')
+  };
 }
 
 /* ---------------------------------------------------------------- venues */

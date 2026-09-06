@@ -228,6 +228,11 @@ body.expanded .table-scroll { max-height: none; }
 }
 .custom-range input:focus { outline: none; border-color: var(--brass-dim); }
 .dash { color: var(--faint); font-size: 11px; }
+.range-note {
+  font-size: 11px; color: var(--muted); line-height: 1.45;
+  flex: 1 1 100%; max-width: 100%;
+}
+.chips[hidden], .custom-range[hidden] { display: none; }
 
 /* --------------------------------------------------------------- modes */
 

@@ -58,6 +58,9 @@
       <span class="dash">→</span>
       <input type="date" id="to" aria-label="To date">
     </div>
+    <span class="range-note" id="range-note" hidden>Compares Sandpiper's inventory records against
+      Quail's point-of-sale records, joined on inventory number. Neither side is authoritative alone:
+      Quail knows what actually rang up and when, Sandpiper knows cost and intended price.</span>
   </div>
 
   <nav class="tabs" id="tabs"></nav>
@@ -244,11 +247,6 @@
 
 
     <section class="tab-panel" data-panel="review">
-      <div class="note">
-        Compares Sandpiper's inventory records against Quail's point-of-sale records,
-        joined on inventory number. Neither side is authoritative alone: Quail knows what
-        actually rang up and when, Sandpiper knows cost and intended price.
-      </div>
       <div class="kpi-grid" id="kpis-recon"></div>
       <div class="grid-2">
         <div class="card">

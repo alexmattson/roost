@@ -67,6 +67,10 @@ The split is by the kind of question a view answers, not by which system the dat
 
 Presets follow the mode: Analyze offers Today through All time, Records only the longer windows.
 
+**Review has no date picker.** It always covers everything: reconciliation exists to prove the
+two systems agree, and a window can only hide a disagreement that is still live. The anomaly
+badge counts over that same full range, so it never disagrees with the tab it points at.
+
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
 switching back restores what that mode was showing, custom ranges included. Defaults on a fresh
 open are All time for Analyze and Review, 90D for Records.
