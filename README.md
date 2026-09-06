@@ -96,7 +96,8 @@ Two things Quail knows that Sandpiper cannot:
   hours later and in batches (76% of sampled sales land within two minutes of another). Quail's
   timestamps are the real register times, which is what makes the **Daily** tab meaningful —
   daily takings including dead days, day of week averaged per occurrence, hour of day, basket
-  size and payment mix.
+  size and payment mix. The weekday and hour charts each carry their own **$ / Units** toggle,
+  and either way the tooltip reports both figures.
 - **Booth rent.** A fixed monthly cost Sandpiper has no field for, so every Sandpiper profit
   figure is overstated by it. The Daily tab reports takings after commission *and* rent. Rent is
   prorated to the elapsed part of the window — charging a full month against a three-day-old

@@ -22,6 +22,9 @@ const state = {
   end: null,
   stats: null,
   flowMode: 'money',
+  // Each of these charts keeps its own $/units choice.
+  dowMode: 'money',
+  hourMode: 'units',
   venue: { kind: 'all', id: null },
   venueNames: {},
   venueInfo: { stores: {}, booths: {} },
@@ -578,25 +581,8 @@ function renderDaily() {
   });
   legend($('#l-daily'), dailySeries);
 
-  barChart($('#c-dow'), {
-    labels: q.dayOfWeek.map((d) => d.label),
-    series: [{ name: 'Avg takings', color: PALETTE.brass, values: q.dayOfWeek.map((d) => d.avgGross) }],
-    height: 170,
-    tipFormat: (v, ser, i) => `${money(v)} avg · ${int(q.dayOfWeek[i].units)} items over ${q.dayOfWeek[i].occurrences} ${q.dayOfWeek[i].label}s`
-  });
-
-  const active = q.hours.filter((h) => h.units > 0);
-  const lo = active.length ? Math.max(0, active[0].hour - 1) : 8;
-  const hi = active.length ? Math.min(23, active[active.length - 1].hour + 1) : 20;
-  const window = q.hours.slice(lo, hi + 1);
-  barChart($('#c-hour'), {
-    labels: window.map((h) => h.label),
-    series: [{ name: 'Items', color: PALETTE.purple, values: window.map((h) => h.units) }],
-    height: 170,
-    integerY: true,
-    yFormat: (v) => int(v),
-    tipFormat: (v, ser, i) => `${int(v)} items · ${money(window[i].gross)}`
-  });
+  renderDowChart(q);
+  renderHourChart(q);
 
   donut($('#c-methods'), {
     height: 158,
@@ -656,6 +642,52 @@ function renderPosLedger() {
     { title: 'Txn', num: true, render: (r) => (r.transactionId == null ? '—' : String(r.transactionId)) }
   ], 'No POS sales in this range')
     + (rows.length > shown.length ? `<div class="empty-row">Showing first ${shown.length} of ${rows.length}</div>` : '');
+}
+
+/** Weekday performance, averaged per occurrence so a partial range can't skew it. */
+function renderDowChart(q) {
+  const asMoney = state.dowMode === 'money';
+  barChart($('#c-dow'), {
+    labels: q.dayOfWeek.map((d) => d.label),
+    series: [{
+      name: asMoney ? 'Avg takings' : 'Avg items',
+      color: PALETTE.brass,
+      values: q.dayOfWeek.map((d) => (asMoney ? d.avgGross : d.avgUnits))
+    }],
+    height: 170,
+    // Averages per weekday are usually fractional, so integer ticks would lie.
+    yFormat: asMoney ? (v) => money(v, { compact: true }) : (v) => (v >= 10 ? int(v) : v.toFixed(1)),
+    tipFormat: (v, ser, i) => {
+      const d = q.dayOfWeek[i];
+      const each = `over ${d.occurrences} × ${d.label}`;   // "4 Thus" read badly
+      return asMoney
+        ? `${money(d.avgGross)} avg · ${d.avgUnits.toFixed(1)} items avg ${each}`
+        : `${d.avgUnits.toFixed(1)} items avg · ${money(d.avgGross)} avg ${each}`;
+    }
+  });
+}
+
+/** Hour of day, clipped to the hours that actually saw trade. */
+function renderHourChart(q) {
+  const asMoney = state.hourMode === 'money';
+  const active = q.hours.filter((h) => h.units > 0);
+  const lo = active.length ? Math.max(0, active[0].hour - 1) : 8;
+  const hi = active.length ? Math.min(23, active[active.length - 1].hour + 1) : 20;
+  const window = q.hours.slice(lo, hi + 1);
+  barChart($('#c-hour'), {
+    labels: window.map((h) => h.label),
+    series: [{
+      name: asMoney ? 'Takings' : 'Items',
+      color: PALETTE.purple,
+      values: window.map((h) => (asMoney ? h.gross : h.units))
+    }],
+    height: 170,
+    integerY: !asMoney,
+    yFormat: asMoney ? (v) => money(v, { compact: true }) : (v) => int(v),
+    tipFormat: (v, ser, i) => (asMoney
+      ? `${money(window[i].gross)} · ${int(window[i].units)} items`
+      : `${int(window[i].units)} items · ${money(window[i].gross)}`)
+  });
 }
 
 /* ----------------------------------------------------------- reconciliation */
@@ -1209,13 +1241,18 @@ async function init() {
     if (state.stats) render();
   };
 
-  $$('#flow-mode button').forEach((btn) => {
-    btn.onclick = () => {
-      state.flowMode = btn.dataset.mode;
-      $$('#flow-mode button').forEach((b) => b.classList.toggle('active', b === btn));
-      if (state.stats) renderFlowChart(state.stats);
-    };
-  });
+  const wireToggle = (id, key, redraw) => {
+    $$(`#${id} button`).forEach((btn) => {
+      btn.onclick = () => {
+        state[key] = btn.dataset.mode;
+        $$(`#${id} button`).forEach((b) => b.classList.toggle('active', b === btn));
+        redraw();
+      };
+    });
+  };
+  wireToggle('flow-mode', 'flowMode', () => { if (state.stats) renderFlowChart(state.stats); });
+  wireToggle('dow-mode', 'dowMode', () => { if (state.quailStats) renderDowChart(state.quailStats); });
+  wireToggle('hour-mode', 'hourMode', () => { if (state.quailStats) renderHourChart(state.quailStats); });
   $('#venue').onchange = () => {
     const v = $('#venue').value;
     state.venue = v === 'all'

@@ -214,11 +214,23 @@
       </div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-head"><h2>By day of week</h2><span class="hint">Avg per occurrence</span></div>
+          <div class="card-head">
+            <h2>By day of week</h2>
+            <div class="toggle" id="dow-mode" title="Averaged per occurrence of that weekday">
+              <button data-mode="money" class="active">$</button>
+              <button data-mode="units">Units</button>
+            </div>
+          </div>
           <div class="chart-box" id="c-dow"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>By hour</h2><span class="hint">Items sold</span></div>
+          <div class="card-head">
+            <h2>By hour</h2>
+            <div class="toggle" id="hour-mode" title="Totals for each hour of the day">
+              <button data-mode="money">$</button>
+              <button data-mode="units" class="active">Units</button>
+            </div>
+          </div>
           <div class="chart-box" id="c-hour"></div>
         </div>
       </div>
