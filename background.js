@@ -5,14 +5,25 @@
 // Compared against the manifest version by the popup to detect a stale worker.
 // MV3 caches the service worker: popup files reload on every open, this file does
 // not, so an un-reloaded extension silently runs old logic here.
-const BUILD = '1.1.0';
+const BUILD = '1.2.0';
 
 const API_HOST = 'https://app.sandpiperhq.com';
 const SESSION_COOKIE = 'sandpiper_s';
 const USER_COOKIE = 'sandpiper_u';
 const PERMISSIONS_CLAIM = '@app-claim/@sandpiper/permissions';
 
-const STORE = { items: 'sp_items', meta: 'sp_meta', account: 'sp_account', venues: 'sp_venues' };
+const STORE = {
+  items: 'sp_items', meta: 'sp_meta', account: 'sp_account', venues: 'sp_venues', quail: 'sp_quail'
+};
+
+/* Quail is the POS behind the stores Sandpiper's stock sells through. It runs on
+ * a separate domain with its own session: the app sends
+ * `Authorization: Basic base64(<vendor email>:<session id>)`, both halves of
+ * which are readable from its cookies. */
+const QUAIL_HOST = 'https://vendor.quailhq.com';
+const QUAIL_EMAIL_COOKIE = 'QUAIL_VENDOR_EMAIL';
+const QUAIL_SESSION_COOKIE = 'QUAIL_VENDOR_SESSION';
+const MAX_RENT_MONTHS = 36;
 
 function b64urlDecode(part) {
   const pad = part.replace(/-/g, '+').replace(/_/g, '/');
@@ -29,9 +40,9 @@ function decodeJwt(token) {
   return JSON.parse(b64urlDecode(parts[1]));
 }
 
-async function getCookie(name) {
+async function getCookie(name, url = API_HOST) {
   try {
-    const c = await chrome.cookies.get({ url: API_HOST, name });
+    const c = await chrome.cookies.get({ url, name });
     return c && c.value ? c.value : null;
   } catch (e) {
     return null;
@@ -83,8 +94,8 @@ const ITEMS_BODY = { filters: [], orderBy: 'ACQUIRED', reverse: true };
 const itemsUrl = (accountId) => `${API_HOST}/api/items/v2/${accountId}/items?from=0&to=10000000`;
 
 /** Primary path: request straight from the service worker using the session cookie + bearer token. */
-async function requestDirect(url, token, { method = 'GET', body = null } = {}) {
-  const headers = { Accept: 'application/json', authorization: `Bearer ${token}` };
+async function requestDirect(url, authorization, { method = 'GET', body = null } = {}) {
+  const headers = { Accept: 'application/json', authorization };
   if (body) headers['content-type'] = 'application/json';
   const res = await fetch(url, {
     method,
@@ -104,19 +115,20 @@ async function requestDirect(url, token, { method = 'GET', body = null } = {}) {
  * Fallback: run the same request inside an open Sandpiper tab, so it goes out
  * same-origin. Used only if the direct call fails (e.g. the API checks Origin).
  */
-async function requestViaPage(url, token, { method = 'GET', body = null } = {}) {
-  const tabs = await chrome.tabs.query({ url: `${API_HOST}/*` });
+async function requestViaPage(url, authorization, { method = 'GET', body = null } = {}) {
+  const origin = new URL(url).origin;
+  const tabs = await chrome.tabs.query({ url: `${origin}/*` });
   if (!tabs.length) {
-    const err = new Error('Open a tab on app.sandpiperhq.com and try again.');
+    const err = new Error(`Open a tab on ${new URL(url).hostname} and try again.`);
     err.code = 'NO_TAB';
     throw err;
   }
   const [injection] = await chrome.scripting.executeScript({
     target: { tabId: tabs[0].id },
-    args: [url, token, method, body],
-    func: async (target, bearer, verb, payload) => {
+    args: [url, authorization, method, body],
+    func: async (target, auth, verb, payload) => {
       try {
-        const headers = { Accept: 'application/json', authorization: `Bearer ${bearer}` };
+        const headers = { Accept: 'application/json', authorization: auth };
         if (payload) headers['content-type'] = 'application/json';
         const r = await fetch(target, {
           method: verb,
@@ -136,14 +148,14 @@ async function requestViaPage(url, token, { method = 'GET', body = null } = {}) 
   return result.data;
 }
 
-async function apiRequest(url, token, init) {
+async function apiRequest(url, authorization, init) {
   try {
-    return await requestDirect(url, token, init);
+    return await requestDirect(url, authorization, init);
   } catch (directError) {
     // A 401/403 usually means the session really is bad — but it can also be an
     // Origin check, so give the in-page path one shot before giving up.
     try {
-      return await requestViaPage(url, token, init);
+      return await requestViaPage(url, authorization, init);
     } catch (pageError) {
       if (directError.status === 401 || directError.status === 403) {
         // Name the path: a 403 here can mean an expired session OR a resource this
@@ -172,14 +184,14 @@ const asArray = (payload) => (Array.isArray(payload) ? payload : payload ? [payl
  * account. Passing a store or booth id here returns 403.
  * Cosmetic, so a failure must never sink an otherwise good item sync.
  */
-async function fetchVenues(token, accountId) {
+async function fetchVenues(authorization, accountId) {
   const stores = {};
   const booths = {};
   const errors = [];
 
   const [storeRes, boothRes] = await Promise.allSettled([
-    apiRequest(`${API_HOST}/api/stores/${accountId}`, token),
-    apiRequest(`${API_HOST}/api/booths/${accountId}`, token)
+    apiRequest(`${API_HOST}/api/stores/${accountId}`, authorization),
+    apiRequest(`${API_HOST}/api/booths/${accountId}`, authorization)
   ]);
 
   if (storeRes.status === 'fulfilled') {
@@ -209,11 +221,106 @@ async function fetchVenues(token, accountId) {
   return { stores, booths, errors, fetchedAt: Date.now() };
 }
 
+async function readQuailSession() {
+  const rawEmail = await getCookie(QUAIL_EMAIL_COOKIE, QUAIL_HOST);
+  const session = await getCookie(QUAIL_SESSION_COOKIE, QUAIL_HOST);
+  if (!rawEmail || !session) {
+    const err = new Error('Not signed in to vendor.quailhq.com — open it, sign in, then fetch again.');
+    err.code = 'NO_QUAIL_SESSION';
+    throw err;
+  }
+  const email = decodeURIComponent(rawEmail);
+  return { email, session, authorization: `Basic ${btoa(`${email}:${session}`)}` };
+}
+
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Calendar months spanned by [from, to], as {start,end} date strings. */
+function monthsBetween(from, to) {
+  const out = [];
+  const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+  while (cursor <= to && out.length < MAX_RENT_MONTHS) {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+    out.push({ key: `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}`, start: ymd(first), end: ymd(last) });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return out;
+}
+
+/**
+ * Pulls POS sales, booth terms, rent and Quail's own monthly statement.
+ * The statement totals are kept so the dashboard can check its arithmetic
+ * against Quail's rather than just trusting the line items.
+ */
+async function fetchQuail(items) {
+  const q = await readQuailSession();
+  const auth = q.authorization;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
+  const tzParam = encodeURIComponent(tz);
+
+  // Cover everything Sandpiper knows about, capped so the month loop stays bounded.
+  const stamps = items
+    .map((i) => Number(i.acquired) || 0)
+    .filter(Boolean)
+    .map((s) => s * 1000);
+  const earliest = stamps.length ? new Date(Math.min(...stamps)) : new Date(Date.now() - 365 * 86400000);
+  const floor = new Date(Date.now() - MAX_RENT_MONTHS * 31 * 86400000);
+  const from = earliest > floor ? earliest : floor;
+  const to = new Date(Date.now() + 86400000);
+  const start = ymd(from);
+  const end = ymd(to);
+
+  const errors = [];
+  const booths = await apiRequest(
+    `${QUAIL_HOST}/api/portal/booths2?start=${start}&end=${end}&tz=${tzParam}`, auth
+  );
+  const boothList = Array.isArray(booths) ? booths : [];
+
+  const sales = [];
+  const rent = [];
+  const statements = [];
+  const months = monthsBetween(from, to);
+
+  for (const booth of boothList) {
+    const id = booth.boothId;
+    try {
+      const rows = await apiRequest(
+        `${QUAIL_HOST}/api/portal/booth-items?start=${start}&end=${end}&tz=${tzParam}&b=${id}`, auth
+      );
+      if (Array.isArray(rows)) sales.push(...rows);
+    } catch (e) {
+      errors.push(`booth ${id} items: ${e.message}`);
+    }
+
+    // Rent and the official statement are month-scoped, so they need one call each.
+    const perMonth = await Promise.allSettled(months.flatMap((m) => [
+      apiRequest(`${QUAIL_HOST}/api/portal/rent?booth=${id}&start=${m.start}&end=${m.end}&tz=${tzParam}`, auth)
+        .then((v) => ({ kind: 'rent', boothId: id, month: m.key, cents: Math.round(Number(v) || 0) })),
+      apiRequest(`${QUAIL_HOST}/api/portal/booth-summary4?booth=${id}&start=${m.start}&end=${m.end}&tz=${tzParam}`, auth)
+        .then((v) => ({ kind: 'statement', boothId: id, month: m.key, ...(v || {}) }))
+    ]));
+    for (const r of perMonth) {
+      if (r.status !== 'fulfilled') { errors.push(String(r.reason && r.reason.message || r.reason)); continue; }
+      if (r.value.kind === 'rent') rent.push(r.value);
+      else statements.push(r.value);
+    }
+  }
+
+  console.log(`[Sandpiper Analytics] quail: ${sales.length} sale(s) across ${boothList.length} booth(s), `
+    + `${months.length} month(s) of rent` + (errors.length ? `, ${errors.length} error(s)` : ''));
+
+  return {
+    sales, booths: boothList, rent, statements, errors,
+    email: q.email, tz, range: { start, end }, fetchedAt: Date.now()
+  };
+}
+
 async function fetchItems() {
   const session = await readSession();
   const accountId = await resolveAccountId(session);
 
-  const json = await apiRequest(itemsUrl(accountId), session.token, { method: 'POST', body: ITEMS_BODY });
+  const json = await apiRequest(itemsUrl(accountId), `Bearer ${session.token}`, { method: 'POST', body: ITEMS_BODY });
   const items = Array.isArray(json) ? json : json.items || json.data || json.results || [];
   if (!Array.isArray(items)) throw new Error('Unexpected response shape from the Sandpiper API.');
 
@@ -221,33 +328,48 @@ async function fetchItems() {
   // report it so the popup can say something rather than silently showing ids.
   let venues = { stores: {}, booths: {}, errors: [] };
   try {
-    venues = await fetchVenues(session.token, accountId);
+    venues = await fetchVenues(`Bearer ${session.token}`, accountId);
   } catch (e) {
     venues.errors = [e.message || String(e)];
+  }
+
+  // Quail is optional: a missing POS session must not block an inventory sync.
+  let quail = null;
+  let quailError = null;
+  try {
+    quail = await fetchQuail(items);
+  } catch (e) {
+    quailError = e.message || String(e);
+    console.log(`[Sandpiper Analytics] quail unavailable: ${quailError}`);
   }
 
   const meta = {
     fetchedAt: Date.now(),
     count: items.length,
+    quailError,
+    quailSales: quail ? quail.sales.length : 0,
     account: accountId,
     accounts: session.accounts,
     user: session.username
   };
-  await chrome.storage.local.set({
+  const payload = {
     [STORE.items]: items,
     [STORE.meta]: meta,
     [STORE.venues]: venues,
     [STORE.account]: accountId
-  });
-  return { items, meta, venues };
+  };
+  if (quail) payload[STORE.quail] = quail;
+  await chrome.storage.local.set(payload);
+  return { items, meta, venues, quail };
 }
 
 async function readCache() {
-  const data = await chrome.storage.local.get([STORE.items, STORE.meta, STORE.venues]);
+  const data = await chrome.storage.local.get([STORE.items, STORE.meta, STORE.venues, STORE.quail]);
   return {
     items: data[STORE.items] || null,
     meta: data[STORE.meta] || null,
-    venues: data[STORE.venues] || { stores: {}, booths: {} }
+    venues: data[STORE.venues] || { stores: {}, booths: {} },
+    quail: data[STORE.quail] || null
   };
 }
 
