@@ -101,6 +101,7 @@ const fromInput = (v) => { const [y, m, d] = v.split('-').map(Number); return ne
 const signClass = (v) => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const days = (n) => (n == null ? '—' : `${Math.round(n)}d`);
+const plural = (n, one, many) => `${int(n)} ${n === 1 ? one : many || one + 's'}`;
 
 function relativeTime(t) {
   const diff = Date.now() - t;
@@ -264,12 +265,43 @@ function renderPresets() {
 
 /* ------------------------------------------------------------------ KPIs */
 
+/* ------------------------------------------------------------ KPI grammar */
+
+/* The colour bar means one thing everywhere: how this number is doing.
+ *   good  — healthy, nothing to do
+ *   watch — worth an eye
+ *   alert — needs attention
+ *   (none) — a descriptive figure with no better or worse direction, e.g. a count
+ * It previously mixed three encodings at once — category, sign and status — so a
+ * red bar could mean "you are losing money" or just "this card is about costs".
+ */
+const STATUS_COLOR = { good: PALETTE.green, watch: PALETTE.brass, alert: PALETTE.red };
+
+/** Higher is better. */
+const bandUp = (v, good, watch) =>
+  (v == null || !isFinite(v) ? null : v >= good ? 'good' : v >= watch ? 'watch' : 'alert');
+/** Lower is better. */
+const bandDown = (v, good, watch) =>
+  (v == null || !isFinite(v) ? null : v <= good ? 'good' : v <= watch ? 'watch' : 'alert');
+/** In the black or not. */
+const bandSign = (v) => (v == null || !isFinite(v) ? null : v >= 0 ? 'good' : 'alert');
+
+/** "▲ 23% vs prior 30 days", or nothing when there is no honest comparison. */
+function trend(current, prior, { hasData = true } = {}) {
+  if (!hasData || prior == null || prior === 0 || !isFinite(prior)) return '';
+  const change = (current - prior) / Math.abs(prior);
+  if (!isFinite(change) || Math.abs(change) < 0.005) return '<span class="trend flat">no change</span>';
+  const up = change > 0;
+  return `<span class="trend ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${pct(Math.abs(change), 0)}</span>`;
+}
+
 function kpi(label, value, sub, opts = {}) {
   const cls = opts.sign ? signClass(opts.signValue != null ? opts.signValue : 0) : '';
   // A compact label like "$4.8k" can hide up to $200, which is no use when two
   // cards are meant to be compared, so the exact figure is always one hover away.
   const exact = opts.exact != null ? ` title="${esc(opts.exact)}"` : '';
-  return `<div class="kpi" style="--accent:${opts.accent || 'transparent'}">
+  const accent = opts.status ? STATUS_COLOR[opts.status] : opts.accent;
+  return `<div class="kpi${opts.status ? ' is-' + opts.status : ''}" style="--accent:${accent || 'transparent'}">
     <div class="kpi-label">${label}</div>
     <div class="kpi-value ${cls}"${exact}>${value}</div>
     <div class="kpi-sub">${sub || '&nbsp;'}</div>
@@ -280,76 +312,124 @@ function kpi(label, value, sub, opts = {}) {
 function renderKpis(s) {
   const rentInfo = state.rentInfo || { cents: 0, full: 0, partial: false };
   const q = state.quailStats;
-  const bottom = s.sales.profit - rentInfo.cents;
-  const rentCover = rentInfo.cents > 0 ? s.sales.profit / rentInfo.cents : null;
+  const prev = s.previous || { hasData: false };
+  const grossProfit = s.sales.profit;
+  const netProfit = grossProfit - rentInfo.cents;
+  const rentCover = rentInfo.cents > 0 ? grossProfit / rentInfo.cents : null;
+  const staleShare = s.inventory.units ? s.inventory.stale / s.inventory.units : 0;
+  /* Only label the comparison when there is one; an empty prior window used to
+   * leave a bare "vs prior period" hanging off a figure with nothing behind it. */
+  const withTrend = (text, current, prior) => {
+    const t = trend(current, prior, prev);
+    return t ? `${text} ${t} vs prior` : text;
+  };
 
-  /* One ladder, top to bottom: what came in, what the store took, what the stock
-   * cost, what is actually left. Every figure reads from the same ledger. */
+  /* Standard consignment-retail vocabulary, used identically everywhere:
+   * gross sales -> commission -> net payout -> cost of goods -> gross profit
+   * -> booth rent -> net profit. Each card names the deduction it just made. */
   $('#kpis').innerHTML = [
-    kpi('Takings', money(s.sales.gross, { compact: true }),
-      `${int(s.counts.sold)} sold in range`,
-      { accent: PALETTE.blue, exact: money(s.sales.gross) }),
-    kpi('After commission', money(s.sales.net, { compact: true }),
-      `less ${money(s.sales.commissions, { compact: true })} commission`,
+    kpi('Gross sales', money(s.sales.gross, { compact: true }),
+      withTrend(plural(s.counts.sold, 'sale'), s.sales.gross, prev.gross),
+      { exact: money(s.sales.gross) }),
+    kpi('Net payout', money(s.sales.net, { compact: true }),
+      withTrend(`less ${money(s.sales.commissions, { compact: true })} commission`, s.sales.net, prev.net),
       { exact: money(s.sales.net) }),
-    kpi('After cost of goods', money(s.sales.profit, { compact: true }),
-      `less ${money(s.sales.cogs, { compact: true })} of stock · ${pct(s.sales.margin)} margin`,
-      { sign: true, signValue: s.sales.profit, exact: money(s.sales.profit) }),
-    kpi('Bottom line', money(bottom, { compact: true }),
+    kpi('Gross profit', money(grossProfit, { compact: true }),
+      `less ${money(s.sales.cogs, { compact: true })} cost of goods · ${pct(s.sales.margin)} margin`,
+      { status: bandSign(grossProfit), exact: money(grossProfit) }),
+    kpi('Net profit', money(netProfit, { compact: true }),
       rentInfo.partial
         ? `less rent ${money(rentInfo.cents, { compact: true })} of ${money(rentInfo.full, { compact: true })} so far`
-        : `less rent ${money(rentInfo.cents, { compact: true })}`,
-      { accent: bottom >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: bottom,
-        exact: money(bottom) }),
+        : `less ${money(rentInfo.cents, { compact: true })} booth rent`,
+      { status: bandSign(netProfit), exact: money(netProfit) }),
 
-    kpi('Inventory at cost', money(s.inventory.cost, { compact: true }),
-      `${int(s.inventory.units)} items on hand`,
-      { accent: PALETTE.purple, exact: money(s.inventory.cost) }),
+    kpi('Stock at cost', money(s.inventory.cost, { compact: true }),
+      plural(s.inventory.units, 'item') + ' unsold',
+      { exact: money(s.inventory.cost) }),
+    kpi('Asking value', money(s.inventory.ask, { compact: true }),
+      `what that stock is priced at`,
+      { exact: money(s.inventory.ask) }),
     kpi('Potential profit', money(s.inventory.potentialProfit, { compact: true }),
-      `on ${money(s.inventory.ask, { compact: true })} of asking price`,
-      { accent: PALETTE.brass, sign: true, signValue: s.inventory.potentialProfit,
+      'if it all sells at asking',
+      { status: s.inventory.units ? bandSign(s.inventory.potentialProfit) : null,
         exact: money(s.inventory.potentialProfit) }),
-    kpi('Spent on buying', money(s.buying.spend, { compact: true }),
-      `${int(s.buying.units)} acquired · avg ${money(s.buying.avgCost, { compact: true })}`,
+    kpi('Spent on stock', money(s.buying.spend, { compact: true }),
+      withTrend(plural(s.buying.units, 'item'), s.buying.spend, prev.spend),
       { exact: money(s.buying.spend) }),
-    kpi('Sell-through', pct(s.velocity.sellThrough),
-      `${int(s.counts.sold)} of ${int(s.counts.sold + s.counts.onHand)} available`),
 
     kpi('Rent covered', pct(rentCover, 0),
-      rentInfo.partial ? 'profit against rent so far' : 'profit against rent for this window',
-      { accent: rentCover >= 1 ? PALETTE.green : PALETTE.brass }),
-    kpi('Selling days', q ? `${int(q.activeDays)} / ${int(q.totalDays)}` : '—',
-      q && q.activeDays ? `avg ${money(q.avgPerActiveDay, { compact: true })} per selling day` : 'from the register'),
-    kpi('Avg basket', q ? money(q.avgBasketValue, { compact: true }) : '—',
-      q ? `${q.avgBasketUnits.toFixed(2)} items · ${pct(q.multiItemRate, 0)} multi-item` : ''),
+      rentInfo.partial ? 'gross profit against rent so far' : 'gross profit against booth rent',
+      { status: bandUp(rentCover, 1, 0.6) }),
+    kpi('Sell-through', pct(s.velocity.sellThrough),
+      `${int(s.counts.sold)} of ${int(s.counts.sold + s.counts.onHand)} available`,
+      { status: s.counts.sold + s.counts.onHand ? bandUp(s.velocity.sellThrough, 0.4, 0.2) : null }),
+    kpi('Aged over 180 days', int(s.inventory.stale),
+      s.inventory.stale ? `${money(s.inventory.staleCost, { compact: true })} tied up` : 'nothing sitting long',
+      { status: s.inventory.units ? bandDown(staleShare, 0.001, 0.2) : null }),
     kpi('Since last sale', q && q.daysSinceLastSale != null ? days(q.daysSinceLastSale) : '—',
-      q && q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '')
+      q && q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'from the register',
+      { status: q ? bandDown(q.daysSinceLastSale, 7, 21) : null })
   ].join('');
 
+  const prevS = s.previous || { hasData: false };
   $('#kpis-sales').innerHTML = [
-    kpi('Gross sales', money(s.sales.gross, { compact: true }), `${int(s.counts.sold)} items`, { accent: PALETTE.blue }),
-    kpi('Commission paid', money(-s.sales.commissions, { compact: true }), `${pct(s.inventory.commissionRate, 1)} of gross`, { accent: PALETTE.red }),
-    kpi('Cost of goods sold', money(-s.sales.cogs, { compact: true }), `avg ${money(s.counts.sold ? s.sales.cogs / s.counts.sold : 0, { compact: true })}/item`),
-    kpi('Net profit', money(s.sales.profit, { compact: true }), `${money(s.sales.avgProfit, { compact: true })} per item`,
-      { accent: s.sales.profit >= 0 ? PALETTE.green : PALETTE.red, sign: true, signValue: s.sales.profit }),
-    kpi('Avg sale price', money(s.sales.avgSale, { compact: true }), `best period ${s.sales.bestMonth ? s.sales.bestMonth.label : '—'}`),
-    kpi('Avg discount', pct(s.sales.discountRate), `${pct(s.sales.fullPriceRate)} sold at full ask`),
-    kpi('Fastest sale', s.lists.fastest.length ? days(s.lists.fastest[0].daysToSell) : '—',
-      s.lists.fastest.length ? esc(s.lists.fastest[0].desc.slice(0, 26)) : ''),
-    kpi('Return on cost', pct(s.sales.roi), `${money(s.sales.net, { compact: true })} net in`)
+    kpi('Gross sales', money(s.sales.gross, { compact: true }),
+      (() => { const t = trend(s.sales.gross, prevS.gross, prevS);
+        return t ? `${plural(s.counts.sold, 'sale')} ${t} vs prior` : plural(s.counts.sold, 'sale'); })(),
+      { exact: money(s.sales.gross) }),
+    kpi('Commission', money(s.sales.commissions, { compact: true }),
+      `${pct(s.inventory.commissionRate, 1)} of gross sales`,
+      { exact: money(s.sales.commissions) }),
+    kpi('Cost of goods', money(s.sales.cogs, { compact: true }),
+      `avg ${money(s.counts.sold ? s.sales.cogs / s.counts.sold : 0, { compact: true })} per item`,
+      { exact: money(s.sales.cogs) }),
+    kpi('Gross profit', money(s.sales.profit, { compact: true }),
+      (() => { const t = trend(s.sales.profit, prevS.profit, prevS);
+        return `${money(s.sales.avgProfit, { compact: true })} per item${t ? ' ' + t + ' vs prior' : ''}`; })(),
+      { status: bandSign(s.sales.profit), exact: money(s.sales.profit) }),
+
+    kpi('Margin', pct(s.sales.margin),
+      'gross profit as a share of sales',
+      { status: s.counts.sold ? bandUp(s.sales.margin, 0.4, 0.2) : null }),
+    kpi('Return on cost', pct(s.sales.roi),
+      'gross profit per $1 of stock',
+      { status: s.counts.sold ? bandUp(s.sales.roi, 1, 0.4) : null }),
+    kpi('Avg sale price', money(s.sales.avgSale, { compact: true }),
+      `best period ${s.sales.bestMonth ? s.sales.bestMonth.label : '—'}`,
+      { exact: money(s.sales.avgSale) }),
+    kpi('Avg discount', pct(s.sales.discountRate),
+      `${pct(s.sales.fullPriceRate)} sold at full asking`,
+      { status: s.counts.sold ? bandDown(s.sales.discountRate, 0.05, 0.15) : null })
   ].join('');
 
+  const staleShareInv = s.inventory.units ? s.inventory.stale / s.inventory.units : 0;
   $('#kpis-inv').innerHTML = [
-    kpi('Items on hand', int(s.inventory.units), `${int(s.counts.unpriced)} without an asking price`, { accent: PALETTE.purple }),
-    kpi('Capital tied up', money(s.inventory.cost, { compact: true }), `avg ${money(s.inventory.units ? s.inventory.cost / s.inventory.units : 0, { compact: true })}/item`),
-    kpi('Retail value', money(s.inventory.ask, { compact: true }), `net of commission ${money(s.inventory.potentialNet, { compact: true })}`, { accent: PALETTE.brass }),
-    kpi('Potential profit', money(s.inventory.potentialProfit, { compact: true }), 'if everything sells at ask',
-      { sign: true, signValue: s.inventory.potentialProfit }),
-    kpi('Median age', days(s.inventory.medianAge), `avg ${days(s.inventory.avgAge)}`),
-    kpi('Aged 180+ days', int(s.inventory.stale), `${money(s.inventory.staleCost, { compact: true })} at cost`,
-      { accent: s.inventory.stale ? PALETTE.red : PALETTE.green }),
-    kpi('Inventory turns', `${s.velocity.turns.toFixed(2)}×`, 'COGS ÷ inventory at cost'),
-    kpi('Days of supply', s.velocity.daysOfSupply ? days(s.velocity.daysOfSupply) : '—', 'at the current sales pace')
+    kpi('Items unsold', int(s.inventory.units),
+      `${plural(s.counts.unpriced, 'item')} without an asking price`,
+      { status: s.counts.unpriced ? 'watch' : null }),
+    kpi('Stock at cost', money(s.inventory.cost, { compact: true }),
+      `avg ${money(s.inventory.units ? s.inventory.cost / s.inventory.units : 0, { compact: true })} per item`,
+      { exact: money(s.inventory.cost) }),
+    kpi('Asking value', money(s.inventory.ask, { compact: true }),
+      `${money(s.inventory.potentialNet, { compact: true })} after commission`,
+      { exact: money(s.inventory.ask) }),
+    kpi('Potential profit', money(s.inventory.potentialProfit, { compact: true }),
+      'if it all sells at asking',
+      { status: s.inventory.units ? bandSign(s.inventory.potentialProfit) : null,
+        exact: money(s.inventory.potentialProfit) }),
+
+    kpi('Median age', days(s.inventory.medianAge),
+      `avg ${days(s.inventory.avgAge)}`,
+      { status: bandDown(s.inventory.medianAge, 90, 180) }),
+    kpi('Aged over 180 days', int(s.inventory.stale),
+      s.inventory.stale ? `${money(s.inventory.staleCost, { compact: true })} tied up` : 'nothing sitting long',
+      { status: s.inventory.units ? bandDown(staleShareInv, 0.001, 0.2) : null }),
+    kpi('Stock turns', `${s.velocity.turns.toFixed(2)}×`,
+      'cost of goods ÷ stock at cost',
+      { status: bandUp(s.velocity.turns, 1, 0.3) }),
+    kpi('Days of supply', s.velocity.daysOfSupply ? days(s.velocity.daysOfSupply) : '—',
+      'at the current sales pace',
+      { status: bandDown(s.velocity.daysOfSupply, 120, 365) })
   ].join('');
 }
 
@@ -393,9 +473,9 @@ function renderTables(s) {
     { title: 'On hand', num: true, render: (r) => int(r.onHand) },
     { title: 'Sold', num: true, render: (r) => int(r.sold) },
     { title: 'Sell-through', num: true, render: (r) => pct(r.sellThrough, 0) },
-    { title: 'Cost held', num: true, render: (r) => money(r.cost, { compact: true }) },
-    { title: 'Ask held', num: true, render: (r) => money(r.ask, { compact: true }) },
-    { title: 'Net rev.', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Stock at cost', num: true, render: (r) => money(r.cost, { compact: true }) },
+    { title: 'Asking value', num: true, render: (r) => money(r.ask, { compact: true }) },
+    { title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Profit', num: true, render: (r) => money(r.profit, { compact: true }), cls: (r) => signClass(r.profit) }
   ], 'No categories');
 }
@@ -529,9 +609,9 @@ function venueRows(rows, kind) {
       render: (r) => `<input class="name-input" data-venue="${r.id}" value="${esc(venueLabel(r.id, kind))}"${r.id === UNASSIGNED ? ' disabled' : ''}>`
     },
     { title: 'Sold', num: true, render: (r) => int(r.units) },
-    { title: 'Gross', num: true, render: (r) => money(r.gross, { compact: true }) },
+    { title: 'Gross sales', num: true, render: (r) => money(r.gross, { compact: true }) },
     { title: 'Commission', num: true, render: (r) => money(-r.commissions, { compact: true }) },
-    { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Profit', num: true, render: (r) => money(r.profit, { compact: true }), cls: (r) => signClass(r.profit) },
     { title: 'Margin', num: true, render: (r) => pct(r.margin, 0) },
     { title: 'Avg sale', num: true, render: (r) => money(r.avgSale, { compact: true }) },
@@ -565,7 +645,7 @@ function renderVenues(s) {
     rows: booths.map((b) => ({
       label: venueLabel(b.id, 'booth'),
       value: b.net,
-      sub: `${b.units} sold · ${money(b.profit)} profit`
+      sub: `${b.units} sold · ${money(b.profit)} gross profit`
     })),
     format: (v) => money(v, { compact: true }),
     colorFor: (r, i) => (r.value < 0 ? PALETTE.red : SERIES_COLORS[i % SERIES_COLORS.length])
@@ -574,7 +654,7 @@ function renderVenues(s) {
   donut($('#c-store-share'), {
     height: 158,
     centerValue: money(stores.reduce((a, v) => a + v.net, 0), { compact: true }),
-    centerLabel: 'net revenue',
+    centerLabel: 'net payout',
     segments: stores.map((v) => ({ label: venueLabel(v.id, 'store'), value: Math.max(0, v.net) })),
     format: (v) => money(v, { compact: true })
   });
@@ -647,7 +727,7 @@ function renderPosCharts() {
   const q = state.quailStats;
   if (!q) return;
 
-  const dailySeries = [{ name: 'Takings', color: PALETTE.blue, values: q.days.map((d) => d.gross) }];
+  const dailySeries = [{ name: 'Gross sales', color: PALETTE.blue, values: q.days.map((d) => d.gross) }];
   barChart($('#c-daily'), {
     labels: q.days.map((d) => d.label),
     series: dailySeries,
@@ -662,7 +742,7 @@ function renderPosCharts() {
   donut($('#c-methods'), {
     height: 158,
     centerValue: money(q.gross, { compact: true }),
-    centerLabel: 'takings',
+    centerLabel: 'gross sales',
     segments: q.methods.map((m) => ({ label: m.method, value: m.gross })),
     format: (v) => money(v, { compact: true })
   });
@@ -671,7 +751,7 @@ function renderPosCharts() {
     { title: 'When', render: (r) => new Date(r.soldAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) },
     { title: 'Item', render: (r) => `<span class="inv">${esc(r.inv || '—')}</span>${esc(r.desc)}`, cls: () => 'name' },
     { title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
-    { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Paid', render: (r) => esc(r.method) }
   ], 'No register sales in this range');
 }
@@ -712,7 +792,7 @@ function renderPosLedger() {
     { title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
     { title: 'Tax', num: true, render: (r) => money(r.tax, { compact: true }) },
     { title: 'Commission', num: true, render: (r) => money(-r.consignment, { compact: true }) },
-    { title: 'Net', num: true, render: (r) => money(r.net, { compact: true }) },
+    { title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
     { title: 'Paid', render: (r) => esc(r.method) },
     { title: 'Txn', num: true, render: (r) => (r.transactionId == null ? '—' : String(r.transactionId)) }
   ], 'No register sales in this range')
@@ -752,7 +832,7 @@ function renderHourChart(q) {
   barChart($('#c-hour'), {
     labels: window.map((h) => h.label),
     series: [{
-      name: asMoney ? 'Takings' : 'Items',
+      name: asMoney ? 'Gross sales' : 'Items',
       color: PALETTE.purple,
       values: window.map((h) => (asMoney ? h.gross : h.units))
     }],
@@ -956,13 +1036,17 @@ function renderReconcile() {
 
   const high = r.findings.filter((f) => f.severity === 'high').length;
   $('#kpis-recon').innerHTML = [
-    kpi('Matched sales', pct(r.totals.matchRate, 0), `${int(r.totals.matched)} of ${int(r.totals.quailSales)} POS sales`,
-      { accent: r.totals.matchRate === 1 ? PALETTE.green : PALETTE.brass }),
+    kpi('Sales matched', pct(r.totals.matchRate, 0),
+      `${int(r.totals.matched)} of ${int(r.totals.quailSales)} register sales`,
+      { status: bandUp(r.totals.matchRate, 1, 0.9) }),
     kpi('Needs attention', int(high), high ? 'high-severity findings' : 'nothing serious',
-      { accent: high ? PALETTE.red : PALETTE.green }),
-    kpi('Gross difference', money(r.totals.grossDelta, { compact: true }), 'Sandpiper minus Quail',
-      { sign: true, signValue: -Math.abs(r.totals.grossDelta) || 0 }),
-    kpi('Total findings', int(r.findings.length), `${int(r.totals.sandpiperSales)} Sandpiper / ${int(r.totals.quailSales)} Quail sales`)
+      { status: high ? 'alert' : 'good' }),
+    kpi('Sales difference', money(r.totals.grossDelta, { compact: true }),
+      'Sandpiper minus the register',
+      { status: bandDown(Math.abs(r.totals.grossDelta), 0, 500), exact: money(r.totals.grossDelta) }),
+    kpi('Total findings', int(r.findings.length),
+      `${int(r.totals.sandpiperSales)} Sandpiper / ${int(r.totals.quailSales)} register sales`,
+      { status: r.findings.length ? 'watch' : 'good' })
   ].join('');
 
   hbar($('#c-findings'), {
@@ -1065,7 +1149,7 @@ function renderFlowChart(s) {
   const series = asMoney
     ? [
       { name: 'Spent on stock', color: PALETTE.purple, values: s.buckets.map((b) => b.spend), alt: acquiredUnits.map((n) => `${int(n)} items`) },
-      { name: 'Net from sales', color: PALETTE.green, values: s.buckets.map((b) => b.net), alt: soldUnits.map((n) => `${int(n)} items`) }
+      { name: 'Net payout', color: PALETTE.green, values: s.buckets.map((b) => b.net), alt: soldUnits.map((n) => `${int(n)} items`) }
     ]
     : [
       { name: 'Acquired', color: PALETTE.purple, values: acquiredUnits, alt: s.buckets.map((b) => money(b.spend, { compact: true })) },
@@ -1087,16 +1171,16 @@ function renderCharts(s) {
 
   // Overview — cumulative
   const cumSeries = [
-    { name: 'Cumulative profit', color: PALETTE.green, values: s.cumulative.map((b) => b.profit) },
-    { name: 'Cumulative net revenue', color: PALETTE.blue, values: s.cumulative.map((b) => b.net) }
+    { name: 'Cumulative gross profit', color: PALETTE.green, values: s.cumulative.map((b) => b.profit) },
+    { name: 'Cumulative net payout', color: PALETTE.blue, values: s.cumulative.map((b) => b.net) }
   ];
   lineChart($('#c-cumulative'), { labels, series: cumSeries, height: 180 });
   legend($('#l-cumulative'), cumSeries);
 
   // Overview — revenue vs cogs
   const revSeries = [
-    { name: 'Net revenue', color: PALETTE.blue, values: s.buckets.map((b) => b.net) },
-    { name: 'Cost of goods sold', color: PALETTE.purple, values: s.buckets.map((b) => b.cogs) }
+    { name: 'Net payout', color: PALETTE.blue, values: s.buckets.map((b) => b.net) },
+    { name: 'Cost of goods', color: PALETTE.purple, values: s.buckets.map((b) => b.cogs) }
   ];
   barChart($('#c-revenue'), { labels, series: revSeries, height: 168 });
   legend($('#l-revenue'), revSeries);
@@ -1118,7 +1202,7 @@ function renderCharts(s) {
   // Sales — profit bars
   barChart($('#c-profit'), {
     labels, height: 180,
-    series: [{ name: 'Net profit', color: PALETTE.green, values: s.buckets.map((b) => b.profit) }]
+    series: [{ name: 'Gross profit', color: PALETTE.green, values: s.buckets.map((b) => b.profit) }]
   });
 
   // Sales — scatter

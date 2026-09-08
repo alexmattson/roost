@@ -73,25 +73,31 @@
     <section class="tab-panel active" data-panel="overview">
       <div class="note" id="quail-note" hidden></div>
       <div class="kpi-grid" id="kpis"></div>
+      <div class="kpi-legend">
+        <span><i style="background:var(--green)"></i>healthy</span>
+        <span><i style="background:var(--brass)"></i>worth watching</span>
+        <span><i style="background:var(--red)"></i>needs attention</span>
+        <span><i style="background:var(--border)"></i>no better or worse direction</span>
+      </div>
       <div class="card">
         <div class="card-head">
-          <h2>Daily takings</h2>
-          <span class="hint">Actual point-of-sale times, including days with no sales</span>
+          <h2>Gross sales by day</h2>
+          <span class="hint">Register times, including days with no sales</span>
         </div>
         <div class="chart-box" id="c-daily"></div>
         <div class="legend-inline" id="l-daily"></div>
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>Cumulative net profit</h2>
-          <span class="hint">Revenue after commission &amp; fees, minus item cost</span>
+          <h2>Cumulative gross profit</h2>
+          <span class="hint">Net payout less cost of goods, running total</span>
         </div>
         <div class="chart-box" id="c-cumulative"></div>
         <div class="legend-inline" id="l-cumulative"></div>
       </div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-head"><h2>Revenue vs. cost of goods</h2></div>
+          <div class="card-head"><h2>Net payout vs. cost of goods</h2></div>
           <div class="chart-box" id="c-revenue"></div>
           <div class="legend-inline" id="l-revenue"></div>
         </div>
@@ -148,7 +154,7 @@
     <section class="tab-panel" data-panel="sales">
       <div class="kpi-grid" id="kpis-sales"></div>
       <div class="card">
-        <div class="card-head"><h2>Net profit by period</h2><span class="hint">Bars below zero are losses</span></div>
+        <div class="card-head"><h2>Gross profit by period</h2><span class="hint">Bars below zero are losses</span></div>
         <div class="chart-box" id="c-profit"></div>
       </div>
       <div class="grid-2">
@@ -177,11 +183,11 @@
       <div class="kpi-grid" id="kpis-inv"></div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-head"><h2>Inventory aging</h2><span class="hint">Capital at cost by age</span></div>
+          <div class="card-head"><h2>Stock aging</h2><span class="hint">Stock at cost by age</span></div>
           <div class="chart-box" id="c-aging"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>Asking-price bands</h2><span class="hint">Units on hand</span></div>
+          <div class="card-head"><h2>Asking-price bands</h2><span class="hint">Items unsold</span></div>
           <div class="chart-box" id="c-bands"></div>
         </div>
       </div>
@@ -191,7 +197,7 @@
           <div id="t-slow"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>Biggest capital bets</h2><span class="hint">Unsold, by cost</span></div>
+          <div class="card-head"><h2>Biggest bets</h2><span class="hint">Unsold, by cost</span></div>
           <div id="t-bets"></div>
         </div>
       </div>
@@ -221,16 +227,16 @@
       </div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-head"><h2>Net revenue by booth</h2></div>
+          <div class="card-head"><h2>Net payout by booth</h2></div>
           <div class="chart-box" id="c-booth-rev"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>Revenue share by store</h2></div>
+          <div class="card-head"><h2>Payout share by store</h2></div>
           <div class="chart-box" id="c-store-share"></div>
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><h2>Net revenue by booth over time</h2><span class="hint">Top 5 booths</span></div>
+        <div class="card-head"><h2>Net payout by booth over time</h2><span class="hint">Top 5 booths</span></div>
         <div class="chart-box" id="c-booth-time"></div>
         <div class="legend-inline" id="l-booth-time"></div>
       </div>

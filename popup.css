@@ -311,6 +311,17 @@ body.expanded .table-scroll { max-height: none; }
 }
 .kpi-sub { font-size: 10.5px; color: var(--faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .kpi-value.pos { color: var(--green); }
+.trend { font-weight: 650; }
+.trend.up { color: var(--green); }
+.trend.down { color: var(--red); }
+.trend.flat { color: var(--faint); font-weight: 560; }
+
+.kpi-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -2px 0 10px;
+  font-size: 10.5px; color: var(--faint);
+}
+.kpi-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.kpi-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 .kpi-value.neg { color: var(--red); }
 
 /* --------------------------------------------------------------- cards */

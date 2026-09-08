@@ -119,14 +119,45 @@ two views cannot disagree about the same window.
 The raw Sandpiper rows are kept untouched for the Review tab, whose job is precisely to show
 where the two systems differ.
 
-Money is reported as a ladder, and each step names what it subtracts:
+### Vocabulary
+
+One term per idea, used identically in every card, chart, series and table header. The money
+figures form a ladder, and each card names the deduction it just made:
+
+| Term | Meaning |
+| --- | --- |
+| **Gross sales** | what the register rang up |
+| **Commission** | the store's cut |
+| **Net payout** | gross sales less commission and card fees — what the store pays you |
+| **Cost of goods** | what the stock that sold had cost you |
+| **Gross profit** | net payout less cost of goods |
+| **Booth rent** | rent for the window, prorated |
+| **Net profit** | gross profit less rent — the number that is actually left |
+| **Stock at cost** | unsold inventory at what you paid |
+| **Asking value** | that same stock at its asking prices |
+| **Potential profit** | asking value less commission, less what it cost |
+
+Before this the same idea went by several names — takings and gross sales, net revenue and net
+payout, inventory at cost and capital tied up — and "net profit" was used for a figure that
+ignored rent.
+
+### What the colour bar means
+
+The stripe on a KPI card says one thing only: how that number is doing.
 
 | | |
 | --- | --- |
-| **Takings** | what the register rang up |
-| **After commission** | less the store's cut and card fees |
-| **After cost of goods** | less what the stock cost |
-| **Bottom line** | less booth rent — the number that is actually left |
+| green | healthy, nothing to do |
+| amber | worth an eye |
+| red | needs attention |
+| none | a descriptive figure with no better or worse direction |
+
+It previously mixed three encodings at once — category, sign and status — so a red bar could
+mean "you are losing money" or merely "this card is about costs". A card whose value has nothing
+behind it (potential profit with no stock) carries no colour rather than a flattering green.
+
+Headline figures also carry a **▲ / ▼ against the previous period of the same length**, shown
+only where that period actually had activity to compare against.
 
 Rent comes from Quail and Sandpiper has no field for it, so before this the profit figures were
 overstated by a fixed monthly cost. Sales the register saw but Sandpiper has never recorded have
