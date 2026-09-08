@@ -691,12 +691,16 @@ function scopedBoothExternalId() {
   return info && info.externalId != null ? info.externalId : null;
 }
 
-/** Rent for the window, narrowed to the selected booth so it matches the sales beside it. */
-function currentRent() {
+/** Rent rows for the selected booth, or all of them when nothing is scoped. */
+function scopedRentRows() {
   const rows = (state.quail && state.quail.rent) || [];
   const boothId = scopedBoothExternalId();
-  const scoped = boothId == null ? rows : rows.filter((r) => r.boothId === boothId);
-  return rentForRange(scoped, state.start, state.end);
+  return boothId == null ? rows : rows.filter((r) => r.boothId === boothId);
+}
+
+/** Rent for the window, narrowed to the selected booth so it matches the sales beside it. */
+function currentRent() {
+  return rentForRange(scopedRentRows(), state.start, state.end);
 }
 
 /** POS rows for the selected venue, so Daily's charts match the rest of the app. */
@@ -1170,10 +1174,25 @@ function renderCharts(s) {
   const labels = s.buckets.map((b) => b.label);
 
   // Overview — cumulative
+  /* Rent is billed monthly but the buckets can be days or quarters, so it is
+   * accrued bucket by bucket and carried forward. Without that the net profit
+   * line would only step down once a month regardless of the axis. */
+  const rentRows = scopedRentRows();
+  let rentSoFar = 0;
+  const cumulativeNetProfit = s.buckets.map((b, i) => {
+    rentSoFar += rentForRange(rentRows, b.t, Math.min(b.next - 1, state.end)).cents;
+    return s.cumulative[i].profit - rentSoFar;
+  });
+
   const cumSeries = [
-    { name: 'Cumulative gross profit', color: PALETTE.green, values: s.cumulative.map((b) => b.profit) },
-    { name: 'Cumulative net payout', color: PALETTE.blue, values: s.cumulative.map((b) => b.net) }
+    { name: 'Net payout', color: PALETTE.blue, values: s.cumulative.map((b) => b.net) },
+    { name: 'Gross profit', color: PALETTE.green, values: s.cumulative.map((b) => b.profit) }
   ];
+  // Only worth a third line when rent is actually known; otherwise it just traces
+  // the gross profit line exactly.
+  if (rentSoFar > 0) {
+    cumSeries.push({ name: 'Net profit, after rent', color: PALETTE.brass, values: cumulativeNetProfit });
+  }
   lineChart($('#c-cumulative'), { labels, series: cumSeries, height: 180 });
   legend($('#l-cumulative'), cumSeries);
 
