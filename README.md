@@ -1,16 +1,33 @@
-# Roost
+<p align="center">
+  <img src="icons/icon128.png" alt="" width="104" height="104">
+</p>
 
-A Chrome extension that gives [Sandpiper](https://app.sandpiperhq.com) the analytics it doesn't
-have, and reconciles those records against the [Quail](https://vendor.quailhq.com)
-point-of-sale system behind the stores your stock actually sells through.
+<h1 align="center">Roost</h1>
+
+<p align="center">
+  <b>Know what your booth actually made.</b><br>
+  Analytics and reconciliation for Sandpiper inventory and Quail point-of-sale,<br>
+  in a Chrome extension that runs entirely in your own browser.
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#if-something-goes-wrong">Help</a>
+</p>
+
+---
+
+Roost gives [Sandpiper](https://app.sandpiperhq.com) the analytics it doesn't have, and
+reconciles those records against the [Quail](https://vendor.quailhq.com) point-of-sale system
+behind the stores your stock actually sells through.
 
 Sandpiper tracks what you own and what it cost. Quail knows what was charged, what commission
 came off, and when the customer really bought. Neither is a complete account on its own. Roost
 pulls both using your existing logged-in sessions, reconciles them into a single ledger, and
 renders a dashboard in the toolbar popup. Everything stays in your own browser — no server, no
 third-party scripts, nothing phones home.
-
-**[Jump to install →](#install)**
 
 ---
 
@@ -174,81 +191,116 @@ duplicated colour logic.
 
 ## Install
 
-Roost is not on the Chrome Web Store. You load it from source as an unpacked extension, which
-takes about two minutes.
+Roost isn't in the Chrome Web Store, so you install it by downloading a folder and pointing
+Chrome at it. It sounds technical, but it's really five short steps and takes about five
+minutes. **You don't need to know how to code, and you'll never open a terminal.**
 
-### 1. Get the code
+You'll need Google Chrome on a computer — this doesn't work on a phone or tablet.
 
-Clone the repository:
+### Step 1 · Download Roost
+
+1. Go to **[github.com/alexmattson/roost](https://github.com/alexmattson/roost)**
+2. Click the green **Code** button near the top right
+3. Choose **Download ZIP** from the menu that drops down
+4. The file lands in your **Downloads** folder as `roost-main.zip`
+
+### Step 2 · Unzip it, and put it somewhere safe
+
+Double-click `roost-main.zip`. You'll get a folder called **`roost-main`** sitting next to it.
+
+**Now move that folder somewhere permanent** — your Documents folder is a good choice. This
+matters more than it sounds: Chrome doesn't copy Roost anywhere, it just remembers where the
+folder lives and reads it every time you start your browser. If the folder gets deleted, moved,
+or emptied out of your Downloads, **Roost stops working**. Pick a home for it now and leave it
+there.
+
+### Step 3 · Tell Chrome about it
+
+1. Open Chrome, click in the address bar, and type **`chrome://extensions`** then press Enter
+
+   *You have to type it — it's a Chrome settings page, so it can't be linked to.*
+
+2. Find the **Developer mode** switch in the **top-right corner** and turn it **on**
+
+   *This is normal. It's the standard way to install an extension that isn't in the Chrome
+   Web Store, and it doesn't make your browser any less safe on its own.*
+
+3. Three new buttons appear at the top left. Click **Load unpacked**
+
+4. A file picker opens. Navigate to your **`roost-main`** folder, **select the folder itself**
+   (single-click it — don't open it and don't pick a file inside), and click **Select**
+
+5. Roost appears in your list of extensions with its nest logo and a version number. That's it —
+   it's installed
+
+If Chrome shows a small warning about developer-mode extensions when you start it up, that's
+expected and you can dismiss it.
+
+### Step 4 · Pin Roost to your toolbar
+
+Right now Roost is installed but hidden away.
+
+1. Click the **puzzle-piece icon** to the right of Chrome's address bar
+2. Find **Roost** in the list
+3. Click the **pin icon** next to it
+
+The orange nest logo now sits in your toolbar, and you click it any time you want your numbers.
+
+### Step 5 · Sign in, then get your data
+
+Roost reads the data you already have access to, using the fact that you're logged in. It never
+asks for a password and never sees one.
+
+1. In a normal Chrome tab, sign in to **[app.sandpiperhq.com](https://app.sandpiperhq.com)** —
+   this is required, it's where your inventory comes from
+2. In another tab, sign in to **[vendor.quailhq.com](https://vendor.quailhq.com)** — technically
+   optional, but without it you lose real sale times, booth rent, payment mix, and the entire
+   Review page. Sign in to both
+3. Click the **Roost icon** in your toolbar
+4. Click **Fetch latest data**
+
+The first load takes a few seconds while it pulls everything down. After that your dashboard
+opens instantly, and the numbers only change when you click that button again — so click it
+whenever you want fresh figures.
+
+**You're done.** Nothing you just did sends your data anywhere: it's read from the two sites you
+already use and stored in your own browser.
+
+### Keeping Roost up to date
+
+There's no automatic update, since Roost isn't coming from the Chrome Web Store. When there's a
+new version:
+
+1. Download and unzip the new ZIP, exactly as in steps 1 and 2
+2. **Replace** your old `roost-main` folder with the new one, keeping it in the same place
+3. Go to **`chrome://extensions`** and click the **circular reload arrow (↻)** on Roost's card
+
+That last step is easy to forget and Roost will behave oddly without it — so if a new version
+seems not to have changed anything, that reload arrow is almost always why. Roost also watches
+for this itself and shows a red banner when it notices.
+
+### If something goes wrong
+
+| What you're seeing | What it means |
+| --- | --- |
+| **There's no "Load unpacked" button** | Developer mode is still off. It's the switch in the top-right corner of `chrome://extensions`. |
+| **"Manifest file is missing or unreadable"** | The wrong folder got picked. You want the folder that has `manifest.json` sitting directly inside it — usually `roost-main`. If you opened a folder and it only contained one other folder, go one level deeper and try that. |
+| **Roost disappeared after restarting Chrome** | The folder was moved, renamed, deleted, or cleaned out of Downloads. Put it back, or download it again, then repeat Step 3. |
+| **A message about your session or being signed out** | Your login to Sandpiper or Quail expired. Open the site, sign in again, then click **Fetch latest data**. |
+| **A red banner about the build** | Click the reload arrow (↻) on Roost's card at `chrome://extensions`. |
+| **Everything is empty** | You haven't clicked **Fetch latest data** yet, or you're signed out of Sandpiper. |
+
+### For developers
+
+Clone it instead, and the update path becomes `git pull` plus the same reload arrow:
 
 ```bash
 git clone https://github.com/alexmattson/roost.git
 cd roost
 ```
 
-No build step, no dependencies, no `npm install` — the folder you just cloned is the extension.
-
-> Prefer not to use git? On the [repository page](https://github.com/alexmattson/roost), click
-> **Code → Download ZIP**, then unzip it. Keep the unzipped folder somewhere permanent: Chrome
-> loads the extension from that path every time it starts, so deleting or moving the folder
-> breaks the extension.
-
-### 2. Load it into Chrome
-
-1. Open a new tab and go to **`chrome://extensions`**
-   *(you have to type this — links to `chrome://` URLs don't work)*
-2. Turn on **Developer mode** using the toggle in the **top right**
-3. Click **Load unpacked**, which appears in the top left once Developer mode is on
-4. Select the **`roost` folder itself** — the one containing `manifest.json`, not a
-   subfolder and not the ZIP file
-5. Roost now appears in the list with its version number
-
-### 3. Pin it to the toolbar
-
-Click the puzzle-piece **Extensions** icon to the right of the address bar, find **Roost**, and
-click the pin icon. The Roost icon now sits in your toolbar.
-
-### 4. Sign in to both services
-
-In normal browser tabs, sign in to:
-
-- **`app.sandpiperhq.com`** — required; this is where inventory comes from
-- **`vendor.quailhq.com`** — optional but strongly recommended; without it you lose real
-  register times, booth rent, payment mix and the whole Review page
-
-Roost reads the session cookies these sites already set. It never asks for, sees, or stores your
-password.
-
-### 5. Fetch your data
-
-Click the Roost icon, then **Fetch latest data**. The first sync pulls your full item list, your
-stores and booths, and Quail's sales and rent history — expect a few seconds. Everything is
-cached locally afterwards, so the dashboard opens instantly and the data only changes when you
-press that button again.
-
-### Updating
-
-```bash
-cd roost
-git pull
-```
-
-Then go to `chrome://extensions` and click the **reload (↻)** icon on Roost's card. This step
-matters: Chrome caches the service worker, so a `git pull` alone will leave the old background
-code running. Roost checks for this on open and shows a red banner when the worker's build
-doesn't match the manifest version.
-
-### If something goes wrong
-
-| Symptom | Cause and fix |
-| --- | --- |
-| **"Load unpacked" isn't visible** | Developer mode isn't on. Toggle it in the top right of `chrome://extensions`. |
-| **"Manifest file is missing or unreadable"** | You picked the wrong folder. Select the one directly containing `manifest.json`. |
-| **The extension vanishes after restarting Chrome** | The source folder was moved, renamed or deleted. Load it again from its permanent location. |
-| **An error about your session** | The site's cookie has expired. Open the site, sign in again, then re-fetch. |
-| **Red banner about the worker build** | Click the reload (↻) icon on Roost's card. |
-
----
+Load that folder unpacked as above. There's no build step and no dependencies — the repository
+*is* the extension.
 
 ## How it works
 
@@ -347,7 +399,10 @@ rather than a flattering green.
 
 ---
 
-## Troubleshooting
+## Developer notes
+
+These are for people working on Roost itself — if you're just using it, the
+[help table above](#if-something-goes-wrong) is the one you want.
 
 **Changes to `background.js` don't seem to apply.** MV3 caches the service worker. The popup
 files are re-fetched every time you open it, but the worker keeps running whatever was loaded
