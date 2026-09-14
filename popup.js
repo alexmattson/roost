@@ -1516,7 +1516,7 @@ function openAddStock() {
   const as = state.addStock;
   as.open = true;
   if (!as.acquired) as.acquired = todayISO();
-  if (!as.rows.length) as.rows = [blankRow(nextInventoryNumber(state.items))];
+  if (!as.rows.length) as.rows = [blankRow(nextInventoryNumber(state.items))];   // one to start on
   $('#add-stock').hidden = false;
   renderAddStock();
   // Straight into the first description: the number is already right.
@@ -1530,16 +1530,24 @@ function closeAddStock() {
   saveDraft();
 }
 
-/** Keeps one empty row at the bottom, so there is always somewhere to type. */
-function ensureTrailingRow() {
-  const rows = state.addStock.rows;
-  const last = rows[rows.length - 1];
-  if (!last || !isRowEmpty(last)) {
-    const prev = last ? last.inv : '';
-    rows.push(blankRow(bumpInventoryNumber(prev) || nextInventoryNumber(state.items)));
-    return true;
-  }
-  return false;
+/**
+ * The next number for this batch, counting the rows already typed into it.
+ *
+ * Draft rows are handed the current time so they win the "series in use" test
+ * in nextInventoryNumber: start typing A-016 into a shop full of 0xxxx and the
+ * rows after it follow you, rather than snapping back to the old scheme.
+ */
+function nextDraftNumber() {
+  const now = Math.floor(Date.now() / 1000);
+  const drafts = state.addStock.rows
+    .filter((r) => String(r.inv || '').trim())
+    .map((r) => ({ inv: r.inv, acquired: now }));
+  return nextInventoryNumber([...state.items, ...drafts]);
+}
+
+/** Adds a row. Only ever called from the button or Enter — never from typing. */
+function addStockRow() {
+  state.addStock.rows.push(blankRow(nextDraftNumber()));
 }
 
 function saveDraft() {
@@ -1568,26 +1576,26 @@ async function loadDraft() {
 
 function renderAddStock() {
   const as = state.addStock;
-  ensureTrailingRow();
 
   $('#as-acquired').value = as.acquired;
   $('#as-lot').value = centsTo(as.lotCents);
 
   const grid = $('#as-grid');
-  grid.innerHTML = `
-    <div class="stock-head">
+  grid.innerHTML = as.rows.length
+    ? `<div class="stock-head">
       <span class="num">Inv #</span><span>Description</span>
       <span class="cost">Cost</span><span class="ask">Asking</span>
       <span class="qty">Qty</span><span class="nets">You keep</span><span></span>
-    </div>`;
+    </div>`
+    : '<p class="stock-empty">No rows. Add one to start entering stock.</p>';
 
   as.rows.forEach((row, i) => grid.appendChild(buildStockRow(row, i)));
 
   const more = document.createElement('button');
   more.className = 'stock-add';
-  more.textContent = '+ Add row';
+  more.textContent = as.rows.length ? '+ Add row' : '+ Add a row';
   more.onclick = () => {
-    ensureTrailingRow();
+    addStockRow();
     renderAddStock();
     const inputs = $$('#as-grid .stock-row input.desc');
     if (inputs.length) inputs[inputs.length - 1].focus();
@@ -1623,20 +1631,6 @@ function buildStockRow(row, i) {
   for (const el of [num, desc, cost, ask, qty]) {
     el.addEventListener('input', () => {
       read();
-      /* Typing in the last row is what makes the next one appear — it keeps a
-       * long entry session to one hand and no clicking. */
-      if (Number(wrap.dataset.i) === state.addStock.rows.length - 1 && !isRowEmpty(row)) {
-        ensureTrailingRow();
-        renderAddStock();
-        const rows = $$('#as-grid .stock-row');
-        const again = rows[Number(wrap.dataset.i)];
-        if (again) {
-          // classList[0], not className: an invalid row carries "num bad".
-          const field = again.querySelector(`input.${el.classList[0]}`);
-          if (field) { field.focus(); field.setSelectionRange(el.value.length, el.value.length); }
-        }
-        return;
-      }
       refreshRow(Number(wrap.dataset.i));
       refreshTotals();
       queueDraftSave();
@@ -1653,14 +1647,16 @@ function buildStockRow(row, i) {
     read();
     const idx = Number(wrap.dataset.i);
     const next = $$('#as-grid .stock-row')[idx + 1];
-    if (next) next.querySelector('input.desc').focus();
-    else { ensureTrailingRow(); renderAddStock(); const all = $$('#as-grid .stock-row input.desc'); all[all.length - 1].focus(); }
+    if (next) { next.querySelector('input.desc').focus(); return; }
+    addStockRow();
+    renderAddStock();
+    const all = $$('#as-grid .stock-row input.desc');
+    if (all.length) all[all.length - 1].focus();
   });
 
   wrap.querySelector('.row-drop').onclick = () => {
     state.addStock.rows.splice(Number(wrap.dataset.i), 1);
-    if (!state.addStock.rows.length) state.addStock.rows = [blankRow(nextInventoryNumber(state.items))];
-    renderAddStock();
+    renderAddStock();   // an empty grid is allowed; it says so and offers a row
     queueDraftSave();
   };
 
@@ -1758,7 +1754,7 @@ function refreshTotals() {
   btn.disabled = as.busy || !t.rows || bad > 0;
   btn.textContent = as.busy ? 'Adding…' : t.rows ? `Add ${int(t.items)} item${t.items === 1 ? '' : 's'}` : 'Add items';
   $('#add-stock-sub').textContent = state.items.length
-    ? `Next free number is ${nextInventoryNumber(state.items)}. Enter moves down; the row below appears as you type.`
+    ? `Numbers continue your ${nextDraftNumber()} series. Enter moves down, and adds a row at the bottom.`
     : 'Fetch your data first so Roost can pick inventory numbers for you.';
 }
 

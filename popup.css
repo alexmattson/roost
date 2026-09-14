@@ -640,6 +640,12 @@ body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
 .row-note.hint { color: var(--faint); }
 .row-note b { color: var(--muted); font-weight: 600; }
 
+.stock-empty {
+  margin: 22px 0 0; padding: 26px 16px;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  text-align: center; color: var(--muted); font-size: 13px;
+}
+
 .stock-add {
   margin-top: 10px;
   background: none; border: 1px dashed var(--border); border-radius: 8px;
