@@ -439,6 +439,45 @@ async function createItems(rows) {
   return { results, created, items };
 }
 
+const deleteUrl = (accountId, id) =>
+  `${API_HOST}/api/items/v2/${accountId}/delete?id=${encodeURIComponent(id)}`;
+
+/**
+ * Removes items, one at a time.
+ *
+ * Sandpiper also takes a whole array at /delete-items, but one call per item is
+ * what lets a failure name the item it failed on and stop there, with
+ * everything before it gone and everything after it untouched. Deleting is the
+ * one action here with nothing to undo it, so being able to say exactly how far
+ * it got matters more than the round trips.
+ */
+async function deleteItems(ids) {
+  const session = await readSession();
+  const accountId = await resolveAccountId(session);
+  const auth = `Bearer ${session.token}`;
+
+  const cache = await chrome.storage.local.get(STORE.items);
+  const items = cache[STORE.items] || [];
+  const gone = new Set();
+
+  const results = [];
+  for (const id of ids) {
+    try {
+      await apiRequest(deleteUrl(accountId, id), auth, { method: 'POST' });
+      gone.add(id);
+      results.push({ id, ok: true });
+    } catch (e) {
+      results.push({ id, ok: false, error: e.message || String(e) });
+      break;   // stop at the first refusal rather than carrying on blind
+    }
+  }
+
+  const kept = items.filter((r) => !gone.has(r.id));
+  if (gone.size) await chrome.storage.local.set({ [STORE.items]: kept });
+  console.log(`[Roost] deleted ${gone.size}/${ids.length} item(s)`);
+  return { results, deleted: gone.size, items: kept };
+}
+
 async function fetchItems() {
   const session = await readSession();
   const accountId = await resolveAccountId(session);
@@ -520,6 +559,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             break;
           }
           sendResponse({ ok: true, ...(await createItems(msg.rows)) });
+          break;
+        }
+        case 'deleteItems': {
+          if (!Array.isArray(msg.ids) || !msg.ids.length) {
+            sendResponse({ ok: false, error: 'Nothing to delete.' });
+            break;
+          }
+          sendResponse({ ok: true, ...(await deleteItems(msg.ids)) });
           break;
         }
         case 'ping':

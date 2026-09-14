@@ -311,8 +311,12 @@
               <option value="loss">Sold at a loss</option>
               <option value="noprice">Missing asking price</option>
             </select>
+            <button id="item-add" class="btn small">+ Add stock</button>
           </div>
         </div>
+        <!-- Selection and its confirmation share a strip, so the thing being
+             asked about is never more than a line away from the question. -->
+        <div class="fix-bar" id="item-bar" hidden></div>
         <div id="t-items" class="table-scroll"></div>
       </div>
     </section>

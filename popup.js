@@ -6,7 +6,7 @@ import { reconcile } from './lib/reconcile.js';
 import { planResolution, buildVenueContext, CONFIDENCE } from './lib/resolve.js';
 import { buildLedger, rentForRange } from './lib/ledger.js';
 import {
-  nextInventoryNumber, bumpInventoryNumber, takenNumbers, priceHistory, margin,
+  nextInventoryNumber, takenNumbers, numberKey, priceHistory, margin,
   splitLotCost, blankRow, isRowEmpty, validateRow, draftNumberCounts,
   buildCreatePayload, draftTotals
 } from './lib/stock.js';
@@ -49,6 +49,12 @@ const state = {
   pendingConfirm: null,
   // Draft stock, kept until it is written or explicitly discarded.
   addStock: { open: false, acquired: null, rows: [], lotCents: null, busy: false },
+  // Records → Items: what is ticked, what is open for editing, what is about
+  // to be deleted once it has been confirmed.
+  itemSel: new Set(),
+  itemEditing: null,
+  itemConfirmDelete: null,
+  itemBusy: false,
   findingFilters: { severity: 'all', match: 'all', type: 'all' },
   applying: false,
   venueList: { stores: [], booths: [] },
@@ -1287,18 +1293,38 @@ function renderCharts(s) {
 
 /* ---------------------------------------------------------- items table */
 
+const shortDate = (t) =>
+  new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+
+/** yyyy-mm-dd in local time, which is what <input type="date"> expects. */
+const dateInputValue = (t) => {
+  if (!t) return '';
+  const d = new Date(t);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+
+/* Midday, so a date that crosses a timezone on its way to the API and back
+ * still lands on the day the user picked. */
+const unixFromDateInput = (v) => (v ? Math.floor(new Date(`${v}T12:00:00`).getTime() / 1000) : null);
+
 const ITEM_COLUMNS = [
   { key: 'inv', title: '#', render: (r) => esc(r.inv || '—') },
   { key: 'desc', title: 'Description', render: (r) => esc(r.desc), cls: () => 'name' },
   { key: 'category', title: 'Category', render: (r) => esc(r.category) },
-  { key: 'acquired', title: 'Acquired', num: true, render: (r) => (r.acquired ? new Date(r.acquired).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }) : '—') },
+  { key: 'acquired', title: 'Acquired', num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
   { key: 'cost', title: 'Cost', num: true, render: (r) => money(r.cost, { compact: true }) },
   { key: 'ask', title: 'Ask', num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
-  { key: 'soldPrice', title: 'Sold', num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : '<span class="pill hold">on hand</span>') },
+  { key: 'sold', title: 'Sold on', num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
+  { key: 'soldPrice', title: 'Sold for', num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : '<span class="pill hold">on hand</span>') },
   { key: 'profit', title: 'Profit', num: true, render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })), cls: (r) => signClass(r.profit || 0) },
   { key: 'margin', title: 'Margin', num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
   { key: 'daysToSell', title: 'Days', num: true, render: (r) => days(r.daysToSell) }
 ];
+
+/* Rows that came only from the register have no Sandpiper record behind them,
+ * so there is nothing to edit and nothing to delete. Review is where they get
+ * turned into real items. */
+const isLiveItem = (r) => r && r.source !== 'quail';
 
 function renderItems() {
   const s = state.stats;
@@ -1332,10 +1358,20 @@ function renderItems() {
   });
 
   const shown = rows.slice(0, 400);
-  const head = ITEM_COLUMNS.map((c) =>
-    `<th class="sortable ${c.num ? 'num' : ''}" data-key="${c.key}">${c.title}${key === c.key ? `<span class="arrow"> ${dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('');
-  const body = shown.map((r) =>
-    `<tr>${ITEM_COLUMNS.map((c) => `<td class="${c.num ? 'num ' : ''}${c.cls ? c.cls(r) : ''}">${c.render(r)}</td>`).join('')}</tr>`).join('');
+
+  /* A tick can only ever mean a row you can see, so anything the filters have
+   * hidden drops out of the selection rather than being deleted unseen. */
+  const visible = new Set(shown.filter(isLiveItem).map((r) => r.id));
+  for (const id of [...state.itemSel]) if (!visible.has(id)) state.itemSel.delete(id);
+  if (state.itemEditing && !visible.has(state.itemEditing)) state.itemEditing = null;
+
+  const head =
+    '<th class="pick"><input type="checkbox" id="item-all" aria-label="Select all shown"></th>' +
+    ITEM_COLUMNS.map((c) =>
+      `<th class="sortable ${c.num ? 'num' : ''}" data-key="${c.key}">${c.title}${key === c.key ? `<span class="arrow"> ${dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('') +
+    '<th class="row-acts"></th>';
+
+  const body = shown.map((r) => (state.itemEditing === r.id ? itemEditorRow(r) : itemRow(r))).join('');
 
   $('#t-items').innerHTML = rows.length
     ? `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>` +
@@ -1349,6 +1385,237 @@ function renderItems() {
       renderItems();
     };
   });
+
+  const all = $('#item-all');
+  if (all) {
+    all.checked = visible.size > 0 && state.itemSel.size === visible.size;
+    all.indeterminate = state.itemSel.size > 0 && state.itemSel.size < visible.size;
+    all.onchange = () => {
+      if (all.checked) visible.forEach((id) => state.itemSel.add(id));
+      else state.itemSel.clear();
+      renderItems();
+    };
+  }
+
+  $$('#t-items .row-pick').forEach((box) => {
+    box.onchange = () => {
+      if (box.checked) state.itemSel.add(box.dataset.id);
+      else state.itemSel.delete(box.dataset.id);
+      renderItems();
+    };
+  });
+
+  $$('#t-items .act-edit').forEach((b) => {
+    b.onclick = () => { state.itemEditing = b.dataset.id; renderItems(); };
+  });
+  $$('#t-items .act-del').forEach((b) => {
+    b.onclick = () => confirmItemDelete([b.dataset.id]);
+  });
+
+  const editing = state.itemEditing && shown.find((r) => r.id === state.itemEditing);
+  if (editing) {
+    $('#t-items .act-save').onclick = () => saveItemEdit(editing);
+    $('#t-items .act-cancel').onclick = () => { state.itemEditing = null; renderItems(); };
+    const first = $('#t-items .e-desc');
+    if (first) first.focus();
+  }
+
+  renderItemBar();
+}
+
+function itemRow(r) {
+  const live = isLiveItem(r);
+  const pick = live
+    ? `<input type="checkbox" class="row-pick" data-id="${esc(r.id)}" ${state.itemSel.has(r.id) ? 'checked' : ''} aria-label="Select ${esc(r.inv || r.desc)}">`
+    : '';
+  const acts = live
+    ? `<button class="row-act act-edit" data-id="${esc(r.id)}" title="Edit this item">Edit</button>`
+      + `<button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button>`
+    : '<span class="pill hold" title="Seen by the register only — Review can add it to Sandpiper">register only</span>';
+  return `<tr class="${state.itemSel.has(r.id) ? 'picked' : ''}">`
+    + `<td class="pick">${pick}</td>`
+    + ITEM_COLUMNS.map((c) => `<td class="${c.num ? 'num ' : ''}${c.cls ? c.cls(r) : ''}">${c.render(r)}</td>`).join('')
+    + `<td class="row-acts">${acts}</td></tr>`;
+}
+
+/**
+ * The row, in place, as fields.
+ *
+ * Editing where the row already is keeps the item's own numbers either side of
+ * what you are changing — a dialog would take the comparison away exactly when
+ * you want it. Derived columns stay blank while editing rather than showing
+ * arithmetic that no longer matches the fields above them.
+ */
+function itemEditorRow(r) {
+  const cents = (v) => (v == null ? '' : (v / 100).toFixed(2));
+  return `<tr class="editing">
+    <td class="pick"></td>
+    <td><input class="e-inv" value="${esc(r.inv)}" aria-label="Inventory number"></td>
+    <td><input class="e-desc" value="${esc(r.desc === '(no description)' ? '' : r.desc)}" aria-label="Description"></td>
+    <td class="muted">${esc(r.category)}</td>
+    <td><input type="date" class="e-acquired" value="${dateInputValue(r.acquired)}" aria-label="Acquired date"></td>
+    <td><input class="e-cost num" value="${cents(r.cost)}" inputmode="decimal" aria-label="Cost"></td>
+    <td><input class="e-ask num" value="${cents(r.ask)}" inputmode="decimal" aria-label="Asking price"></td>
+    <td><input type="date" class="e-sold" value="${dateInputValue(r.sold)}" aria-label="Sold date"></td>
+    <td><input class="e-soldPrice num" value="${cents(r.soldPrice)}" inputmode="decimal" aria-label="Sold price"></td>
+    <td colspan="3" class="muted">${r.isSold ? 'Register values win on the next fetch.' : ''}</td>
+    <td class="row-acts">
+      <button class="row-act act-save">Save</button>
+      <button class="row-act act-cancel">Cancel</button>
+    </td>
+  </tr>`;
+}
+
+/**
+ * Turns the edited fields into the smallest set of changes that says what
+ * moved, in the raw API's own names and units — cents for money, whole seconds
+ * for dates. Cost keeps any restoration recorded against the item: originalCost
+ * is what you typed, totalCost carries the expenses that were already there.
+ */
+function collectItemChanges(r) {
+  const val = (cls) => { const el = $('#t-items .e-' + cls); return el ? el.value : null; };
+  const cents = (v) => { const n = Number(String(v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? Math.round(n * 100) : null; };
+  const changes = [];
+
+  const inv = String(val('inv') || '').trim();
+  if (inv !== r.inv) changes.push({ field: 'inventoryNumber', to: inv });
+
+  const desc = String(val('desc') || '').trim();
+  const was = r.desc === '(no description)' ? '' : r.desc;
+  if (desc !== was) changes.push({ field: 'description', to: desc });
+
+  const acq = unixFromDateInput(val('acquired'));
+  if (acq !== (r.acquired == null ? null : Math.round(r.acquired / 1000))) {
+    changes.push({ field: 'acquired', to: acq || 0 });
+  }
+
+  const cost = cents(val('cost'));
+  if (cost != null && cost !== r.cost) {
+    changes.push({ field: 'originalCost', to: cost });
+    changes.push({ field: 'totalCost', to: cost + (r.restoration || 0) });
+  }
+
+  const ask = cents(val('ask'));
+  if (ask != null && ask !== r.ask) changes.push({ field: 'askingPrice', to: ask });
+
+  /* Only offered for something already sold. Clearing a sale is Sandpiper's
+   * unsell, a different endpoint with different consequences. */
+  if (r.isSold) {
+    const sold = unixFromDateInput(val('sold'));
+    if (sold && sold !== Math.round(r.sold / 1000)) changes.push({ field: 'sold', to: sold });
+    const sp = cents(val('soldPrice'));
+    if (sp != null && sp !== r.soldPrice) changes.push({ field: 'soldPrice', to: sp });
+  }
+  return changes;
+}
+
+async function saveItemEdit(r) {
+  const changes = collectItemChanges(r);
+  if (!changes.length) { state.itemEditing = null; renderItems(); return; }
+
+  const inv = String(($('#t-items .e-inv') || {}).value || '').trim();
+  if (!inv) { banner('An item needs an inventory number.', 'error'); return; }
+  const clash = takenNumbers(state.items.filter((i) => i.id !== r.id)).get(numberKey(inv));
+  if (clash) { banner(`#${inv} is already "${clash.desc}".`, 'error'); return; }
+
+  state.itemBusy = true;
+  renderItemBar();
+  try {
+    const res = await send('applyEdits', { plans: [{ itemId: r.id, changes }] });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The edit request failed.');
+    const bad = res.results.find((x) => !x.ok);
+    if (bad) throw new Error(bad.error);
+
+    state.items = normalize(res.items);
+    state.venueList = listVenues(state.items);
+    rebuildLedger();
+    state.itemEditing = null;
+    banner(`Updated #${inv}.`, 'ok');
+    setTimeout(() => banner(''), 2600);
+    render();
+  } catch (e) {
+    banner(e.message, 'error');
+  } finally {
+    state.itemBusy = false;
+    renderItemBar();
+  }
+}
+
+/* --- deleting ------------------------------------------------------------ */
+
+function confirmItemDelete(ids) {
+  state.itemConfirmDelete = ids.filter(Boolean);
+  renderItemBar();
+  $('#item-bar').scrollIntoView({ block: 'nearest' });
+}
+
+/**
+ * Deleting is the one thing here that cannot be undone, so it always names what
+ * it is about to remove and never fires on a single click.
+ */
+function renderItemBar() {
+  const bar = $('#item-bar');
+  if (!bar) return;
+  const pending = state.itemConfirmDelete;
+  const sel = state.itemSel;
+
+  if (pending && pending.length) {
+    const named = pending
+      .map((id) => state.ledger.find((r) => r.id === id))
+      .filter(Boolean)
+      .map((r) => `#${esc(r.inv || '—')} ${esc(r.desc)}`);
+    const list = named.slice(0, 3).join(', ') + (named.length > 3 ? ` and ${named.length - 3} more` : '');
+    bar.hidden = false;
+    bar.innerHTML = `<span class="count">Delete <b>${int(pending.length)}</b> item${pending.length === 1 ? '' : 's'} from Sandpiper — ${list}. This cannot be undone.</span>
+      <button class="fix-btn" id="del-cancel">Cancel</button>
+      <button class="fix-btn danger" id="del-go"${state.itemBusy ? ' disabled' : ''}>${state.itemBusy ? 'Deleting…' : 'Delete'}</button>`;
+    $('#del-cancel').onclick = () => { state.itemConfirmDelete = null; renderItemBar(); };
+    $('#del-go').onclick = () => doItemDelete(pending);
+    return;
+  }
+
+  if (sel.size) {
+    bar.hidden = false;
+    bar.innerHTML = `<span class="count"><b>${int(sel.size)}</b> selected</span>
+      <button class="fix-btn" id="sel-clear">Clear</button>
+      <button class="fix-btn danger" id="sel-del">Delete selected</button>`;
+    $('#sel-clear').onclick = () => { state.itemSel.clear(); renderItems(); };
+    $('#sel-del').onclick = () => confirmItemDelete([...sel]);
+    return;
+  }
+
+  bar.hidden = true;
+  bar.innerHTML = '';
+}
+
+async function doItemDelete(ids) {
+  state.itemBusy = true;
+  renderItemBar();
+  try {
+    const res = await send('deleteItems', { ids });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The delete request failed.');
+    const failed = res.results.find((r) => !r.ok);
+
+    state.items = normalize(res.items);
+    state.venueList = listVenues(state.items);
+    rebuildLedger();
+    ids.forEach((id) => state.itemSel.delete(id));
+    state.itemConfirmDelete = null;
+
+    banner(
+      failed
+        ? `Deleted ${int(res.deleted)} of ${int(ids.length)}, then stopped: ${failed.error}`
+        : `Deleted ${int(res.deleted)} item${res.deleted === 1 ? '' : 's'}.`,
+      failed ? 'error' : 'ok'
+    );
+    if (!failed) setTimeout(() => banner(''), 2800);
+    render();
+  } catch (e) {
+    banner(e.message, 'error');
+  } finally {
+    state.itemBusy = false;
+    renderItemBar();
+  }
 }
 
 /* ---------------------------------------------------------------- render */
@@ -1889,6 +2156,7 @@ async function init() {
     render();
   };
   $('#item-search').oninput = renderItems;
+  $('#item-add').onclick = openAddStock;
   ['severity', 'match', 'type'].forEach((key) => {
     $('#f-' + key).onchange = (e) => {
       state.findingFilters[key] = e.target.value;
