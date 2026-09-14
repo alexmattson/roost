@@ -506,20 +506,45 @@ function renderTables(s) {
 
 /* --------------------------------------------------------------- health */
 
+/**
+ * Takes a finding to the rows behind it.
+ *
+ * The window travels with the click. Records keeps its own range, so landing
+ * there on its 90-day default after clicking a figure computed over all time
+ * would list a different set of items than the number that was clicked — which
+ * is exactly the kind of quiet disagreement the single ledger exists to avoid.
+ * Seeding the remembered range before switching means selectMode restores it as
+ * if Records had been showing that window all along.
+ */
+function jumpToItems(filter) {
+  state.ranges.records = { preset: state.preset, start: state.start, end: state.end };
+  $('#item-filter').value = filter;
+  $('#item-search').value = '';
+  selectMode('records');
+  selectTab('items');
+}
+
 function renderHealth(s) {
   const rows = [];
-  const add = (tone, text, val) => rows.push({ tone, text, val });
+  /* `to` is what makes a finding a thing you can act on rather than a thing you
+   * are told: a filter to see the offending items, or a mode to go and fix
+   * them in. Findings that describe a rate rather than a set of rows have no
+   * destination, and stay as text. */
+  const add = (tone, text, val, to = null) => rows.push({ tone, text, val, to });
   const color = { good: PALETTE.green, warn: PALETTE.brass, bad: PALETTE.red };
 
   add(s.counts.unpriced ? 'warn' : 'good',
     `<b>${int(s.counts.unpriced)}</b> unsold items have no asking price`,
-    s.counts.unpriced ? 'Needs pricing' : 'All priced');
+    s.counts.unpriced ? 'Needs pricing' : 'All priced',
+    s.counts.unpriced ? { filter: 'noprice' } : null);
   add(s.counts.zeroCost ? 'warn' : 'good',
     `<b>${int(s.counts.zeroCost)}</b> unsold items are recorded at $0 cost`,
-    s.counts.zeroCost ? 'Check costs' : 'Costs set');
+    s.counts.zeroCost ? 'Check costs' : 'Costs set',
+    s.counts.zeroCost ? { filter: 'zerocost' } : null);
   add(s.inventory.stale > s.inventory.units * 0.3 ? 'bad' : s.inventory.stale ? 'warn' : 'good',
     `<b>${int(s.inventory.stale)}</b> items have been held over 180 days`,
-    money(s.inventory.staleCost, { compact: true }));
+    money(s.inventory.staleCost, { compact: true }),
+    s.inventory.stale ? { filter: 'aged' } : null);
   add(s.sales.discountRate > 0.1 ? 'warn' : 'good',
     `Items sell for <b>${pct(s.sales.discountRate)}</b> below asking price on average`,
     pct(s.sales.fullPriceRate) + ' at full');
@@ -535,20 +560,33 @@ function renderHealth(s) {
       led.costUnknown
         ? `<b>${int(led.costUnknown)}</b> sale(s) rang up with no Sandpiper record, so profit ignores their cost`
         : 'Every sale counted has a cost basis behind it',
-      led.costUnknown ? 'profit is optimistic' : 'costs complete');
+      led.costUnknown ? 'profit is optimistic' : 'costs complete',
+      led.costUnknown ? { filter: 'registeronly' } : null);
     add(led.corrected ? 'warn' : 'good',
       led.corrected
         ? `<b>${int(led.corrected)}</b> sale(s) use register values where Sandpiper disagreed`
         : 'Sandpiper matches the register on every sale',
-      led.corrected ? 'see Anomalies' : 'in step');
+      led.corrected ? 'see Anomalies' : 'in step',
+      led.corrected ? { mode: 'review' } : null);
   }
 
-  $('#health').innerHTML = rows.map((r) => `
-    <div class="health-row">
+  $('#health').innerHTML = rows.map((r, i) => {
+    const tag = r.to ? 'button' : 'div';
+    const extra = r.to
+      ? ` data-i="${i}" title="${r.to.mode ? 'Open Review' : 'Show these items'}"`
+      : '';
+    return `<${tag} class="health-row${r.to ? ' actionable' : ''}"${extra}>
       <span class="health-icon" style="background:${color[r.tone]}"></span>
       <span class="health-text">${r.text}</span>
       <span class="health-val" style="color:${color[r.tone]}">${r.val}</span>
-    </div>`).join('');
+      <span class="health-go" aria-hidden="true">${r.to ? '→' : ''}</span>
+    </${tag}>`;
+  }).join('');
+
+  $$('#health .health-row.actionable').forEach((el) => {
+    const to = rows[Number(el.dataset.i)].to;
+    el.onclick = () => (to.mode ? selectMode(to.mode) : jumpToItems(to.filter));
+  });
 }
 
 /** One reconciled set of sales for every figure outside the Review tab. */
@@ -1362,10 +1400,20 @@ function renderItems() {
     return acq || sld || held;
   });
 
-  if (filter === 'onhand') rows = rows.filter((i) => !i.isSold);
+  /* "On hand" means on hand at the end of the window, which is the same test
+   * analytics uses for every stock figure — so a count clicked on Overview and
+   * the rows listed here are the same items, not two nearly-equal sets. */
+  const heldAtEnd = (i) =>
+    i.acquired != null && i.acquired <= state.end && (i.sold == null || i.sold > state.end);
+  const ageAtEnd = (i) => (i.acquired != null ? (state.end - i.acquired) / DAY : null);
+
+  if (filter === 'onhand') rows = rows.filter(heldAtEnd);
   else if (filter === 'sold') rows = rows.filter((i) => i.isSold);
   else if (filter === 'loss') rows = rows.filter((i) => i.isSold && i.profit < 0);
-  else if (filter === 'noprice') rows = rows.filter((i) => !i.isSold && i.ask <= 0);
+  else if (filter === 'noprice') rows = rows.filter((i) => heldAtEnd(i) && i.ask <= 0);
+  else if (filter === 'zerocost') rows = rows.filter((i) => heldAtEnd(i) && i.cost <= 0);
+  else if (filter === 'aged') rows = rows.filter((i) => heldAtEnd(i) && (ageAtEnd(i) || 0) > 180);
+  else if (filter === 'registeronly') rows = rows.filter((i) => i.source === 'quail');
 
   if (q) rows = rows.filter((i) => i.desc.toLowerCase().includes(q) || String(i.inv).toLowerCase().includes(q));
 

@@ -523,6 +523,21 @@ input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0;
 .health-text b { color: var(--text); font-weight: 600; }
 .health-val { font-size: 11.5px; font-weight: 620; font-variant-numeric: tabular-nums; }
 
+/* A finding that leads somewhere is a button; one that only reports a rate
+   stays a div. Both keep the same box, and the arrow's width is reserved on
+   every row so the values stay on one line whichever kind a row is. */
+button.health-row {
+  width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.health-go { width: 9px; flex: none; font-size: 12px; color: var(--faint); opacity: 0; }
+.health-row.actionable:hover, .health-row.actionable:focus-visible {
+  border-color: var(--brass); background: var(--btn-hover); outline: none;
+}
+.health-row.actionable:hover .health-text { color: var(--text); }
+.health-row.actionable:hover .health-go, .health-row.actionable:focus-visible .health-go {
+  opacity: 1; color: var(--brass);
+}
+
 /* -------------------------------------------------------------- footer */
 
 .footer {

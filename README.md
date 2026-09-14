@@ -128,6 +128,13 @@ An untagged POS sale and an unrecorded Sandpiper sale at the same price within t
 reported as **one** probable pairing rather than two separate anomalies. Data-quality checks on
 the Sandpiper records themselves sit on the same page, since both are things to act on.
 
+Those checks are the way into the work rather than a report about it: a finding that stands for
+a set of items — stock with no asking price, stock recorded at $0 cost, anything held over 180
+days, sales the register saw that Sandpiper never recorded — is a button, and pressing it opens
+Records filtered to exactly those items, where they can be corrected. The window travels with
+the click, so the rows listed are the same rows the number counted. Findings that describe a
+rate rather than a set, like the average discount off asking, stay as text.
+
 ### Resolving anomalies
 
 Where a finding can be settled by correcting Sandpiper, the fix is offered inline. Quail is
