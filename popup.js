@@ -37,7 +37,7 @@ const state = {
   venueInfo: { stores: {}, booths: {} },
   quail: null,
   quailSales: [],
-  // Raw Sandpiper rows stay in `items` for Review; every figure elsewhere reads
+  // Raw Sandpiper rows stay in `items` for Sync; every figure elsewhere reads
   // `ledger`, which is those rows with register truth applied.
   ledger: [],
   ledgerSummary: null,
@@ -64,7 +64,7 @@ const state = {
 };
 
 /* Modes group views by the kind of question they answer: analysis is ranged and
- * aggregate, Daily is operational, Review is a task list, Records is lookup.
+ * aggregate, Sync is a task list, Records is lookup.
  * Each mode carries its own preset ranges — Daily wants days, Analyze wants
  * months — but never overrides a range the user set explicitly. */
 const MODES = [
@@ -82,14 +82,16 @@ const MODES = [
     ]
   },
   {
+    /* The id stays 'review': it keys the panel element, the remembered range and
+     * the saved tab, and renaming it would strand both on upgrade for no gain. */
     id: 'review',
-    label: 'Review',
+    label: 'Sync',
     /* No range picker at all: reconciliation exists to prove the two systems
      * agree, and a window can only hide a disagreement that is still live. */
     presets: [],
     fullRange: true,
     defaultPreset: 'all',
-    tabs: [['review', 'Review']]
+    tabs: [['review', 'Sync']]
   },
   {
     id: 'records',
@@ -163,7 +165,7 @@ function applyPreset(preset) {
 }
 
 function renderModes() {
-  // The anomaly count rides on the Review button so it is visible from any mode.
+  // The anomaly count rides on the Sync button so it is visible from any mode.
   const count = (state.badge && state.badge.count) || 0;
   const urgent = (state.badge && state.badge.urgent) || false;
   $('#modes').innerHTML = MODES
@@ -222,7 +224,7 @@ function selectMode(modeId) {
   const valid = mode.tabs.some(([id]) => id === remembered);
   state.tab = valid ? remembered : mode.tabs[0][0];
 
-  /* Each mode owns its range. Carrying one across meant Review inherited whatever
+  /* Each mode owns its range. Carrying one across meant Sync inherited whatever
    * Analyze happened to be showing whenever both offered that preset, so a mode's
    * own default only ever applied by accident. */
   const saved = mode.fullRange ? null : state.ranges[modeId];
@@ -574,7 +576,7 @@ function renderHealth(s) {
   $('#health').innerHTML = rows.map((r, i) => {
     const tag = r.to ? 'button' : 'div';
     const extra = r.to
-      ? ` data-i="${i}" title="${r.to.mode ? 'Open Review' : 'Show these items'}"`
+      ? ` data-i="${i}" title="${r.to.mode ? 'Open Sync' : 'Show these items'}"`
       : '';
     return `<${tag} class="health-row${r.to ? ' actionable' : ''}"${extra}>
       <span class="health-icon" style="background:${color[r.tone]}"></span>
@@ -590,13 +592,13 @@ function renderHealth(s) {
   });
 }
 
-/** One reconciled set of sales for every figure outside the Review tab. */
+/** One reconciled set of sales for every figure outside the Sync tab. */
 function rebuildLedger() {
   const built = buildLedger(state.items, state.quailSales, buildVenueContext(state.venueInfo));
   state.ledger = built.items;
   state.ledgerSummary = built.summary;
 
-  /* The badge counts what Review will actually show, which is always everything.
+  /* The badge counts what Sync will actually show, which is always everything.
    * Deriving it from the current range made it read 1 while Analyze was narrowed
    * to today and 7 the moment you clicked through. Range-independent, so this is
    * computed once per sync rather than on every render. */
@@ -1465,7 +1467,7 @@ function renderItems() {
    * find a thing in the system that holds it, so each page answers for one
    * system: Items is what Sandpiper believes, POS sales is what the register
    * rang up. Analyze reads the ledger, because a business figure has to
-   * reconcile both; Review is where the two are held against each other. */
+   * reconcile both; Sync is where the two are held against each other. */
   let rows = state.items.filter((i) => {
     const acq = i.acquired == null || (i.acquired >= state.start && i.acquired <= state.end);
     const sld = i.sold != null && i.sold >= state.start && i.sold <= state.end;

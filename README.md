@@ -37,9 +37,9 @@ third-party scripts, nothing phones home.
 
 ![Roost's Analyze view: KPI tiles for gross sales, net payout, gross and net profit, stock at cost, asking value, potential profit and sell-through, followed by gross sales by day, cumulative profit, net payout vs cost of goods, a where-the-money-sits donut, buying vs selling, day-of-week and hour-of-day charts, payment mix and recent sales.](docs/screenshot-analyze.png)
 
-### Review — what the two systems disagree about
+### Sync — what the two systems disagree about
 
-![Roost's Review view: sales matched, needs attention, sales difference and total findings tiles, a findings-by-type breakdown, data quality checks, and an anomalies table with severity and match chips and inline Fix buttons.](docs/screenshot-review.png)
+![Roost's Sync view: sales matched, needs attention, sales difference and total findings tiles, a findings-by-type breakdown, data quality checks, and an anomalies table with severity and match chips and inline Fix buttons.](docs/screenshot-review.png)
 
 ---
 
@@ -53,7 +53,7 @@ Each mode has its own tabs and its own range presets.
 | Mode | Tabs | Kind of question |
 | --- | --- | --- |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | "how is the business doing" — Overview carries the money ladder and the register's daily view |
-| **Review** | *(single page)* | a task list — "what needs fixing" |
+| **Sync** | *(single page)* | a task list — "what needs fixing", and where the two systems are brought into line |
 | **Records** | Items · POS sales | lookup — "find this specific thing", each page answering for one system |
 
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
@@ -61,7 +61,7 @@ switching back restores what that mode was showing, custom ranges included. On a
 Analyze starts at All time and Records at 90D. Your last mode, and the last tab within each
 mode, are remembered.
 
-**Review has no date picker.** It always covers everything: reconciliation exists to prove the
+**Sync has no date picker.** It always covers everything: reconciliation exists to prove the
 two systems agree, and a window can only hide a disagreement that is still live. The anomaly
 badge counts over that same full range, so it never disagrees with the tab it points at.
 
@@ -113,7 +113,7 @@ healthy booth look like a failing one.
 
 ### Reconciliation
 
-The Review page joins the two systems on inventory number and reports what disagrees:
+The Sync page joins the two systems on inventory number and reports what disagrees:
 
 | Finding | Meaning |
 | --- | --- |
@@ -172,7 +172,7 @@ applied one at a time so a partial failure stops somewhere understandable, and t
 updates in place as each succeeds, so resolved findings disappear immediately without a full
 re-sync.
 
-The Review tab carries a badge with the number of anomalies in range, turning red when any are
+The Sync tab carries a badge with the number of anomalies in range, turning red when any are
 high severity, so it is visible from any mode.
 
 ### Stores and booths
@@ -268,7 +268,7 @@ asks for a password and never sees one.
    this is required, it's where your inventory comes from
 2. In another tab, sign in to **[vendor.quailhq.com](https://vendor.quailhq.com)** — technically
    optional, but without it you lose real sale times, booth rent, payment methods, and the entire
-   Review page. Sign in to both
+   Sync page. Sign in to both
 3. Click the **Roost icon** in your toolbar
 4. Click **Fetch latest data**
 
@@ -354,7 +354,7 @@ Records is the deliberate exception. Its two pages are lookup, not analysis, and
 for a single system: **Items** is what Sandpiper holds, **POS sales** is what the register
 rang. Merging them there would mean editing a row while looking at another system's version of
 it — which is also why Items is the one place edits can be trusted to show up exactly as typed.
-Review is where the two are held against each other.
+Sync is where the two are held against each other.
 
 ### Units
 
