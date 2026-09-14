@@ -29,6 +29,7 @@ const state = {
   stats: null,
   flowMode: 'money',
   // Each of these charts keeps its own $/units choice.
+  dayMode: 'money',
   dowMode: 'money',
   hourMode: 'units',
   venue: { kind: 'all', id: null },
@@ -793,15 +794,7 @@ function renderPosCharts() {
   const q = state.quailStats;
   if (!q) return;
 
-  const dailySeries = [{ name: 'Gross sales', color: PALETTE.blue, values: q.days.map((d) => d.gross) }];
-  barChart($('#c-daily'), {
-    labels: q.days.map((d) => d.label),
-    series: dailySeries,
-    height: 180,
-    tipFormat: (v, ser, i) => `${money(v)} · ${int(q.days[i].units)} items`
-  });
-  legend($('#l-daily'), dailySeries);
-
+  renderDailyChart(q);
   renderDowChart(q);
   renderHourChart(q);
 
@@ -866,6 +859,28 @@ function renderPosLedger() {
 }
 
 /** Weekday performance, averaged per occurrence so a partial range can't skew it. */
+function renderDailyChart(q) {
+  const asMoney = state.dayMode === 'money';
+  const series = [{
+    name: asMoney ? 'Gross sales' : 'Items sold',
+    color: PALETTE.blue,
+    values: q.days.map((d) => (asMoney ? d.gross : d.units))
+  }];
+  barChart($('#c-daily'), {
+    labels: q.days.map((d) => d.label),
+    series,
+    height: 180,
+    // Items are whole things, so a fractional tick would be describing nothing.
+    integerY: !asMoney,
+    yFormat: asMoney ? (v) => money(v, { compact: true }) : (v) => int(v),
+    // Whichever is being charted, the tooltip reports both.
+    tipFormat: (v, ser, i) => (asMoney
+      ? `${money(q.days[i].gross)} · ${int(q.days[i].units)} items`
+      : `${int(q.days[i].units)} items · ${money(q.days[i].gross)}`)
+  });
+  legend($('#l-daily'), series);
+}
+
 function renderDowChart(q) {
   const asMoney = state.dowMode === 'money';
   barChart($('#c-dow'), {
@@ -2195,6 +2210,7 @@ async function init() {
     });
   };
   wireToggle('flow-mode', 'flowMode', () => { if (state.stats) renderFlowChart(state.stats); });
+  wireToggle('day-mode', 'dayMode', () => { if (state.quailStats) renderDailyChart(state.quailStats); });
   wireToggle('dow-mode', 'dowMode', () => { if (state.quailStats) renderDowChart(state.quailStats); });
   wireToggle('hour-mode', 'hourMode', () => { if (state.quailStats) renderHourChart(state.quailStats); });
   $('#venue').onchange = () => {

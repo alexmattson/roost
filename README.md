@@ -100,8 +100,8 @@ Sandpiper's `sold` timestamp is when the sale was keyed in — typically hours l
 batches (76% of sampled sales land within two minutes of another). Quail's timestamps are the
 real register times, which is what makes the daily view on Overview meaningful: daily takings
 including dead days, day of week averaged per occurrence, hour of day, basket size and payment
-mix. The weekday and hour charts each carry a **$ / Units** toggle, and either way the tooltip
-reports both figures.
+mix. The daily, weekday and hour charts each carry a **$ / Units** toggle, and either way the
+tooltip reports both figures.
 
 **Booth rent** is a fixed monthly cost Sandpiper has no field for, so every Sandpiper profit
 figure is overstated by it. Roost reports takings after commission *and* rent, prorated to the

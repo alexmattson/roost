@@ -85,8 +85,12 @@
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>Gross sales by day</h2>
-          <span class="hint">Register times, including days with no sales</span>
+          <h2>Sales by day</h2>
+          <span class="hint source">Register times, including days with no sales</span>
+          <div class="toggle" id="day-mode">
+            <button data-mode="money" class="active">$</button>
+            <button data-mode="units">Units</button>
+          </div>
         </div>
         <div class="chart-box" id="c-daily"></div>
         <div class="legend-inline" id="l-daily"></div>
