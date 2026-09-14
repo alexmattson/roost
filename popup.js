@@ -1845,8 +1845,10 @@ function initAddStock() {
   $('#as-acquired').onchange = (e) => { state.addStock.acquired = e.target.value; queueDraftSave(); };
   $('#as-lot').oninput = (e) => { state.addStock.lotCents = centsFrom(e.target.value); };
 
+  /* Keyed off what is actually on screen rather than what state believes: if
+   * the two ever disagree again, Escape should still be a way out. */
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.addStock.open) closeAddStock();
+    if (e.key === 'Escape' && !$('#add-stock').hidden) closeAddStock();
   });
 }
 

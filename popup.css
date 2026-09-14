@@ -456,6 +456,7 @@ td.wrap { white-space: normal; max-width: 420px; }
   padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
   background: var(--panel-2); border: 1px solid var(--border);
 }
+.fix-bar[hidden] { display: none; }   /* as above: authored display beats [hidden] */
 .fix-bar .count { font-size: 11.5px; color: var(--muted); margin-right: auto; }
 .fix-bar .count b { color: var(--text); font-weight: 620; }
 .fix-btn {
@@ -549,6 +550,9 @@ input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0;
   display: flex; flex-direction: column;
   background: var(--bg);
 }
+/* An authored display beats the UA's [hidden] rule, so the attribute needs
+   saying again here or the sheet is open the moment the popup loads. */
+.sheet[hidden] { display: none; }
 body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
 
 .sheet-head {
