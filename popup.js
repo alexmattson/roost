@@ -49,9 +49,8 @@ const state = {
   pendingConfirm: null,
   // Draft stock, kept until it is written or explicitly discarded.
   addStock: { open: false, acquired: null, rows: [], lotCents: null, busy: false },
-  // Records → Items: what is ticked, what is open for editing, what is about
-  // to be deleted once it has been confirmed.
-  itemSel: new Set(),
+  // Records → Items: which row is open for editing, and what is about to be
+  // deleted once it has been confirmed.
   itemEditing: null,
   itemConfirmDelete: null,
   itemBusy: false,
@@ -1359,14 +1358,12 @@ function renderItems() {
 
   const shown = rows.slice(0, 400);
 
-  /* A tick can only ever mean a row you can see, so anything the filters have
-   * hidden drops out of the selection rather than being deleted unseen. */
+  /* An editor left open on a row the filters have since hidden would be
+   * invisible and still live, so it closes with the row. */
   const visible = new Set(shown.filter(isLiveItem).map((r) => r.id));
-  for (const id of [...state.itemSel]) if (!visible.has(id)) state.itemSel.delete(id);
   if (state.itemEditing && !visible.has(state.itemEditing)) state.itemEditing = null;
 
   const head =
-    '<th class="pick"><input type="checkbox" id="item-all" aria-label="Select all shown"></th>' +
     ITEM_COLUMNS.map((c) =>
       `<th class="sortable ${c.num ? 'num' : ''}" data-key="${c.key}">${c.title}${key === c.key ? `<span class="arrow"> ${dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('') +
     '<th class="row-acts"></th>';
@@ -1382,25 +1379,6 @@ function renderItems() {
     th.onclick = () => {
       const k = th.dataset.key;
       state.itemSort = { key: k, dir: state.itemSort.key === k ? -state.itemSort.dir : -1 };
-      renderItems();
-    };
-  });
-
-  const all = $('#item-all');
-  if (all) {
-    all.checked = visible.size > 0 && state.itemSel.size === visible.size;
-    all.indeterminate = state.itemSel.size > 0 && state.itemSel.size < visible.size;
-    all.onchange = () => {
-      if (all.checked) visible.forEach((id) => state.itemSel.add(id));
-      else state.itemSel.clear();
-      renderItems();
-    };
-  }
-
-  $$('#t-items .row-pick').forEach((box) => {
-    box.onchange = () => {
-      if (box.checked) state.itemSel.add(box.dataset.id);
-      else state.itemSel.delete(box.dataset.id);
       renderItems();
     };
   });
@@ -1424,16 +1402,11 @@ function renderItems() {
 }
 
 function itemRow(r) {
-  const live = isLiveItem(r);
-  const pick = live
-    ? `<input type="checkbox" class="row-pick" data-id="${esc(r.id)}" ${state.itemSel.has(r.id) ? 'checked' : ''} aria-label="Select ${esc(r.inv || r.desc)}">`
-    : '';
-  const acts = live
+  const acts = isLiveItem(r)
     ? `<button class="row-act act-edit" data-id="${esc(r.id)}" title="Edit this item">Edit</button>`
       + `<button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button>`
     : '<span class="pill hold" title="Seen by the register only — Review can add it to Sandpiper">register only</span>';
-  return `<tr class="${state.itemSel.has(r.id) ? 'picked' : ''}">`
-    + `<td class="pick">${pick}</td>`
+  return '<tr>'
     + ITEM_COLUMNS.map((c) => `<td class="${c.num ? 'num ' : ''}${c.cls ? c.cls(r) : ''}">${c.render(r)}</td>`).join('')
     + `<td class="row-acts">${acts}</td></tr>`;
 }
@@ -1449,7 +1422,6 @@ function itemRow(r) {
 function itemEditorRow(r) {
   const cents = (v) => (v == null ? '' : (v / 100).toFixed(2));
   return `<tr class="editing">
-    <td class="pick"></td>
     <td><input class="e-inv" value="${esc(r.inv)}" aria-label="Inventory number"></td>
     <td><input class="e-desc" value="${esc(r.desc === '(no description)' ? '' : r.desc)}" aria-label="Description"></td>
     <td class="muted">${esc(r.category)}</td>
@@ -1557,35 +1529,23 @@ function renderItemBar() {
   const bar = $('#item-bar');
   if (!bar) return;
   const pending = state.itemConfirmDelete;
-  const sel = state.itemSel;
 
-  if (pending && pending.length) {
-    const named = pending
-      .map((id) => state.ledger.find((r) => r.id === id))
-      .filter(Boolean)
-      .map((r) => `#${esc(r.inv || '—')} ${esc(r.desc)}`);
-    const list = named.slice(0, 3).join(', ') + (named.length > 3 ? ` and ${named.length - 3} more` : '');
-    bar.hidden = false;
-    bar.innerHTML = `<span class="count">Delete <b>${int(pending.length)}</b> item${pending.length === 1 ? '' : 's'} from Sandpiper — ${list}. This cannot be undone.</span>
-      <button class="fix-btn" id="del-cancel">Cancel</button>
-      <button class="fix-btn danger" id="del-go"${state.itemBusy ? ' disabled' : ''}>${state.itemBusy ? 'Deleting…' : 'Delete'}</button>`;
-    $('#del-cancel').onclick = () => { state.itemConfirmDelete = null; renderItemBar(); };
-    $('#del-go').onclick = () => doItemDelete(pending);
+  if (!pending || !pending.length) {
+    bar.hidden = true;
+    bar.innerHTML = '';
     return;
   }
 
-  if (sel.size) {
-    bar.hidden = false;
-    bar.innerHTML = `<span class="count"><b>${int(sel.size)}</b> selected</span>
-      <button class="fix-btn" id="sel-clear">Clear</button>
-      <button class="fix-btn danger" id="sel-del">Delete selected</button>`;
-    $('#sel-clear').onclick = () => { state.itemSel.clear(); renderItems(); };
-    $('#sel-del').onclick = () => confirmItemDelete([...sel]);
-    return;
-  }
-
-  bar.hidden = true;
-  bar.innerHTML = '';
+  const named = pending
+    .map((id) => state.ledger.find((r) => r.id === id))
+    .filter(Boolean)
+    .map((r) => `#${esc(r.inv || '—')} ${esc(r.desc)}`);
+  bar.hidden = false;
+  bar.innerHTML = `<span class="count">Delete <b>${esc(named.join(', '))}</b> from Sandpiper? This cannot be undone.</span>
+    <button class="fix-btn" id="del-cancel">Cancel</button>
+    <button class="fix-btn danger" id="del-go"${state.itemBusy ? ' disabled' : ''}>${state.itemBusy ? 'Deleting…' : 'Delete'}</button>`;
+  $('#del-cancel').onclick = () => { state.itemConfirmDelete = null; renderItemBar(); };
+  $('#del-go').onclick = () => doItemDelete(pending);
 }
 
 async function doItemDelete(ids) {
@@ -1599,7 +1559,6 @@ async function doItemDelete(ids) {
     state.items = normalize(res.items);
     state.venueList = listVenues(state.items);
     rebuildLedger();
-    ids.forEach((id) => state.itemSel.delete(id));
     state.itemConfirmDelete = null;
 
     banner(

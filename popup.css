@@ -681,11 +681,6 @@ body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
    in it rather than behind a menu. Both columns are sized to their content and
    nothing else moves, which keeps the numbers lined up where they were. */
 
-th.pick, td.pick { width: 26px; padding-left: 8px; padding-right: 0; }
-td.pick input, th.pick input { margin: 0; cursor: pointer; }
-
-tr.picked { background: var(--row-hover); }
-
 th.row-acts, td.row-acts { width: 1%; white-space: nowrap; text-align: right; padding-right: 8px; }
 
 /* Kept quiet until the row is under the pointer: eleven columns of numbers
