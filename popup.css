@@ -536,3 +536,131 @@ input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0;
 .empty-state { display: grid; place-items: center; height: 340px; text-align: center; gap: 8px; }
 .empty-state h3 { margin: 0; font-size: 15px; font-weight: 620; }
 .empty-state p { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 380px; }
+
+/* ------------------------------------------------------------------ Add stock
+
+   A sheet over the dashboard rather than another tab. Entering stock is a task
+   with a beginning and an end: you arrive with a box of things, you type them
+   in, you leave. Covering the app keeps the numbers you are about to change
+   out of the way, and hands the grid the whole width. */
+
+.sheet {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
+
+.sheet-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--topbar-tint), transparent);
+}
+.sheet-head h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.sheet-sub { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+
+.sheet-defaults {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.sheet-defaults .field { display: flex; flex-direction: column; gap: 4px; }
+.sheet-defaults .field > span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.sheet-note { margin: 0; font-size: 11.5px; color: var(--faint); flex: 1; min-width: 180px; }
+
+.sheet-defaults input[type="date"],
+.money-input input {
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 9px; font: inherit; font-size: 13px;
+}
+.money-input { position: relative; display: inline-flex; align-items: center; }
+.money-input i { position: absolute; left: 9px; font-style: normal; color: var(--faint); font-size: 13px; }
+.money-input input { padding-left: 20px; width: 110px; text-align: right; }
+
+/* --- the grid ----------------------------------------------------------- */
+
+.stock-grid { flex: 1; overflow-y: auto; padding: 4px 18px 12px; }
+
+.stock-head, .stock-row {
+  display: grid;
+  grid-template-columns: 88px minmax(150px, 1fr) 96px 96px 44px 104px 30px;
+  gap: 8px; align-items: center;
+}
+.stock-head {
+  position: sticky; top: 0; z-index: 2;
+  padding: 8px 0; background: var(--bg);
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint);
+  border-bottom: 1px solid var(--border-soft);
+}
+.stock-head .num, .stock-head .qty { text-align: center; }
+.stock-head .cost, .stock-head .ask, .stock-head .nets { text-align: right; }
+
+.stock-row { padding: 5px 0; }
+.stock-row + .stock-row { border-top: 1px solid var(--border-soft); }
+.stock-row:hover { background: var(--row-hover); }
+
+.stock-row input {
+  width: 100%; box-sizing: border-box;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 9px; font: inherit; font-size: 13px;
+}
+.stock-row input:focus { outline: none; border-color: var(--brass); box-shadow: 0 0 0 2px var(--glow-a); }
+.stock-row input.num  { text-align: center; font-variant-numeric: tabular-nums; color: var(--muted); }
+.stock-row input.num:focus { color: var(--text); }
+.stock-row input.cost, .stock-row input.ask { text-align: right; font-variant-numeric: tabular-nums; }
+.stock-row input.qty  { text-align: center; }
+.stock-row input.bad  { border-color: var(--red); }
+
+/* What the row is worth, sitting where a total belongs. */
+.stock-nets { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.stock-nets b { color: var(--text); font-weight: 600; }
+.stock-nets.loss b { color: var(--red); }
+
+.row-drop {
+  display: grid; place-items: center; width: 26px; height: 26px;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--faint); cursor: pointer; font-size: 16px; line-height: 1;
+}
+.row-drop:hover { background: var(--btn-hover); color: var(--red); }
+
+/* A row's second line: what is wrong with it, or what its like sold for. */
+.row-note {
+  grid-column: 2 / -1;
+  margin: -2px 0 4px; font-size: 11.5px; line-height: 1.45;
+}
+.row-note.err  { color: var(--red); }
+.row-note.warn { color: var(--brass); }
+.row-note.hint { color: var(--faint); }
+.row-note b { color: var(--muted); font-weight: 600; }
+
+.stock-add {
+  margin-top: 10px;
+  background: none; border: 1px dashed var(--border); border-radius: 8px;
+  color: var(--muted); padding: 8px 12px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.stock-add:hover { border-color: var(--brass); color: var(--text); }
+
+/* --- footer -------------------------------------------------------------- */
+
+.sheet-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 18px; border-top: 1px solid var(--border);
+  background: var(--footer-bg);
+}
+.sheet-totals { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sheet-totals b { color: var(--text); font-weight: 600; }
+.sheet-actions { display: flex; gap: 8px; }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); }
+.btn.ghost:hover { background: var(--btn-hover); color: var(--text); }
+.btn.small { padding: 7px 11px; font-size: 12.5px; }
+
+/* The popup is 780px wide; the grid gives up its softer columns before its
+   numbers, since you can add stock without seeing the margin but not without
+   seeing what you typed. */
+@media (max-width: 860px) {
+  .stock-head, .stock-row { grid-template-columns: 78px minmax(120px, 1fr) 84px 84px 40px 30px; }
+  .stock-head .nets, .stock-row .stock-nets { display: none; }
+}

@@ -6,6 +6,11 @@ import { reconcile } from './lib/reconcile.js';
 import { planResolution, buildVenueContext, CONFIDENCE } from './lib/resolve.js';
 import { buildLedger, rentForRange } from './lib/ledger.js';
 import {
+  nextInventoryNumber, bumpInventoryNumber, takenNumbers, priceHistory, margin,
+  splitLotCost, blankRow, isRowEmpty, validateRow, draftNumberCounts,
+  buildCreatePayload, draftTotals
+} from './lib/stock.js';
+import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
 } from './lib/charts.js';
@@ -42,6 +47,8 @@ const state = {
   findingsShown: 0,
   selected: new Set(),
   pendingConfirm: null,
+  // Draft stock, kept until it is written or explicitly discarded.
+  addStock: { open: false, acquired: null, rows: [], lotCents: null, busy: false },
   findingFilters: { severity: 'all', match: 'all', type: 'all' },
   applying: false,
   venueList: { stores: [], booths: [] },
@@ -1474,6 +1481,375 @@ function initNav() {
   renderTabs();
 }
 
+
+/* ======================================================================= Add stock
+
+   Sandpiper adds one item per modal: open it, type six fields, save, open it
+   again. That is the wrong shape for how stock actually arrives — you come back
+   from a pick with a box, not with an item. This is a grid you type down, with
+   the three things Sandpiper cannot tell you because it only knows the row in
+   front of it: whether the number is free, what things like this have sold for,
+   and what you keep after the store's cut. */
+
+const DRAFT_KEY = 'sp_stock_draft';
+
+/** Cents from whatever the user typed, or null for an empty field. */
+function centsFrom(text) {
+  const raw = String(text == null ? '' : text).replace(/[^0-9.]/g, '');
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+const centsTo = (c) => (c == null ? '' : (c / 100).toFixed(2));
+
+const todayISO = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+
+/** The commission the store has actually been charging, for the margin column. */
+const stockCommission = () =>
+  (state.stats && state.stats.inventory && state.stats.inventory.commissionRate) || 0.15;
+
+function openAddStock() {
+  const as = state.addStock;
+  as.open = true;
+  if (!as.acquired) as.acquired = todayISO();
+  if (!as.rows.length) as.rows = [blankRow(nextInventoryNumber(state.items))];
+  $('#add-stock').hidden = false;
+  renderAddStock();
+  // Straight into the first description: the number is already right.
+  const first = $('#as-grid .stock-row input.desc');
+  if (first) first.focus();
+}
+
+function closeAddStock() {
+  state.addStock.open = false;
+  $('#add-stock').hidden = true;
+  saveDraft();
+}
+
+/** Keeps one empty row at the bottom, so there is always somewhere to type. */
+function ensureTrailingRow() {
+  const rows = state.addStock.rows;
+  const last = rows[rows.length - 1];
+  if (!last || !isRowEmpty(last)) {
+    const prev = last ? last.inv : '';
+    rows.push(blankRow(bumpInventoryNumber(prev) || nextInventoryNumber(state.items)));
+    return true;
+  }
+  return false;
+}
+
+function saveDraft() {
+  const as = state.addStock;
+  const rows = as.rows.filter((r) => !isRowEmpty(r));
+  try {
+    if (rows.length) chrome.storage.local.set({ [DRAFT_KEY]: { acquired: as.acquired, rows } });
+    else chrome.storage.local.remove(DRAFT_KEY);
+  } catch (e) { /* a lost draft is not worth breaking the screen over */ }
+}
+
+async function loadDraft() {
+  try {
+    const got = await chrome.storage.local.get(DRAFT_KEY);
+    const draft = got[DRAFT_KEY];
+    if (draft && Array.isArray(draft.rows) && draft.rows.length) {
+      state.addStock.rows = draft.rows;
+      state.addStock.acquired = draft.acquired || todayISO();
+      return draft.rows.length;
+    }
+  } catch (e) { /* no draft is the normal case */ }
+  return 0;
+}
+
+/* --- rendering ----------------------------------------------------------- */
+
+function renderAddStock() {
+  const as = state.addStock;
+  ensureTrailingRow();
+
+  $('#as-acquired').value = as.acquired;
+  $('#as-lot').value = centsTo(as.lotCents);
+
+  const grid = $('#as-grid');
+  grid.innerHTML = `
+    <div class="stock-head">
+      <span class="num">Inv #</span><span>Description</span>
+      <span class="cost">Cost</span><span class="ask">Asking</span>
+      <span class="qty">Qty</span><span class="nets">You keep</span><span></span>
+    </div>`;
+
+  as.rows.forEach((row, i) => grid.appendChild(buildStockRow(row, i)));
+
+  const more = document.createElement('button');
+  more.className = 'stock-add';
+  more.textContent = '+ Add row';
+  more.onclick = () => {
+    ensureTrailingRow();
+    renderAddStock();
+    const inputs = $$('#as-grid .stock-row input.desc');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  };
+  grid.appendChild(more);
+
+  refreshAllRows();
+  refreshTotals();
+}
+
+function buildStockRow(row, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'stock-row';
+  wrap.dataset.i = String(i);
+  wrap.innerHTML = `
+    <input class="num"  value="${escapeAttr(row.inv)}"  aria-label="Inventory number" spellcheck="false">
+    <input class="desc" value="${escapeAttr(row.desc)}" aria-label="Description" placeholder="What is it?">
+    <input class="cost" value="${centsTo(row.costCents)}" aria-label="Cost"    inputmode="decimal" placeholder="0.00">
+    <input class="ask"  value="${centsTo(row.askCents)}"  aria-label="Asking price" inputmode="decimal" placeholder="0.00">
+    <input class="qty"  value="${row.qty || 1}" aria-label="Quantity" inputmode="numeric">
+    <span class="stock-nets"></span>
+    <button class="row-drop" title="Remove this row" aria-label="Remove row">×</button>`;
+
+  const [num, desc, cost, ask, qty] = wrap.querySelectorAll('input');
+  const read = () => {
+    row.inv = num.value.trim();
+    row.desc = desc.value;
+    row.costCents = centsFrom(cost.value);
+    row.askCents = centsFrom(ask.value);
+    row.qty = Math.max(1, parseInt(qty.value, 10) || 1);
+  };
+
+  for (const el of [num, desc, cost, ask, qty]) {
+    el.addEventListener('input', () => {
+      read();
+      /* Typing in the last row is what makes the next one appear — it keeps a
+       * long entry session to one hand and no clicking. */
+      if (Number(wrap.dataset.i) === state.addStock.rows.length - 1 && !isRowEmpty(row)) {
+        ensureTrailingRow();
+        renderAddStock();
+        const rows = $$('#as-grid .stock-row');
+        const again = rows[Number(wrap.dataset.i)];
+        if (again) {
+          // classList[0], not className: an invalid row carries "num bad".
+          const field = again.querySelector(`input.${el.classList[0]}`);
+          if (field) { field.focus(); field.setSelectionRange(el.value.length, el.value.length); }
+        }
+        return;
+      }
+      refreshRow(Number(wrap.dataset.i));
+      refreshTotals();
+      queueDraftSave();
+    });
+  }
+
+  // Money reads better settled than mid-keystroke.
+  cost.addEventListener('blur', () => { read(); cost.value = centsTo(row.costCents); refreshRow(Number(wrap.dataset.i)); });
+  ask.addEventListener('blur', () => { read(); ask.value = centsTo(row.askCents); refreshRow(Number(wrap.dataset.i)); });
+
+  wrap.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    read();
+    const idx = Number(wrap.dataset.i);
+    const next = $$('#as-grid .stock-row')[idx + 1];
+    if (next) next.querySelector('input.desc').focus();
+    else { ensureTrailingRow(); renderAddStock(); const all = $$('#as-grid .stock-row input.desc'); all[all.length - 1].focus(); }
+  });
+
+  wrap.querySelector('.row-drop').onclick = () => {
+    state.addStock.rows.splice(Number(wrap.dataset.i), 1);
+    if (!state.addStock.rows.length) state.addStock.rows = [blankRow(nextInventoryNumber(state.items))];
+    renderAddStock();
+    queueDraftSave();
+  };
+
+  const note = document.createElement('div');
+  note.className = 'row-note';
+  wrap.appendChild(note);
+  return wrap;
+}
+
+const escapeAttr = (s) => String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+let draftTimer = null;
+function queueDraftSave() {
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 400);
+}
+
+/**
+ * A row's second line. Errors first, because they stop the write; then the
+ * warnings worth a glance; and when a row is simply fine, what its like has
+ * sold for — which is the number you actually want while deciding a price.
+ */
+function refreshRow(i) {
+  const el = $$('#as-grid .stock-row')[i];
+  const row = state.addStock.rows[i];
+  if (!el || !row) return;
+
+  const rate = stockCommission();
+  const note = el.querySelector('.row-note');
+  const numEl = el.querySelector('input.num');
+
+  if (isRowEmpty(row)) {
+    note.className = 'row-note';
+    note.textContent = '';
+    numEl.classList.remove('bad');
+    el.querySelector('.stock-nets').textContent = '';
+    return;
+  }
+
+  const v = validateRow(row, {
+    taken: state.stockTaken,
+    draftCounts: draftNumberCounts(state.addStock.rows),
+    commissionRate: rate
+  });
+  numEl.classList.toggle('bad', v.errors.some((e) => e.includes('#')));
+
+  if (v.errors.length) {
+    note.className = 'row-note err';
+    note.textContent = v.errors[0];
+  } else if (v.warnings.length) {
+    note.className = 'row-note warn';
+    note.textContent = v.warnings[0];
+  } else {
+    const h = row.desc.trim().length > 3 ? priceHistory(row.desc, state.items) : null;
+    if (h && h.soldMedian) {
+      const days = h.daysMedian != null ? `, took <b>${int(Math.round(h.daysMedian))} days</b>` : '';
+      note.className = 'row-note hint';
+      note.innerHTML = `${h.basis === 'similar items' ? 'Similar' : 'Your ' + h.basis} sold for <b>${money(h.soldMedian)}</b>${days} <span class="hint">(${int(h.n)})</span>`;
+    } else {
+      note.className = 'row-note';
+      note.textContent = '';
+    }
+  }
+
+  const nets = el.querySelector('.stock-nets');
+  if (row.askCents > 0) {
+    const m = margin(row.askCents, row.costCents || 0, rate);
+    nets.classList.toggle('loss', m.profit < 0);
+    nets.innerHTML = `<b>${money(m.net)}</b><br>${m.profit >= 0 ? '+' : ''}${money(m.profit)}`;
+  } else {
+    nets.classList.remove('loss');
+    nets.textContent = '';
+  }
+}
+
+function refreshAllRows() {
+  state.stockTaken = takenNumbers(state.items);
+  state.addStock.rows.forEach((_, i) => refreshRow(i));
+}
+
+function refreshTotals() {
+  const as = state.addStock;
+  const rate = stockCommission();
+  const t = draftTotals(as.rows, rate);
+  const counts = draftNumberCounts(as.rows);
+  const bad = as.rows.filter((r) => !isRowEmpty(r) &&
+    !validateRow(r, { taken: state.stockTaken, draftCounts: counts, commissionRate: rate }).ok).length;
+
+  $('#as-totals').innerHTML = t.rows
+    ? `<b>${int(t.items)}</b> item${t.items === 1 ? '' : 's'} · cost <b>${money(t.cost)}</b> · asking <b>${money(t.ask)}</b> · you keep <b>${money(t.net)}</b>`
+      + (bad ? ` · <span style="color:var(--red)">${int(bad)} need${bad === 1 ? 's' : ''} fixing</span>` : '')
+    : 'Nothing to add yet.';
+
+  const btn = $('#as-submit');
+  btn.disabled = as.busy || !t.rows || bad > 0;
+  btn.textContent = as.busy ? 'Adding…' : t.rows ? `Add ${int(t.items)} item${t.items === 1 ? '' : 's'}` : 'Add items';
+  $('#add-stock-sub').textContent = state.items.length
+    ? `Next free number is ${nextInventoryNumber(state.items)}. Enter moves down; the row below appears as you type.`
+    : 'Fetch your data first so Roost can pick inventory numbers for you.';
+}
+
+/* --- actions ------------------------------------------------------------- */
+
+function splitLot() {
+  const as = state.addStock;
+  const rows = as.rows.filter((r) => !isRowEmpty(r));
+  if (!as.lotCents || !rows.length) {
+    banner('Enter what the lot cost, and at least one item to spread it over.', 'error');
+    return;
+  }
+  const parts = splitLotCost(as.lotCents, rows);
+  rows.forEach((r, i) => { r.costCents = parts[i]; });
+  const weighted = rows.every((r) => r.askCents > 0);
+  renderAddStock();
+  banner(
+    `Split ${money(as.lotCents)} across ${int(rows.length)} items, ${weighted ? 'weighted by asking price' : 'evenly'}.`,
+    'ok'
+  );
+  setTimeout(() => banner(''), 3000);
+  queueDraftSave();
+}
+
+async function submitStock() {
+  const as = state.addStock;
+  const rows = as.rows.filter((r) => !isRowEmpty(r));
+  if (!rows.length) return;
+
+  const acquired = Math.floor(new Date(`${as.acquired}T12:00:00`).getTime() / 1000);
+  as.busy = true;
+  refreshTotals();
+  try {
+    const res = await send('createItems', {
+      rows: rows.map((r) => ({ item: buildCreatePayload(r, { acquired }), quantity: Math.max(1, r.qty || 1) }))
+    });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The create request failed.');
+
+    const failed = res.results.filter((r) => !r.ok);
+    if (res.items) {
+      state.items = normalize(res.items);
+      state.venueList = listVenues(state.items);
+      rebuildLedger();
+    }
+
+    /* Only the rows that failed stay behind, already filled in, so a retry is
+     * never a re-type. */
+    as.rows = failed.length
+      ? rows.filter((r) => failed.some((f) => f.inv === String(r.inv).trim()))
+      : [];
+    as.lotCents = null;
+    saveDraft();
+
+    banner(
+      failed.length
+        ? `Added ${int(res.created)}. ${failed.length} failed: ${failed[0].error}`
+        : `Added ${int(res.created)} item${res.created === 1 ? '' : 's'} to Sandpiper.`,
+      failed.length ? 'error' : 'ok'
+    );
+    if (!failed.length) { setTimeout(() => banner(''), 3200); closeAddStock(); }
+    else renderAddStock();
+    render();
+  } catch (e) {
+    banner(e.message, 'error');
+  } finally {
+    as.busy = false;
+    if (as.open) refreshTotals();
+  }
+}
+
+function initAddStock() {
+  $('#add-stock-open').onclick = openAddStock;
+  $('#add-stock-close').onclick = closeAddStock;
+  $('#as-discard').onclick = () => {
+    if (state.addStock.rows.some((r) => !isRowEmpty(r)) &&
+        !confirm('Discard everything typed here?')) return;
+    state.addStock.rows = [];
+    state.addStock.lotCents = null;
+    saveDraft();
+    closeAddStock();
+  };
+  $('#as-submit').onclick = submitStock;
+  $('#as-split').onclick = splitLot;
+  $('#as-acquired').onchange = (e) => { state.addStock.acquired = e.target.value; queueDraftSave(); };
+  $('#as-lot').oninput = (e) => { state.addStock.lotCents = centsFrom(e.target.value); };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.addStock.open) closeAddStock();
+  });
+}
+
 async function init() {
   if (new URLSearchParams(location.search).get('full') === '1') {
     document.body.classList.add('expanded');
@@ -1483,6 +1859,7 @@ async function init() {
   renderPresets();
 
   $('#refresh').onclick = refresh;
+  initAddStock();
   $('#expand').onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?full=1') });
   $('#theme-toggle').onclick = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
@@ -1553,8 +1930,15 @@ async function init() {
   if (cached && cached.ok && cached.items && cached.items.length) {
     loadInto(cached);
     updateSubline();
+    /* A draft outlives the popup, which closes the moment you click away from
+     * it — losing half a box of typing to a stray click would be unforgivable. */
+    const pending = await loadDraft();
     const age = Date.now() - (cached.meta ? cached.meta.fetchedAt : 0);
-    if (age > 12 * 3600 * 1000) banner('This data is over 12 hours old — fetch again for the latest.', 'info');
+    if (pending) {
+      banner(`You have ${int(pending)} unsaved item${pending === 1 ? '' : 's'} in Add stock.`, 'info');
+    } else if (age > 12 * 3600 * 1000) {
+      banner('This data is over 12 hours old — fetch again for the latest.', 'info');
+    }
   } else {
     showEmptyState();
     updateSubline();

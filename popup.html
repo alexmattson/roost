@@ -37,6 +37,10 @@
       <button id="expand" class="icon-btn" title="Open full dashboard in a tab">
         <svg viewBox="0 0 24 24"><path d="M9 3H3v6M3 3l7 7M15 21h6v-6M21 21l-7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button id="add-stock-open" class="btn">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <span>Add stock</span>
+      </button>
       <button id="refresh" class="btn primary">
         <svg class="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span id="refresh-label">Fetch latest data</span>
@@ -327,6 +331,47 @@
       </div>
     </section>
   </main>
+
+  <!-- Batch entry. An overlay rather than a tab: adding stock is a task you
+       finish and leave, not a view you navigate around in, and it wants the
+       full width for its grid. -->
+  <section id="add-stock" class="sheet" hidden aria-labelledby="add-stock-title">
+    <div class="sheet-head">
+      <div>
+        <h2 id="add-stock-title">Add stock</h2>
+        <p class="sheet-sub" id="add-stock-sub"></p>
+      </div>
+      <button id="add-stock-close" class="icon-btn" title="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet-defaults">
+      <label class="field">
+        <span>Acquired</span>
+        <input type="date" id="as-acquired">
+      </label>
+      <label class="field">
+        <span>Paid for the lot</span>
+        <span class="money-input">
+          <i>$</i><input type="text" id="as-lot" inputmode="decimal" placeholder="0.00">
+        </span>
+      </label>
+      <button id="as-split" class="btn small">Split across rows</button>
+      <p class="sheet-note" id="as-split-note">Spreads one price over everything below, weighted by asking price.</p>
+    </div>
+
+    <div class="stock-grid" id="as-grid"></div>
+
+    <div class="sheet-foot">
+      <div class="sheet-totals" id="as-totals"></div>
+      <div class="sheet-actions">
+        <button id="as-discard" class="btn ghost">Discard</button>
+        <button id="as-submit" class="btn primary">Add items</button>
+      </div>
+    </div>
+  </section>
+
 
   <footer class="footer">
     <span id="footnote">—</span>

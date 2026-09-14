@@ -5,7 +5,7 @@
 // Compared against the manifest version by the popup to detect a stale worker.
 // MV3 caches the service worker: popup files reload on every open, this file does
 // not, so an un-reloaded extension silently runs old logic here.
-const BUILD = '1.4.0';
+const BUILD = '1.5.0';
 
 const API_HOST = 'https://app.sandpiperhq.com';
 const SESSION_COOKIE = 'sandpiper_s';
@@ -389,6 +389,56 @@ async function applyEdits(plans) {
   return { results, applied, items };
 }
 
+const createUrl = (accountId, quantity) =>
+  `${API_HOST}/api/items/v2/${accountId}/create?quantity=${encodeURIComponent(quantity)}`;
+
+/**
+ * Creates new inventory, one row at a time.
+ *
+ * Sequential for the same reason edits are: a batch that dies halfway should
+ * stop somewhere you can understand, with everything before it safely written
+ * and nothing after it started.
+ *
+ * The endpoint answers with an array of new ids — one per copy asked for in
+ * ?quantity — so a row of three comes back as three items sharing a payload.
+ * Each is folded into the cache immediately, giving the dashboard its new stock
+ * without a full re-sync.
+ */
+async function createItems(rows) {
+  const session = await readSession();
+  const accountId = await resolveAccountId(session);
+  const auth = `Bearer ${session.token}`;
+
+  const cache = await chrome.storage.local.get(STORE.items);
+  const items = cache[STORE.items] || [];
+
+  const results = [];
+  let created = 0;
+  for (const row of rows) {
+    const quantity = Math.max(1, Math.round(Number(row.quantity) || 1));
+    try {
+      const ids = await apiRequest(createUrl(accountId, quantity), auth, {
+        method: 'POST',
+        body: row.item
+      });
+      /* Defended rather than trusted: without ids there is nothing to put in the
+       * cache, and silently carrying on would leave the dashboard disagreeing
+       * with Sandpiper until the next fetch. */
+      const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+      if (!list.length) throw new Error('Sandpiper created the item but returned no id.');
+      for (const id of list) items.unshift({ ...row.item, id });
+      created += list.length;
+      results.push({ inv: row.item.inventoryNumber, ok: true, ids: list });
+    } catch (e) {
+      results.push({ inv: row.item.inventoryNumber, ok: false, error: e.message || String(e) });
+    }
+  }
+
+  if (created) await chrome.storage.local.set({ [STORE.items]: items });
+  console.log(`[Roost] created ${created} item(s) from ${rows.length} row(s)`);
+  return { results, created, items };
+}
+
 async function fetchItems() {
   const session = await readSession();
   const accountId = await resolveAccountId(session);
@@ -462,6 +512,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             break;
           }
           sendResponse({ ok: true, ...(await applyEdits(msg.plans)) });
+          break;
+        }
+        case 'createItems': {
+          if (!Array.isArray(msg.rows) || !msg.rows.length) {
+            sendResponse({ ok: false, error: 'Nothing to add.' });
+            break;
+          }
+          sendResponse({ ok: true, ...(await createItems(msg.rows)) });
           break;
         }
         case 'ping':
