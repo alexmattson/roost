@@ -1516,8 +1516,10 @@ function itemEditorRow(r) {
     <td><input class="e-ask num" value="${cents(r.ask)}" inputmode="decimal" aria-label="Asking price"></td>
     <td><input type="date" class="e-sold" value="${dateInputValue(r.sold)}" aria-label="Sold date"></td>
     <td><input class="e-soldPrice num" value="${cents(r.soldPrice)}" inputmode="decimal" aria-label="Sold price"></td>
-    <td colspan="3"></td>
-    <td class="row-acts">
+    <!-- The buttons take the three derived columns with them. Those cells are
+         blank while editing anyway, and it buys Save and Cancel room without
+         widening the action column for every ordinary row. -->
+    <td colspan="4" class="row-acts">
       <button class="row-act act-save">Save</button>
       <button class="row-act act-cancel">Cancel</button>
     </td>
