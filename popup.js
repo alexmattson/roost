@@ -561,7 +561,7 @@ function renderHealth(s) {
         ? `<b>${int(led.costUnknown)}</b> sale(s) rang up with no Sandpiper record, so profit ignores their cost`
         : 'Every sale counted has a cost basis behind it',
       led.costUnknown ? 'profit is optimistic' : 'costs complete',
-      led.costUnknown ? { filter: 'registeronly' } : null);
+      led.costUnknown ? { mode: 'review' } : null);
     add(led.corrected ? 'warn' : 'good',
       led.corrected
         ? `<b>${int(led.corrected)}</b> sale(s) use register values where Sandpiper disagreed`
@@ -1382,18 +1382,18 @@ const itemColgroup = () =>
   + ITEM_COLUMNS.map((c) => `<col style="width:${c.w}%">`).join('')
   + `<col style="width:${ITEM_ACTS_W}%"></colgroup>`;
 
-/* Rows that came only from the register have no Sandpiper record behind them,
- * so there is nothing to edit and nothing to delete. Review is where they get
- * turned into real items. */
-const isLiveItem = (r) => r && r.source !== 'quail';
-
 function renderItems() {
   const s = state.stats;
   if (!s) return;
   const q = $('#item-search').value.trim().toLowerCase();
   const filter = $('#item-filter').value;
 
-  let rows = state.ledger.filter((i) => {
+  /* Sandpiper's own records, not the merged ledger. Records is where you go to
+   * find a thing in the system that holds it, so each page answers for one
+   * system: Items is what Sandpiper believes, POS sales is what the register
+   * rang up. Analyze reads the ledger, because a business figure has to
+   * reconcile both; Review is where the two are held against each other. */
+  let rows = state.items.filter((i) => {
     const acq = i.acquired == null || (i.acquired >= state.start && i.acquired <= state.end);
     const sld = i.sold != null && i.sold >= state.start && i.sold <= state.end;
     const held = i.acquired != null && i.acquired <= state.end && (i.sold == null || i.sold > state.end);
@@ -1413,7 +1413,7 @@ function renderItems() {
   else if (filter === 'noprice') rows = rows.filter((i) => heldAtEnd(i) && i.ask <= 0);
   else if (filter === 'zerocost') rows = rows.filter((i) => heldAtEnd(i) && i.cost <= 0);
   else if (filter === 'aged') rows = rows.filter((i) => heldAtEnd(i) && (ageAtEnd(i) || 0) > 180);
-  else if (filter === 'registeronly') rows = rows.filter((i) => i.source === 'quail');
+
 
   if (q) rows = rows.filter((i) => i.desc.toLowerCase().includes(q) || String(i.inv).toLowerCase().includes(q));
 
@@ -1432,7 +1432,7 @@ function renderItems() {
 
   /* An editor left open on a row the filters have since hidden would be
    * invisible and still live, so it closes with the row. */
-  const visible = new Set(shown.filter(isLiveItem).map((r) => r.id));
+  const visible = new Set(shown.map((r) => r.id));
   if (state.itemEditing && !visible.has(state.itemEditing)) state.itemEditing = null;
 
   const head =
@@ -1466,7 +1466,7 @@ function renderItems() {
       /* Clicking a row is easy to do by accident in a way that pressing an Edit
        * button was not, so an open editor with changes in it is never thrown
        * away silently — it stays put and says so. */
-      const open = state.itemEditing && state.ledger.find((r) => r.id === state.itemEditing);
+      const open = state.itemEditing && state.items.find((r) => r.id === state.itemEditing);
       if (open && open.id !== tr.dataset.id && collectItemChanges(open).length) {
         banner('Save or cancel your changes first.', 'info');
         setTimeout(() => banner(''), 2400);
@@ -1492,13 +1492,9 @@ function renderItems() {
 }
 
 function itemRow(r) {
-  const live = isLiveItem(r);
-  const acts = live
-    ? `<button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button>`
-    : '<span class="pill hold" title="Seen by the register only — Review can add it to Sandpiper">register only</span>';
-  return `<tr${live ? ` class="editable" data-id="${esc(r.id)}" title="Click to edit"` : ''}>`
+  return `<tr class="editable" data-id="${esc(r.id)}" title="Click to edit">`
     + ITEM_COLUMNS.map((c) => `<td class="${c.num ? 'num ' : ''}${c.cls ? c.cls(r) : ''}">${c.render(r)}</td>`).join('')
-    + `<td class="row-acts">${acts}</td></tr>`;
+    + `<td class="row-acts"><button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button></td></tr>`;
 }
 
 /**
@@ -1520,9 +1516,7 @@ function itemEditorRow(r) {
     <td><input class="e-ask num" value="${cents(r.ask)}" inputmode="decimal" aria-label="Asking price"></td>
     <td><input type="date" class="e-sold" value="${dateInputValue(r.sold)}" aria-label="Sold date"></td>
     <td><input class="e-soldPrice num" value="${cents(r.soldPrice)}" inputmode="decimal" aria-label="Sold price"></td>
-    <td colspan="3" class="muted">${r.source === 'both'
-      ? '<span title="This sale is matched to a register record, so the date and price shown here are Quail\'s, not Sandpiper\'s. Editing them still corrects Sandpiper — which is worth doing — but this table will go on showing the register\'s figures after the next fetch.">register sets these</span>'
-      : ''}</td>
+    <td colspan="3"></td>
     <td class="row-acts">
       <button class="row-act act-save">Save</button>
       <button class="row-act act-cancel">Cancel</button>
@@ -1629,7 +1623,7 @@ function renderItemBar() {
   }
 
   const named = pending
-    .map((id) => state.ledger.find((r) => r.id === id))
+    .map((id) => state.items.find((r) => r.id === id))
     .filter(Boolean)
     .map((r) => `#${esc(r.inv || '—')} ${esc(r.desc)}`);
   bar.hidden = false;

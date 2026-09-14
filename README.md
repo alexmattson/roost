@@ -54,7 +54,7 @@ Each mode has its own tabs and its own range presets.
 | --- | --- | --- |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | "how is the business doing" — Overview carries the money ladder and the register's daily view |
 | **Review** | *(single page)* | a task list — "what needs fixing" |
-| **Records** | Items · POS sales | lookup — "find this specific thing" |
+| **Records** | Items · POS sales | lookup — "find this specific thing", each page answering for one system |
 
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
 switching back restores what that mode was showing, custom ranges included. On a fresh open
@@ -344,9 +344,14 @@ Load that folder unpacked as above. There's no build step and no dependencies �
 
 `lib/ledger.js` overlays register truth onto the inventory records, pairs untagged register
 sales with their Sandpiper counterpart, and adds any sale the register saw that Sandpiper has
-not recorded. Every figure in the app reads that one ledger, so two views cannot disagree about
-the same window. The raw Sandpiper rows are kept untouched for the Review page, whose job is
-precisely to show where the two systems differ.
+not recorded. Every **business figure** reads that one ledger, so two views cannot disagree
+about the same window.
+
+Records is the deliberate exception. Its two pages are lookup, not analysis, and each answers
+for a single system: **Items** is what Sandpiper holds, **POS sales** is what the register
+rang. Merging them there would mean editing a row while looking at another system's version of
+it — which is also why Items is the one place edits can be trusted to show up exactly as typed.
+Review is where the two are held against each other.
 
 ### Units
 

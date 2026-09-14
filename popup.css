@@ -335,6 +335,9 @@ body.expanded .table-scroll { max-height: none; }
 }
 .card-head h2 { margin: 0; font-size: 12.5px; font-weight: 620; letter-spacing: -.005em; }
 .hint { font-size: 10.5px; color: var(--faint); }
+/* Names the system a page answers for, so it belongs beside the title rather
+   than out at the right edge where a card's stray note usually sits. */
+.card-head .hint.source { margin-right: auto; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chart-box { width: 100%; min-height: 40px; }
 .chart-empty {
