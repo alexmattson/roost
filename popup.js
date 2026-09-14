@@ -328,6 +328,13 @@ function renderKpis(s) {
   const grossProfit = s.sales.profit;
   const netProfit = grossProfit - rentInfo.cents;
   const rentCover = rentInfo.cents > 0 ? grossProfit / rentInfo.cents : null;
+  /* What the store actually hands over. Rent is the store's money, not a cost
+   * of the goods, so it comes out of the payout rather than out of profit —
+   * and taking it here leaves net profit at exactly the figure it always was,
+   * since (net payout - rent) - cost of goods is the same arithmetic in a more
+   * honest order. */
+  const takeHome = s.sales.net - rentInfo.cents;
+  const netMargin = s.sales.gross > 0 ? netProfit / s.sales.gross : null;
   const staleShare = s.inventory.units ? s.inventory.stale / s.inventory.units : 0;
   /* Only label the comparison when there is one; an empty prior window used to
    * leave a bare "vs prior period" hanging off a figure with nothing behind it. */
@@ -336,9 +343,14 @@ function renderKpis(s) {
     return t ? `${text} ${t} vs prior` : text;
   };
 
-  /* Standard consignment-retail vocabulary, used identically everywhere:
-   * gross sales -> commission -> net payout -> cost of goods -> gross profit
-   * -> booth rent -> net profit. Each card names the deduction it just made. */
+  /* Standard consignment-retail vocabulary, used identically everywhere. One
+   * deduction per card, in the order the money actually leaves:
+   * gross sales -> commission -> net payout -> booth rent -> take-home
+   * -> cost of goods -> net profit.
+   *
+   * Gross profit sits between net payout and cost of goods on that same
+   * ladder, but it is the one rung that ignores rent, which makes it the
+   * weakest of the five to lead with. It keeps its place on the Sales tab. */
   $('#kpis').innerHTML = [
     kpi('Gross sales', money(s.sales.gross, { compact: true }),
       withTrend(plural(s.counts.sold, 'sale'), s.sales.gross, prev.gross),
@@ -346,13 +358,13 @@ function renderKpis(s) {
     kpi('Net payout', money(s.sales.net, { compact: true }),
       withTrend(`less ${money(s.sales.commissions, { compact: true })} commission`, s.sales.net, prev.net),
       { exact: money(s.sales.net) }),
-    kpi('Gross profit', money(grossProfit, { compact: true }),
-      `less ${money(s.sales.cogs, { compact: true })} cost of goods · ${pct(s.sales.margin)} margin`,
-      { status: bandSign(grossProfit), exact: money(grossProfit) }),
-    kpi('Net profit', money(netProfit, { compact: true }),
+    kpi('Take-home', money(takeHome, { compact: true }),
       rentInfo.partial
         ? `less rent ${money(rentInfo.cents, { compact: true })} of ${money(rentInfo.full, { compact: true })} so far`
         : `less ${money(rentInfo.cents, { compact: true })} booth rent`,
+      { status: bandSign(takeHome), exact: money(takeHome) }),
+    kpi('Net profit', money(netProfit, { compact: true }),
+      `less ${money(s.sales.cogs, { compact: true })} cost of goods${netMargin == null ? '' : ` · ${pct(netMargin)} margin`}`,
       { status: bandSign(netProfit), exact: money(netProfit) }),
 
     kpi('Stock at cost', money(s.inventory.cost, { compact: true }),

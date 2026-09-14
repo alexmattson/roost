@@ -78,8 +78,11 @@ Every number respects the selected date range, using the rule that matches the m
 | Inventory, aging, potential profit | a point-in-time **snapshot** as of the range end |
 
 - **Net payout** = gross sales − commission − card fees
-- **Gross profit** = net payout − cost of goods (`totalCost`, which includes restoration)
-- **Net profit** = gross profit − booth rent, prorated to the window
+- **Take-home** = net payout − booth rent, prorated to the window — the money the store
+  actually hands over
+- **Net profit** = take-home − cost of goods (`totalCost`, which includes restoration)
+- **Gross profit** = net payout − cost of goods — profit before rent, which is why Overview
+  leads with take-home instead and gross profit sits on the Sales tab
 - **Potential profit** = asking price of unsold stock, less your observed commission rate,
   minus what that stock cost you
 - **Commission rate** is derived from your own sales history rather than hard-coded
@@ -368,17 +371,19 @@ everything to cents at the boundary.
 ### Vocabulary
 
 One term per idea, used identically in every card, chart, series and table header. The money
-figures form a ladder, and each card names the deduction it just made:
+figures form a ladder — one deduction per rung, in the order the money actually leaves — and
+each card names the deduction it just made:
 
 | Term | Meaning |
 | --- | --- |
 | **Gross sales** | what the register rang up |
 | **Commission** | the store's cut |
-| **Net payout** | gross sales less commission and card fees — what the store pays you |
-| **Cost of goods** | what the stock that sold had cost you |
-| **Gross profit** | net payout less cost of goods |
+| **Net payout** | gross sales less commission and card fees |
 | **Booth rent** | rent for the window, prorated |
-| **Net profit** | gross profit less rent — the number that is actually left |
+| **Take-home** | net payout less rent — what the store actually pays you |
+| **Cost of goods** | what the stock that sold had cost you |
+| **Net profit** | take-home less cost of goods — the number that is actually left |
+| **Gross profit** | net payout less cost of goods — profit before rent |
 | **Stock at cost** | unsold inventory at what you paid |
 | **Asking value** | that same stock at its asking prices |
 | **Potential profit** | asking value less commission, less what it cost |
