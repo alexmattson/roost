@@ -1472,7 +1472,9 @@ function itemEditorRow(r) {
     <td><input class="e-ask num" value="${cents(r.ask)}" inputmode="decimal" aria-label="Asking price"></td>
     <td><input type="date" class="e-sold" value="${dateInputValue(r.sold)}" aria-label="Sold date"></td>
     <td><input class="e-soldPrice num" value="${cents(r.soldPrice)}" inputmode="decimal" aria-label="Sold price"></td>
-    <td colspan="3" class="muted">${r.isSold ? 'Register values win on the next fetch.' : ''}</td>
+    <td colspan="3" class="muted">${r.source === 'both'
+      ? '<span title="This sale is matched to a register record, so the date and price shown here are Quail\'s, not Sandpiper\'s. Editing them still corrects Sandpiper — which is worth doing — but this table will go on showing the register\'s figures after the next fetch.">register sets these</span>'
+      : ''}</td>
     <td class="row-acts">
       <button class="row-act act-save">Save</button>
       <button class="row-act act-cancel">Cancel</button>
