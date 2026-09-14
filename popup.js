@@ -1318,19 +1318,31 @@ const dateInputValue = (t) => {
  * still lands on the day the user picked. */
 const unixFromDateInput = (v) => (v ? Math.floor(new Date(`${v}T12:00:00`).getTime() / 1000) : null);
 
+/* Widths are declared rather than discovered. The table is laid out fixed, so
+ * a row swapping its text for input fields cannot resize a column and shunt
+ * every number sideways — the two date columns are the worst of it, since a
+ * native date field is several times wider than "Sep 9, 26".
+ *
+ * Percentages, summing to 100 with the action column. */
 const ITEM_COLUMNS = [
-  { key: 'inv', title: '#', render: (r) => esc(r.inv || '—') },
-  { key: 'desc', title: 'Description', render: (r) => esc(r.desc), cls: () => 'name' },
-  { key: 'category', title: 'Category', render: (r) => esc(r.category) },
-  { key: 'acquired', title: 'Acquired', num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
-  { key: 'cost', title: 'Cost', num: true, render: (r) => money(r.cost, { compact: true }) },
-  { key: 'ask', title: 'Ask', num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
-  { key: 'sold', title: 'Sold on', num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
-  { key: 'soldPrice', title: 'Sold for', num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : '<span class="pill hold">on hand</span>') },
-  { key: 'profit', title: 'Profit', num: true, render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })), cls: (r) => signClass(r.profit || 0) },
-  { key: 'margin', title: 'Margin', num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
-  { key: 'daysToSell', title: 'Days', num: true, render: (r) => days(r.daysToSell) }
+  { key: 'inv', title: '#', w: 7, render: (r) => esc(r.inv || '—') },
+  { key: 'desc', title: 'Description', w: 17, render: (r) => esc(r.desc), cls: () => 'name' },
+  { key: 'category', title: 'Category', w: 9, render: (r) => esc(r.category) },
+  { key: 'acquired', title: 'Acquired', w: 11, num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
+  { key: 'cost', title: 'Cost', w: 7, num: true, render: (r) => money(r.cost, { compact: true }) },
+  { key: 'ask', title: 'Ask', w: 7, num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
+  { key: 'sold', title: 'Sold on', w: 11, num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
+  { key: 'soldPrice', title: 'Sold for', w: 7, num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : '<span class="pill hold">on hand</span>') },
+  { key: 'profit', title: 'Profit', w: 7, num: true, render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })), cls: (r) => signClass(r.profit || 0) },
+  { key: 'margin', title: 'Margin', w: 5, num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
+  { key: 'daysToSell', title: 'Days', w: 5, num: true, render: (r) => days(r.daysToSell) }
 ];
+
+const ITEM_ACTS_W = 7;
+const itemColgroup = () =>
+  '<colgroup>'
+  + ITEM_COLUMNS.map((c) => `<col style="width:${c.w}%">`).join('')
+  + `<col style="width:${ITEM_ACTS_W}%"></colgroup>`;
 
 /* Rows that came only from the register have no Sandpiper record behind them,
  * so there is nothing to edit and nothing to delete. Review is where they get
@@ -1383,7 +1395,7 @@ function renderItems() {
   const body = shown.map((r) => (state.itemEditing === r.id ? itemEditorRow(r) : itemRow(r))).join('');
 
   $('#t-items').innerHTML = rows.length
-    ? `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>` +
+    ? `<table class="items-table">${itemColgroup()}<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>` +
       (rows.length > shown.length ? `<div class="empty-row">Showing first ${shown.length} of ${rows.length} items</div>` : '')
     : '<div class="empty-row">No items match those filters</div>';
 
@@ -1395,8 +1407,26 @@ function renderItems() {
     };
   });
 
-  $$('#t-items .act-edit').forEach((b) => {
-    b.onclick = () => { state.itemEditing = b.dataset.id; renderItems(); };
+  /* The row is the target, not a button on it: by the time you have found the
+   * thing you want to correct, your pointer is already on it. Buttons and the
+   * fields of an open editor are excluded so they still do their own job. */
+  $$('#t-items tr.editable').forEach((tr) => {
+    tr.onclick = (e) => {
+      if (e.target.closest('button, input, select, a')) return;
+      if (window.getSelection && String(window.getSelection()).length) return;  // let text be copied
+
+      /* Clicking a row is easy to do by accident in a way that pressing an Edit
+       * button was not, so an open editor with changes in it is never thrown
+       * away silently — it stays put and says so. */
+      const open = state.itemEditing && state.ledger.find((r) => r.id === state.itemEditing);
+      if (open && open.id !== tr.dataset.id && collectItemChanges(open).length) {
+        banner('Save or cancel your changes first.', 'info');
+        setTimeout(() => banner(''), 2400);
+        return;
+      }
+      state.itemEditing = tr.dataset.id;
+      renderItems();
+    };
   });
   $$('#t-items .act-del').forEach((b) => {
     b.onclick = () => confirmItemDelete([b.dataset.id]);
@@ -1414,11 +1444,11 @@ function renderItems() {
 }
 
 function itemRow(r) {
-  const acts = isLiveItem(r)
-    ? `<button class="row-act act-edit" data-id="${esc(r.id)}" title="Edit this item">Edit</button>`
-      + `<button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button>`
+  const live = isLiveItem(r);
+  const acts = live
+    ? `<button class="row-act act-del" data-id="${esc(r.id)}" title="Delete this item">Delete</button>`
     : '<span class="pill hold" title="Seen by the register only — Review can add it to Sandpiper">register only</span>';
-  return '<tr>'
+  return `<tr${live ? ` class="editable" data-id="${esc(r.id)}" title="Click to edit"` : ''}>`
     + ITEM_COLUMNS.map((c) => `<td class="${c.num ? 'num ' : ''}${c.cls ? c.cls(r) : ''}">${c.render(r)}</td>`).join('')
     + `<td class="row-acts">${acts}</td></tr>`;
 }
@@ -2082,7 +2112,9 @@ function initAddStock() {
   /* Keyed off what is actually on screen rather than what state believes: if
    * the two ever disagree again, Escape should still be a way out. */
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !$('#add-stock').hidden) closeAddStock();
+    if (e.key !== 'Escape') return;
+    if (!$('#add-stock').hidden) { closeAddStock(); return; }
+    if (state.itemEditing) { state.itemEditing = null; renderItems(); }
   });
 }
 
