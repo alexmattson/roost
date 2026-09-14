@@ -786,7 +786,7 @@ function renderPosCharts() {
         ? `No point-of-sale data: ${esc(state.meta.quailError)}`
         : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.';
     }
-    ['#c-daily', '#c-dow', '#c-hour', '#c-methods'].forEach((sel) => empty($(sel), 'No POS data'));
+    ['#c-daily', '#c-dow', '#c-hour', '#c-rent'].forEach((sel) => empty($(sel), 'No POS data'));
     $('#t-recent').innerHTML = '';
     return;
   }
@@ -798,13 +798,7 @@ function renderPosCharts() {
   renderDowChart(q);
   renderHourChart(q);
 
-  donut($('#c-methods'), {
-    height: 158,
-    centerValue: money(q.gross, { compact: true }),
-    centerLabel: 'gross sales',
-    segments: q.methods.map((m) => ({ label: m.method, value: m.gross })),
-    format: (v) => money(v, { compact: true })
-  });
+  renderRentChart();
 
   $('#t-recent').innerHTML = table(q.recent, [
     { title: 'When', render: (r) => new Date(r.soldAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) },
@@ -859,6 +853,70 @@ function renderPosLedger() {
 }
 
 /** Weekday performance, averaged per occurrence so a partial range can't skew it. */
+/**
+ * Whether the booth is worth keeping.
+ *
+ * Rent is the one cost that arrives whether or not anything sells, so the
+ * question a dealer actually has to answer each month is whether the booth
+ * cleared it. "Rent covered" answers that for the selected window as a single
+ * percentage, which says nothing about direction — a booth sliding from 300% to
+ * 90% over a year and one climbing the other way read identically.
+ *
+ * Twelve months regardless of the range, because a trend needs a length of its
+ * own: reading it through a 30-day window would leave one bar and no trend.
+ */
+function renderRentChart() {
+  const rentRows = scopedRentRows();
+  const box = $('#c-rent');
+  if (!box) return;
+  if (!rentRows.length) {
+    $('#l-rent').innerHTML = '';
+    return empty(box, 'No booth rent recorded');
+  }
+
+  const now = new Date();
+  const months = [];
+  for (let k = 11; k >= 0; k--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
+    months.push({
+      label: d.toLocaleDateString(undefined, { month: 'short' }),
+      start: d.getTime(),
+      end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime()
+    });
+  }
+
+  /* Sales-derived, so it follows the venue scope like every other sales figure;
+   * the range is deliberately ignored. */
+  const v = state.venue;
+  const inScope = (i) => !v || v.kind === 'all' || !v.id
+    || (v.kind === 'store' ? i.store : i.booth) === (v.id === UNASSIGNED ? null : v.id);
+  const sales = state.ledger.filter((i) => i.isSold && i.sold != null && inScope(i));
+
+  const payout = months.map((m) =>
+    sales.reduce((a, i) => a + (i.sold >= m.start && i.sold <= m.end ? i.net : 0), 0));
+  /* rentForRange prorates the month in progress, so today does not read as a
+   * loss against a full month's rent that is not owed yet. */
+  const rent = months.map((m) => rentForRange(rentRows, m.start, m.end).cents);
+
+  const series = [
+    { name: 'Net payout', color: PALETTE.green, values: payout },
+    { name: 'Booth rent', color: PALETTE.brass, values: rent }
+  ];
+
+  barChart(box, {
+    labels: months.map((m) => m.label),
+    series,
+    height: 158,
+    tipFormat: (val, ser, i) => {
+      const left = payout[i] - rent[i];
+      return ser.name === 'Net payout'
+        ? `${money(payout[i])}`
+        : `${money(rent[i])} · ${left >= 0 ? 'kept' : 'short'} ${money(Math.abs(left))}`;
+    }
+  });
+  legend($('#l-rent'), series);
+}
+
 function renderDailyChart(q) {
   const asMoney = state.dayMode === 'money';
   const series = [{

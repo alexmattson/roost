@@ -99,12 +99,15 @@ up to $200, so every money KPI carries its exact value in a tooltip.
 Sandpiper's `sold` timestamp is when the sale was keyed in — typically hours later and in
 batches (76% of sampled sales land within two minutes of another). Quail's timestamps are the
 real register times, which is what makes the daily view on Overview meaningful: daily takings
-including dead days, day of week averaged per occurrence, hour of day, basket size and payment
-mix. The daily, weekday and hour charts each carry a **$ / Units** toggle, and either way the
-tooltip reports both figures.
+including dead days, day of week averaged per occurrence, hour of day, and basket size. The
+daily, weekday and hour charts each carry a **$ / Units** toggle, and either way the tooltip
+reports both figures. Payment method stays a column and a filter on the POS sales table, where
+it is something you search by rather than a chart that reads the same every time.
 
 **Booth rent** is a fixed monthly cost Sandpiper has no field for, so every Sandpiper profit
-figure is overstated by it. Roost reports takings after commission *and* rent, prorated to the
+figure is overstated by it. It is also the cost that arrives whether or not anything sells,
+which is why Overview charts net payout against rent over twelve months — the keep-or-drop
+question needs a direction, and a single "rent covered" percentage cannot show one. Roost reports takings after commission *and* rent, prorated to the
 elapsed part of the window — charging a full month against a three-day-old month would make a
 healthy booth look like a failing one.
 
@@ -264,7 +267,7 @@ asks for a password and never sees one.
 1. In a normal Chrome tab, sign in to **[app.sandpiperhq.com](https://app.sandpiperhq.com)** —
    this is required, it's where your inventory comes from
 2. In another tab, sign in to **[vendor.quailhq.com](https://vendor.quailhq.com)** — technically
-   optional, but without it you lose real sale times, booth rent, payment mix, and the entire
+   optional, but without it you lose real sale times, booth rent, payment methods, and the entire
    Review page. Sign in to both
 3. Click the **Roost icon** in your toolbar
 4. Click **Fetch latest data**
