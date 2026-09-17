@@ -96,8 +96,25 @@
       <form id="login-form" autocomplete="on">
         <fieldset class="login-set">
           <legend>Sandpiper <span class="req">required</span></legend>
-          <input id="sp-user" type="email" placeholder="Email" autocomplete="username" aria-label="Sandpiper email">
-          <input id="sp-pass" type="password" placeholder="Password" autocomplete="current-password" aria-label="Sandpiper password">
+          <p class="login-hint">Sandpiper doesn't allow password sign-in from other sites, so paste
+            your session token instead.</p>
+          <textarea id="sp-token" rows="3" placeholder="Paste your Sandpiper session token" aria-label="Sandpiper session token" spellcheck="false"></textarea>
+          <div class="login-bm">
+            <p>One-time setup: drag this to your bookmarks bar —
+              <a id="sp-bookmarklet" class="bm-link" href="#" draggable="true">🪺 Get Sandpiper token</a></p>
+            <p class="login-hint">Then, signed in at
+              <a href="https://app.sandpiperhq.com" target="_blank" rel="noopener">app.sandpiperhq.com</a>,
+              click that bookmark — it brings you back here signed in.</p>
+          </div>
+          <details class="login-help">
+            <summary>Rather do it by hand?</summary>
+            <ol>
+              <li>Open <a href="https://app.sandpiperhq.com" target="_blank" rel="noopener">app.sandpiperhq.com</a> and sign in.</li>
+              <li>Open DevTools (<kbd>F12</kbd>) → <b>Application</b> → <b>Cookies</b> → <code>https://app.sandpiperhq.com</code>.</li>
+              <li>Copy the whole value of the <code>sandpiper_s</code> cookie and paste it above.</li>
+            </ol>
+            <p>The token is only ever sent to Sandpiper, and only from your browser.</p>
+          </details>
         </fieldset>
 
         <fieldset class="login-set">

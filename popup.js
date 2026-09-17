@@ -2247,6 +2247,36 @@ function initAddStock() {
    web app has no session yet. The extension never reaches it — it is already
    authenticated by the browser's cookies. */
 
+/**
+ * Builds the drag-to-bookmarks link.
+ *
+ * Sandpiper keeps its session in a script-readable cookie, so a bookmarklet run
+ * on the Sandpiper tab can read it and hand it back. It returns here through the
+ * URL fragment — after the '#', which browsers never send to a server — so the
+ * token travels from Sandpiper's page to Roost's without passing through
+ * GitHub or anyone else. The destination is this page's own address, so the
+ * bookmark points wherever Roost is actually served.
+ */
+function installBookmarklet() {
+  const link = $('#sp-bookmarklet');
+  if (!link) return;
+  const back = location.origin + location.pathname;
+  const code =
+    "(function(){" +
+    "var m=document.cookie.match(/(?:^|;\\s*)sandpiper_s=([^;]+)/);" +
+    "if(!m){alert('No Sandpiper session found. Sign in at app.sandpiperhq.com first.');return;}" +
+    "location.href=" + JSON.stringify(back) + "+'#sp='+encodeURIComponent(m[1]);" +
+    "})();";
+  link.setAttribute('href', 'javascript:' + encodeURIComponent(code));
+  // A javascript: link clicked here would run in Roost's own origin, where the
+  // cookie is not — so it only works dragged to the bar and clicked on Sandpiper.
+  link.onclick = (e) => {
+    e.preventDefault();
+    banner('Drag this link to your bookmarks bar, then click it while signed in to Sandpiper.', 'info');
+    setTimeout(() => banner(''), 4200);
+  };
+}
+
 function renderLoginGate(message) {
   const gate = $('#login-gate');
   gate.hidden = false;
@@ -2255,6 +2285,20 @@ function renderLoginGate(message) {
     err.textContent = message;
     err.hidden = false;
   }
+
+  installBookmarklet();
+  // The bookmarklet returns the token in the fragment, which never reaches a
+  // server. Lift it into the field and clear it from the address bar.
+  const fromHash = /[#&]sp=([^&]+)/.exec(location.hash || '');
+  if (fromHash) {
+    try { $('#sp-token').value = decodeURIComponent(fromHash[1]); } catch (e) { $('#sp-token').value = fromHash[1]; }
+    history.replaceState(null, '', location.pathname + location.search);
+    const err = $('#login-error');
+    err.textContent = 'Sandpiper token loaded. Add Quail below if you like, then sign in.';
+    err.hidden = false;
+    err.classList.add('as-note');
+  }
+
   const form = $('#login-form');
   form.onsubmit = async (e) => {
     e.preventDefault();
@@ -2264,19 +2308,16 @@ function renderLoginGate(message) {
     btn.disabled = true;
     btn.textContent = 'Signing in…';
     try {
-      const sandpiper = {
-        username: $('#sp-user').value.trim(),
-        password: $('#sp-pass').value
-      };
-      if (!sandpiper.username || !sandpiper.password) throw new Error('Enter your Sandpiper email and password.');
+      const sandpiperToken = $('#sp-token').value.trim();
+      if (!sandpiperToken) throw new Error('Paste your Sandpiper session token.');
       const qEmail = $('#q-user').value.trim();
       const qPass = $('#q-pass').value;
       const quail = qEmail && qPass ? { email: qEmail, password: qPass } : null;
 
-      const { quailError, quailConnected } = await webLogin({ sandpiper, quail });
+      const { quailError, quailConnected } = await webLogin({ sandpiperToken, quail });
 
-      // A page holding a live token should not keep the passwords a keystroke away.
-      $('#sp-pass').value = '';
+      // A page holding a live session should not keep the secrets a keystroke away.
+      $('#sp-token').value = '';
       $('#q-pass').value = '';
 
       await init();
@@ -2285,6 +2326,7 @@ function renderLoginGate(message) {
       }
       await refresh();
     } catch (e2) {
+      err.classList.remove('as-note');
       err.textContent = e2.message || String(e2);
       err.hidden = false;
       btn.disabled = false;

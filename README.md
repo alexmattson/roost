@@ -317,15 +317,19 @@ Load that folder unpacked as above. There's no build step and no dependencies �
 
 ## Roost on the web
 
-The same dashboard runs as a website, with no extension to install. Instead of reading the
-browser's existing sessions, it asks you to sign in to Sandpiper and Quail on a start screen,
-exchanges each password for a session token, and keeps those tokens in the tab. Everything else
-— every chart, every edit, every reconciliation — is the identical code.
+The same dashboard runs as a website, with no extension to install. A start screen signs you in
+to both systems and keeps the tokens in the tab; everything else — every chart, every edit,
+every reconciliation — is the identical code.
 
-**Nothing moves to a server, because there is no server.** Both companies' APIs send permissive
-CORS and hand back their session token in the login response body, so the page talks to each
-service directly from your browser, exactly as the extension does. GitHub Pages only ever serves
-static files.
+The two sign-ins differ, because the two companies do. **Quail** takes an email and password
+right on the screen. **Sandpiper** does not allow that from another site, so instead you drag a
+one-time bookmark to your bar and click it while signed in to Sandpiper: it reads your session
+and returns you to Roost signed in. (A manual token paste is there as a fallback.)
+
+**Nothing moves to a server, because there is no server.** The APIs send permissive CORS, so the
+page talks to each service directly from your browser, exactly as the extension does — and the
+bookmarklet returns the token through the URL fragment, which browsers never send anywhere.
+GitHub Pages only ever serves static files.
 
 ### Hosting it on GitHub Pages
 
@@ -340,10 +344,11 @@ There is no build step — the repository is the site. The extension's own files
 
 ### The trade-offs, honestly
 
-- **You would be typing vendor passwords into a page that is not the vendor.** Roost only ever
-  exchanges them for a token and never stores or forwards them, but a `github.io` address asking
-  for a Sandpiper password has the shape of a phishing page. A custom domain helps; asking
-  Sandpiper and Quail for real API access helps more.
+- **A Quail password is typed into a page that is not Quail.** Roost only ever exchanges it for
+  a token and never stores or forwards it, but a `github.io` address asking for a vendor password
+  has the shape of a phishing page. (Sandpiper avoids this — the bookmarklet means its password
+  is only ever entered on Sandpiper itself.) A custom domain helps; asking both vendors for real
+  API access helps more.
 - **Tokens live in `sessionStorage`** — they survive a reload but not closing the tab, and never
   leave the browser. Signing out clears them and the cached data.
 - **The open CORS both APIs send is arguably a bug on their side.** If either tightens it, the
@@ -358,10 +363,13 @@ people who cannot or will not install an unpacked extension.
   `chrome.cookies`, decodes the JWT to find your account id, and sends the request with both the
   cookie and an `Authorization: Bearer` header. Quail authenticates separately, with
   `Authorization: Basic base64(<vendor email>:<session id>)`, both halves read from its cookies.
-  On the web there is no cookie to read, so the sign-in screen posts to `login/do-login`
-  (Sandpiper) and `api/auth/login` (Quail), which return the JWT and the session id in their
-  response bodies; from there the two headers are identical. Either way, nothing is stored
-  anywhere but your own browser.
+  On the web there is no cookie to read. Quail signs in on the page — its `api/auth/login`
+  sends CORS and returns the session id in the body. Sandpiper cannot: its `login` route sends
+  no CORS headers, so a browser on another origin can't exchange a password for a token, only
+  use one it already holds. Its `sandpiper_s` cookie is script-readable, though, so a
+  bookmarklet run on the Sandpiper tab reads the token and hands it back through the URL
+  fragment; from there the `Bearer` header is identical to the extension's. Either way, nothing
+  is stored anywhere but your own browser.
 - **Requests** — `POST /api/items/v2/<account>/items?from=0&to=10000000` with
   `{"filters":[],"orderBy":"ACQUIRED","reverse":true}`. The range is deliberately huge so a
   single call returns everything. Then `GET /api/stores/<accountId>` and
