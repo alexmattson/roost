@@ -317,14 +317,17 @@ Load that folder unpacked as above. There's no build step and no dependencies �
 
 ## Roost on the web
 
-The same dashboard runs as a website, with no extension to install. A start screen signs you in
-to both systems and keeps the tokens in the tab; everything else — every chart, every edit,
-every reconciliation — is the identical code.
+The same dashboard runs as a website, with no extension to install. A start screen connects each
+system on its own — with its own status — and keeps the tokens in the tab; everything else —
+every chart, every edit, every reconciliation — is the identical code. Sandpiper is required;
+Quail is optional, and either can be connected without the other.
 
-The two sign-ins differ, because the two companies do. **Quail** takes an email and password
+The two connections differ, because the two companies do. **Quail** takes an email and password
 right on the screen. **Sandpiper** does not allow that from another site, so instead you drag a
 one-time bookmark to your bar and click it while signed in to Sandpiper: it reads your session
-and returns you to Roost signed in. (A manual token paste is there as a fallback.)
+and returns you to Roost connected. (A manual token paste is there as a fallback.) A page on
+another origin cannot see or reuse your existing Sandpiper login on its own — the browser
+forbids it — which is exactly why the bookmark, running on Sandpiper's own page, is needed.
 
 **Nothing moves to a server, because there is no server.** The APIs send permissive CORS, so the
 page talks to each service directly from your browser, exactly as the extension does — and the

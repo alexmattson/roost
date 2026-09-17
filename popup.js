@@ -11,7 +11,7 @@ import {
   buildCreatePayload, draftTotals
 } from './lib/stock.js';
 import { platform, IS_WEB } from './lib/platform.js';
-import { webLogin, isWebAuthed, signOutWeb } from './lib/webbackend.js';
+import { connectSandpiper, connectQuail, webStatus, isWebAuthed, signOutWeb } from './lib/webbackend.js';
 import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
@@ -2277,61 +2277,77 @@ function installBookmarklet() {
   };
 }
 
-function renderLoginGate(message) {
-  const gate = $('#login-gate');
-  gate.hidden = false;
-  if (message) {
-    const err = $('#login-error');
-    err.textContent = message;
-    err.hidden = false;
-  }
+/** Paints the two status rows from what is actually connected, and gates entry
+ *  on Sandpiper — Quail is optional. */
+function paintLoginStatus() {
+  const st = webStatus();
+  const set = (id, on, onText) => {
+    const el = $(id);
+    el.dataset.state = on ? 'on' : 'off';
+    el.textContent = on ? onText : 'Not connected';
+  };
+  set('#sp-status', st.sandpiper.connected, st.sandpiper.user ? `Connected · ${st.sandpiper.user}` : 'Connected');
+  set('#q-status', st.quail.connected, st.quail.email ? `Connected · ${st.quail.email}` : 'Connected');
+  $('#login-enter').disabled = !st.sandpiper.connected;
+}
 
+function loginError(msg, note) {
+  const err = $('#login-error');
+  err.classList.toggle('as-note', !!note);
+  err.textContent = msg;
+  err.hidden = !msg;
+}
+
+function renderLoginGate(message) {
+  $('#login-gate').hidden = false;
   installBookmarklet();
-  // The bookmarklet returns the token in the fragment, which never reaches a
-  // server. Lift it into the field and clear it from the address bar.
+  paintLoginStatus();
+  if (message) loginError(message);
+
+  // Connect Sandpiper independently — from a pasted token, or the one the
+  // bookmarklet dropped in the fragment (which never reaches a server).
+  const connectSp = async (token, viaBookmarklet) => {
+    loginError('');
+    try {
+      await connectSandpiper(token);
+      $('#sp-token').value = '';
+      paintLoginStatus();
+    } catch (e) {
+      loginError(e.message || String(e));
+    }
+  };
+
   const fromHash = /[#&]sp=([^&]+)/.exec(location.hash || '');
   if (fromHash) {
-    try { $('#sp-token').value = decodeURIComponent(fromHash[1]); } catch (e) { $('#sp-token').value = fromHash[1]; }
+    let tok = fromHash[1];
+    try { tok = decodeURIComponent(tok); } catch (e) { /* use as-is */ }
     history.replaceState(null, '', location.pathname + location.search);
-    const err = $('#login-error');
-    err.textContent = 'Sandpiper token loaded. Add Quail below if you like, then sign in.';
-    err.hidden = false;
-    err.classList.add('as-note');
+    connectSp(tok, true);
   }
 
-  const form = $('#login-form');
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = $('#login-submit');
-    const err = $('#login-error');
-    err.hidden = true;
-    btn.disabled = true;
-    btn.textContent = 'Signing in…';
+  $('#sp-token-use').onclick = () => connectSp($('#sp-token').value.trim(), false);
+
+  // Connect Quail independently, with its own password.
+  $('#q-connect').onclick = async () => {
+    loginError('');
+    const btn = $('#q-connect');
+    btn.disabled = true; btn.textContent = 'Connecting…';
     try {
-      const sandpiperToken = $('#sp-token').value.trim();
-      if (!sandpiperToken) throw new Error('Paste your Sandpiper session token.');
-      const qEmail = $('#q-user').value.trim();
-      const qPass = $('#q-pass').value;
-      const quail = qEmail && qPass ? { email: qEmail, password: qPass } : null;
-
-      const { quailError, quailConnected } = await webLogin({ sandpiperToken, quail });
-
-      // A page holding a live session should not keep the secrets a keystroke away.
-      $('#sp-token').value = '';
+      await connectQuail({ email: $('#q-user').value.trim(), password: $('#q-pass').value });
       $('#q-pass').value = '';
-
-      await init();
-      if (quail && !quailConnected) {
-        banner(`Signed in to Sandpiper. Quail did not connect: ${quailError} — register data is unavailable until you sign in to it.`, 'info');
-      }
-      await refresh();
-    } catch (e2) {
-      err.classList.remove('as-note');
-      err.textContent = e2.message || String(e2);
-      err.hidden = false;
-      btn.disabled = false;
-      btn.textContent = 'Sign in';
+      paintLoginStatus();
+    } catch (e) {
+      loginError(e.message || String(e));
+    } finally {
+      btn.disabled = false; btn.textContent = 'Connect';
     }
+  };
+
+  // Enter once Sandpiper is live; Quail rides along if it is too.
+  $('#login-enter').onclick = async () => {
+    if (!webStatus().sandpiper.connected) return;
+    await init();
+    await refresh();
   };
 }
 
