@@ -1827,6 +1827,11 @@ async function refresh() {
   btn.classList.add('loading');
   $('#refresh-label').textContent = 'Fetching…';
   banner('');
+  // With no data yet the dashboard would sit blank through the sync, so take
+  // over the panel with a loading state. A refresh that already has data on
+  // screen keeps showing it, and leans on the button's own spinner instead.
+  const firstLoad = !state.items.length;
+  if (firstLoad) $('#main').classList.add('busy');
   try {
     const res = await send('refresh');
     if (!res || !res.ok) throw new Error((res && res.error) || 'Could not reach the extension background worker.');
@@ -1848,6 +1853,7 @@ async function refresh() {
   } catch (e) {
     banner(e.message, 'error');
   } finally {
+    $('#main').classList.remove('busy');
     btn.disabled = false;
     btn.classList.remove('loading');
     $('#refresh-label').textContent = 'Fetch latest data';

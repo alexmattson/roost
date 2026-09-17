@@ -556,6 +556,16 @@ button.health-row {
 .empty-state h3 { margin: 0; font-size: 15px; font-weight: 620; }
 .empty-state p { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 380px; }
 
+/* Shown only while the first fetch is running: the panels and empty-state are
+   held back, so the dashboard doesn't sit blank through a long sync. */
+.loading-state { display: none; place-items: center; height: 340px; text-align: center; gap: 10px; }
+#main.busy .loading-state { display: grid; }
+#main.busy .tab-panel,
+#main.busy #empty-state { display: none; }
+.loading-state h3 { margin: 0; font-size: 15px; font-weight: 620; }
+.loading-state p { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 360px; }
+.loading-spin { width: 30px; height: 30px; color: var(--brass); animation: spin .9s linear infinite; transform-origin: 50% 50%; }
+
 /* ------------------------------------------------------------------ Add stock
 
    A sheet over the dashboard rather than another tab. Entering stock is a task
