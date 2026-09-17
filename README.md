@@ -7,11 +7,15 @@
 <p align="center">
   <b>Know what your booth actually made.</b><br>
   Analytics and reconciliation for Sandpiper inventory and Quail point-of-sale,<br>
-  in a Chrome extension that runs entirely in your own browser.
+  running entirely in your own browser.
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
+  <b>→ <a href="https://alexmattson.github.io/roost/">alexmattson.github.io/roost</a> ←</b>
+</p>
+
+<p align="center">
+  <a href="#get-started">Get started</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#features">Features</a> ·
   <a href="#if-something-goes-wrong">Help</a>
@@ -25,9 +29,9 @@ behind the stores your stock actually sells through.
 
 Sandpiper tracks what you own and what it cost. Quail knows what was charged, what commission
 came off, and when the customer really bought. Neither is a complete account on its own. Roost
-pulls both using your existing logged-in sessions, reconciles them into a single ledger, and
-renders a dashboard in the toolbar popup. Everything stays in your own browser — no server, no
-third-party scripts, nothing phones home.
+pulls both, reconciles them into a single ledger, and renders a dashboard — right in your
+browser. There is no server: the page talks to Sandpiper and Quail directly, and everything
+stays with you. No accounts to create, no third-party scripts, nothing phones home.
 
 ---
 
@@ -65,7 +69,6 @@ mode, are remembered.
 two systems agree, and a window can only hide a disagreement that is still live. The anomaly
 badge counts over that same full range, so it never disagrees with the tab it points at.
 
-The **⤢** button opens the same dashboard full-width in a tab.
 
 ### Analytics
 
@@ -189,190 +192,88 @@ about this rather than quietly mixing the two:
 
 Booth rows show the commission rate you were **actually** charged next to the `consignmentRate`
 on the booth record, and flag the difference in red when they diverge. Names come from the API;
-clicking one lets you rename it, and your name always wins (kept in `chrome.storage.local`).
+clicking one lets you rename it, and your name always wins (kept in your browser).
 
 ### Appearance
 
 The sun/moon button in the top bar switches between light and dark. On first run it follows your
-OS setting; after that your choice is remembered (`localStorage`, shared by the popup and the
-full-tab view). Both themes are driven entirely by CSS custom properties, including the chart
+OS setting; after that your choice is remembered in your browser. Both themes are driven entirely
+by CSS custom properties, including the chart
 colours: `refreshPalette()` in `lib/charts.js` re-reads the `--chart-*` variables on every
 render, so SVG grid lines, axes, crosshairs and series colours all follow the theme without
 duplicated colour logic.
 
 ---
 
-## Install
+## Get started
 
-Roost isn't in the Chrome Web Store, so you install it by downloading a folder and pointing
-Chrome at it. It sounds technical, but it's really five short steps and takes about five
-minutes. **You don't need to know how to code, and you'll never open a terminal.**
+Open **[alexmattson.github.io/roost](https://alexmattson.github.io/roost/)** and connect your two
+accounts. There's nothing to install — it runs in any modern browser on a computer.
 
-You'll need Google Chrome on a computer — this doesn't work on a phone or tablet.
+### Connect Sandpiper
 
-### Step 1 · Download Roost
+Sandpiper doesn't allow sign-in from another site, so you bring your session across with a small
+bookmark:
 
-1. Go to **[github.com/alexmattson/roost](https://github.com/alexmattson/roost)**
-2. Click the green **Code** button near the top right
-3. Choose **Download ZIP** from the menu that drops down
-4. The file lands in your **Downloads** folder as `roost-main.zip`
+1. Drag the **Roost** bookmark from the start screen up to your bookmarks bar.
+2. Open [app.sandpiperhq.com](https://app.sandpiperhq.com) and sign in as usual.
+3. On that Sandpiper tab, click the **Roost** bookmark. You land back on Roost, connected.
 
-### Step 2 · Unzip it, and put it somewhere safe
+### Connect Quail
 
-Double-click `roost-main.zip`. You'll get a folder called **`roost-main`** sitting next to it.
+Enter your Quail vendor email and password in the Quail row and click **Connect**. Quail is
+optional, but without it you lose real sale times, booth rent, and the whole Sync page.
 
-**Now move that folder somewhere permanent** — your Documents folder is a good choice. This
-matters more than it sounds: Chrome doesn't copy Roost anywhere, it just remembers where the
-folder lives and reads it every time you start your browser. If the folder gets deleted, moved,
-or emptied out of your Downloads, **Roost stops working**. Pick a home for it now and leave it
-there.
+Once Sandpiper shows connected, click **Enter Roost**, then **Fetch latest data**. The first load
+takes a few seconds; after that the dashboard opens instantly and refreshes only when you ask.
 
-### Step 3 · Tell Chrome about it
-
-1. Open Chrome, click in the address bar, and type **`chrome://extensions`** then press Enter
-
-   *You have to type it — it's a Chrome settings page, so it can't be linked to.*
-
-2. Find the **Developer mode** switch in the **top-right corner** and turn it **on**
-
-   *This is normal. It's the standard way to install an extension that isn't in the Chrome
-   Web Store, and it doesn't make your browser any less safe on its own.*
-
-3. Three new buttons appear at the top left. Click **Load unpacked**
-
-4. A file picker opens. Navigate to your **`roost-main`** folder, **select the folder itself**
-   (single-click it — don't open it and don't pick a file inside), and click **Select**
-
-5. Roost appears in your list of extensions with its nest logo and a version number. That's it —
-   it's installed
-
-If Chrome shows a small warning about developer-mode extensions when you start it up, that's
-expected and you can dismiss it.
-
-### Step 4 · Pin Roost to your toolbar
-
-Right now Roost is installed but hidden away.
-
-1. Click the **puzzle-piece icon** to the right of Chrome's address bar
-2. Find **Roost** in the list
-3. Click the **pin icon** next to it
-
-The orange nest logo now sits in your toolbar, and you click it any time you want your numbers.
-
-### Step 5 · Sign in, then get your data
-
-Roost reads the data you already have access to, using the fact that you're logged in. It never
-asks for a password and never sees one.
-
-1. In a normal Chrome tab, sign in to **[app.sandpiperhq.com](https://app.sandpiperhq.com)** —
-   this is required, it's where your inventory comes from
-2. In another tab, sign in to **[vendor.quailhq.com](https://vendor.quailhq.com)** — technically
-   optional, but without it you lose real sale times, booth rent, payment methods, and the entire
-   Sync page. Sign in to both
-3. Click the **Roost icon** in your toolbar
-4. Click **Fetch latest data**
-
-The first load takes a few seconds while it pulls everything down. After that your dashboard
-opens instantly, and the numbers only change when you click that button again — so click it
-whenever you want fresh figures.
-
-**You're done.** Nothing you just did sends your data anywhere: it's read from the two sites you
-already use and stored in your own browser.
-
-### Keeping Roost up to date
-
-There's no automatic update, since Roost isn't coming from the Chrome Web Store. When there's a
-new version:
-
-1. Download and unzip the new ZIP, exactly as in steps 1 and 2
-2. **Replace** your old `roost-main` folder with the new one, keeping it in the same place
-3. Go to **`chrome://extensions`** and click the **circular reload arrow (↻)** on Roost's card
-
-That last step is easy to forget and Roost will behave oddly without it — so if a new version
-seems not to have changed anything, that reload arrow is almost always why. Roost also watches
-for this itself and shows a red banner when it notices.
+Your logins never leave your browser: the Quail password is exchanged for a session token and
+discarded, the Sandpiper token comes straight from your own Sandpiper tab, and both are held only
+until you close it.
 
 ### If something goes wrong
 
 | What you're seeing | What it means |
 | --- | --- |
-| **There's no "Load unpacked" button** | Developer mode is still off. It's the switch in the top-right corner of `chrome://extensions`. |
-| **"Manifest file is missing or unreadable"** | The wrong folder got picked. You want the folder that has `manifest.json` sitting directly inside it — usually `roost-main`. If you opened a folder and it only contained one other folder, go one level deeper and try that. |
-| **Roost disappeared after restarting Chrome** | The folder was moved, renamed, deleted, or cleaned out of Downloads. Put it back, or download it again, then repeat Step 3. |
-| **A message about your session or being signed out** | Your login to Sandpiper or Quail expired. Open the site, sign in again, then click **Fetch latest data**. |
-| **A red banner about the build** | Click the reload arrow (↻) on Roost's card at `chrome://extensions`. |
-| **Everything is empty** | You haven't clicked **Fetch latest data** yet, or you're signed out of Sandpiper. |
+| **Sandpiper won't turn green after clicking the bookmark** | Click it *on the Sandpiper tab* while signed in, not on the Roost page. If a red "rejected that token" shows, sign in to Sandpiper again and re-click. |
+| **The Roost bookmark does nothing** | It only works on the Sandpiper tab; anywhere else it just shows a reminder. |
+| **A message about your session** | The token expired — re-click the Roost bookmark, or reconnect Quail. |
+| **Everything is empty** | You haven't pressed **Fetch latest data** yet. |
+| **Signed out when you reopen** | Tokens are kept only for the tab's lifetime, so closing it signs you out. Connect again. |
 
-### For developers
+### Good to know
 
-Clone it instead, and the update path becomes `git pull` plus the same reload arrow:
+- **Your data stays in your browser.** The page talks to Sandpiper and Quail directly; there is
+  no Roost server to send anything to. Tokens live in `sessionStorage` (gone when the tab closes),
+  the fetched data in `localStorage`, both on your machine only.
+- **A Quail password is typed into a page that isn't Quail.** Roost only exchanges it for a token
+  and never stores or forwards it — but if that gives you pause, that's a fair instinct. Sandpiper
+  avoids it entirely, since its password is only ever entered on Sandpiper itself.
+- **It leans on how the two APIs are configured today.** Both currently allow a browser on another
+  site to call them; if either changes that, the site would need adjusting.
 
-```bash
-git clone https://github.com/alexmattson/roost.git
-cd roost
-```
+### Host your own copy
 
-Load that folder unpacked as above. There's no build step and no dependencies — the repository
-*is* the extension.
+The site is just static files, served by GitHub Pages straight from the repository:
 
-## Roost on the web
+1. Fork or clone [github.com/alexmattson/roost](https://github.com/alexmattson/roost).
+2. In your fork, **Settings → Pages → Build and deployment**: set **Source** to *Deploy from a
+   branch*, pick **main** and **/ (root)**, and **Save**.
+3. A minute later it is live at `https://<you>.github.io/roost/`.
 
-The same dashboard runs as a website, with no extension to install. A start screen connects each
-system on its own — with its own status — and keeps the tokens in the tab; everything else —
-every chart, every edit, every reconciliation — is the identical code. Sandpiper is required;
-Quail is optional, and either can be connected without the other.
-
-The two connections differ, because the two companies do. **Quail** takes an email and password
-right on the screen. **Sandpiper** does not allow that from another site, so instead you drag its
-**Roost** bookmark to your bar once and click it while signed in to Sandpiper: it reads your
-session and returns you here connected. A page on another origin cannot see or reuse your existing
-Sandpiper login on its own — the browser forbids it — which is exactly why the bookmark, running
-on Sandpiper's own page, is needed.
-
-**Nothing moves to a server, because there is no server.** The APIs send permissive CORS, so the
-page talks to each service directly from your browser, exactly as the extension does — and the
-bookmarklet returns the token through the URL fragment, which browsers never send anywhere.
-GitHub Pages only ever serves static files.
-
-### Hosting it on GitHub Pages
-
-1. Push this repository to GitHub (it already lives at
-   [github.com/alexmattson/roost](https://github.com/alexmattson/roost)).
-2. **Settings → Pages**. Under **Build and deployment**, set **Source** to *Deploy from a branch*,
-   pick the **main** branch and the **/ (root)** folder, and **Save**.
-3. Wait a minute, then open `https://<you>.github.io/roost/`. That's the app.
-
-There is no build step — the repository is the site. The extension's own files
-(`manifest.json`, `background.js`) sit alongside and are simply unused on the web.
-
-### The trade-offs, honestly
-
-- **A Quail password is typed into a page that is not Quail.** Roost only ever exchanges it for
-  a token and never stores or forwards it, but a `github.io` address asking for a vendor password
-  has the shape of a phishing page. (Sandpiper avoids this — the bookmarklet means its password
-  is only ever entered on Sandpiper itself.) A custom domain helps; asking both vendors for real
-  API access helps more.
-- **Tokens live in `sessionStorage`** — they survive a reload but not closing the tab, and never
-  leave the browser. Signing out clears them and the cached data.
-- **The open CORS both APIs send is arguably a bug on their side.** If either tightens it, the
-  website stops working (the extension, which is same-origin by permission, would not).
-
-For those reasons the extension remains the recommended way to run Roost. The website exists for
-people who cannot or will not install an unpacked extension.
+No build step and no dependencies — the repository is the site.
 
 ## How it works
 
-- **Auth** — in the extension, the service worker reads your `sandpiper_s` session cookie via
-  `chrome.cookies`, decodes the JWT to find your account id, and sends the request with both the
-  cookie and an `Authorization: Bearer` header. Quail authenticates separately, with
-  `Authorization: Basic base64(<vendor email>:<session id>)`, both halves read from its cookies.
-  On the web there is no cookie to read. Quail signs in on the page — its `api/auth/login`
-  sends CORS and returns the session id in the body. Sandpiper cannot: its `login` route sends
-  no CORS headers, so a browser on another origin can't exchange a password for a token, only
-  use one it already holds. Its `sandpiper_s` cookie is script-readable, though, so a
-  bookmarklet run on the Sandpiper tab reads the token and hands it back through the URL
-  fragment; from there the `Bearer` header is identical to the extension's. Either way, nothing
-  is stored anywhere but your own browser.
+- **Auth** — every request carries a token, obtained differently for each system because the two
+  differ. **Quail** signs in on the page: its `api/auth/login` sends CORS and returns a session
+  id in the body, which becomes `Authorization: Basic base64(<vendor email>:<session id>)`.
+  **Sandpiper** can't sign in on the page — its `login` route sends no CORS headers, so a browser
+  on another origin can't exchange a password for a token, only use one it already holds. Its
+  `sandpiper_s` cookie is script-readable, so the Roost bookmark, run on the Sandpiper tab, reads
+  the token and hands it back through the URL fragment (never sent to a server); the account id is
+  decoded from that token's JWT, and it rides on every call as `Authorization: Bearer`. Nothing is
+  stored anywhere but your own browser.
 - **Requests** — `POST /api/items/v2/<account>/items?from=0&to=10000000` with
   `{"filters":[],"orderBy":"ACQUIRED","reverse":true}`. The range is deliberately huge so a
   single call returns everything. Then `GET /api/stores/<accountId>` and
@@ -381,18 +282,15 @@ people who cannot or will not install an unpacked extension.
   instead returns `403 Forbidden`. Venue failures are reported but never sink an item sync. Each
   Quail refresh pulls booth terms, line-item sales, and one rent call per calendar month; a
   missing Quail session is reported but never blocks an inventory sync.
-- **Fallback** — if the direct call is refused, the same request is re-run inside an open
-  Sandpiper tab so it goes out same-origin.
-- **Storage** — results land in `chrome.storage.local` and the dashboard renders from that cache
-  on every open.
-- **Charts** — hand-rolled SVG (`lib/charts.js`). Extension CSP blocks remote scripts, so there
-  are no third-party libraries.
+- **Storage** — the fetched data lands in `localStorage` and the dashboard renders from that cache
+  on every open; session tokens sit in `sessionStorage`, so they clear when the tab closes.
+- **Charts** — hand-rolled SVG (`lib/charts.js`). The page loads no third-party scripts, so there
+  are no charting libraries and nothing to phone home.
 - **Writes** — `POST /api/items/v2/<accountId>/edit` replaces the whole item rather than patching
   it, so each payload starts from the untouched API row with only the planned fields overlaid —
   that is why the raw rows are cached alongside the normalised ones. A successful edit answers
   **204 No Content**, so responses are read as text and an empty body is treated as success;
-  parsing it as JSON unconditionally would report a successful write as a failure *and* trigger
-  the in-page fallback to write a second time.
+  parsing it as JSON unconditionally would report a successful write as a failure.
 
 ### One set of numbers
 
@@ -416,16 +314,16 @@ everything to cents at the boundary.
 
 ### Layout
 
+A static site: one HTML page, plain ES modules, no build step, no dependencies.
+
 | Path | Role |
 | --- | --- |
-| `manifest.json` | MV3 manifest — permissions, host permissions, service worker, popup |
-| `index.html` / `popup.js` / `popup.css` | The dashboard — the extension popup, the full tab, and the website, all the same page |
-| `main.js` | Entry point for both builds; starts the controller once the platform is chosen |
-| `lib/platform.js` | Picks the world at load: chrome storage + background worker, or web storage + inline backend |
-| `background.js` | Extension only — the service worker: cookie auth, fetching, caching, writes |
-| `lib/core.js` | The API orchestration both builds share, with nothing of where it runs |
-| `lib/webbackend.js` | Web only — login, an inline stand-in for the worker, localStorage caching |
-| `theme.js` | Applies the saved theme before first paint (a classic, non-deferred script — MV3's CSP forbids inline scripts, so it can't live in the HTML) |
+| `index.html` / `popup.js` / `popup.css` | The whole app — one page, its controller, its styles |
+| `main.js` | Entry point; starts the controller |
+| `lib/core.js` | The API orchestration — which endpoints, in what order |
+| `lib/webbackend.js` | Sign-in, fetching, and the `localStorage` cache |
+| `lib/platform.js` | The seam the controller talks to for storage and fetching |
+| `theme.js` | Applies the saved theme before first paint (a classic, non-deferred script, so the page never flashes the wrong theme) |
 | `lib/analytics.js` | Metric computation over the ledger |
 | `lib/ledger.js` | Reconciles Sandpiper and Quail into one set of numbers |
 | `lib/quail.js` | Quail client, unit normalisation, register-rhythm analytics |
@@ -479,20 +377,18 @@ rather than a flattering green.
 These are for people working on Roost itself — if you're just using it, the
 [help table above](#if-something-goes-wrong) is the one you want.
 
-**Changes to `background.js` don't seem to apply.** MV3 caches the service worker. The popup
-files are re-fetched every time you open it, but the worker keeps running whatever was loaded
-when the extension was installed. Click the reload (↻) icon on the extension's card at
-`chrome://extensions`.
+**Running it locally.** Any static server works, since ES modules won't load over `file://`:
 
-**Watching the requests.** Service worker fetches never appear in the Sandpiper page's Network
-tab — only in the worker's own inspector (`chrome://extensions` → Roost → *Inspect views:
-service worker*). Note the console only captures logs emitted while it's open, so open it before
-hitting fetch. Each sync logs a `[Roost]` line with the venue counts it resolved, and the popup
-banner reports the same thing without any DevTools.
-
-**More than one account.** If your login covers several, the first is used. To switch, open the
-service worker console from `chrome://extensions` and run:
-
-```js
-chrome.runtime.sendMessage({ type: 'setAccount', accountId: '<uuid>' })
+```bash
+git clone https://github.com/alexmattson/roost.git
+cd roost
+python3 -m http.server        # then open http://localhost:8000/
 ```
+
+No install and no build — edit a file, reload the page.
+
+**Watching the requests.** Every fetch goes straight from the page, so it all shows up in the
+browser's own Network tab. Each sync also logs a `[Roost]` line with the venue counts it resolved,
+and the sign-in banner reports the same thing without any DevTools.
+
+**More than one account.** If your Sandpiper login covers several, the first is used.
