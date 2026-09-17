@@ -794,6 +794,16 @@ td.muted { color: var(--faint); font-size: 11.5px; }
 
 body.web { min-height: 100vh; }
 
+/* Set from the head before paint (see theme.js): hide the app and show the gate
+   straight away, so the dashboard never flashes ahead of the sign-in screen. */
+html.pre-auth .topbar,
+html.pre-auth .modes,
+html.pre-auth .rangebar,
+html.pre-auth .tabs,
+html.pre-auth #main,
+html.pre-auth #banner { display: none; }
+html.pre-auth #login-gate[hidden] { display: grid; }
+
 .login-gate[hidden] { display: none; }   /* authored display beats [hidden] */
 .login-gate {
   position: fixed; inset: 0; z-index: 80;
@@ -838,6 +848,9 @@ body.web { min-height: 100vh; }
 .sys-row.connected .sys-steps,
 .sys-row.connected .sys-actions { display: none; }
 .sys-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+/* Quail's row goes straight from header to fields, so the status chip would
+   otherwise sit right on top of them. */
+.sys-head + .sys-actions { margin-top: 11px; }
 .sys-actions input {
   flex: 1 1 130px; min-width: 0; box-sizing: border-box;
   background: var(--panel); color: var(--text);

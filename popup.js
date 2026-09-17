@@ -2363,6 +2363,8 @@ async function init() {
     document.body.classList.add('expanded');
     $('#expand').style.display = 'none';
   }
+  // Past the gate: reveal the app that the pre-auth class was holding back.
+  document.documentElement.classList.remove('pre-auth');
   $('#login-gate').hidden = true;
   if (IS_WEB) wireWebAccount();
   initNav();
