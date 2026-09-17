@@ -315,13 +315,53 @@ cd roost
 Load that folder unpacked as above. There's no build step and no dependencies — the repository
 *is* the extension.
 
+## Roost on the web
+
+The same dashboard runs as a website, with no extension to install. Instead of reading the
+browser's existing sessions, it asks you to sign in to Sandpiper and Quail on a start screen,
+exchanges each password for a session token, and keeps those tokens in the tab. Everything else
+— every chart, every edit, every reconciliation — is the identical code.
+
+**Nothing moves to a server, because there is no server.** Both companies' APIs send permissive
+CORS and hand back their session token in the login response body, so the page talks to each
+service directly from your browser, exactly as the extension does. GitHub Pages only ever serves
+static files.
+
+### Hosting it on GitHub Pages
+
+1. Push this repository to GitHub (it already lives at
+   [github.com/alexmattson/roost](https://github.com/alexmattson/roost)).
+2. **Settings → Pages**. Under **Build and deployment**, set **Source** to *Deploy from a branch*,
+   pick the **main** branch and the **/ (root)** folder, and **Save**.
+3. Wait a minute, then open `https://<you>.github.io/roost/`. That's the app.
+
+There is no build step — the repository is the site. The extension's own files
+(`manifest.json`, `background.js`) sit alongside and are simply unused on the web.
+
+### The trade-offs, honestly
+
+- **You would be typing vendor passwords into a page that is not the vendor.** Roost only ever
+  exchanges them for a token and never stores or forwards them, but a `github.io` address asking
+  for a Sandpiper password has the shape of a phishing page. A custom domain helps; asking
+  Sandpiper and Quail for real API access helps more.
+- **Tokens live in `sessionStorage`** — they survive a reload but not closing the tab, and never
+  leave the browser. Signing out clears them and the cached data.
+- **The open CORS both APIs send is arguably a bug on their side.** If either tightens it, the
+  website stops working (the extension, which is same-origin by permission, would not).
+
+For those reasons the extension remains the recommended way to run Roost. The website exists for
+people who cannot or will not install an unpacked extension.
+
 ## How it works
 
-- **Auth** — the service worker reads your `sandpiper_s` session cookie via `chrome.cookies`,
-  decodes the JWT to find your account id, and sends the request with both the cookie and an
-  `Authorization: Bearer` header. Quail authenticates separately, with
+- **Auth** — in the extension, the service worker reads your `sandpiper_s` session cookie via
+  `chrome.cookies`, decodes the JWT to find your account id, and sends the request with both the
+  cookie and an `Authorization: Bearer` header. Quail authenticates separately, with
   `Authorization: Basic base64(<vendor email>:<session id>)`, both halves read from its cookies.
-  Nothing is stored anywhere but your own browser.
+  On the web there is no cookie to read, so the sign-in screen posts to `login/do-login`
+  (Sandpiper) and `api/auth/login` (Quail), which return the JWT and the session id in their
+  response bodies; from there the two headers are identical. Either way, nothing is stored
+  anywhere but your own browser.
 - **Requests** — `POST /api/items/v2/<account>/items?from=0&to=10000000` with
   `{"filters":[],"orderBy":"ACQUIRED","reverse":true}`. The range is deliberately huge so a
   single call returns everything. Then `GET /api/stores/<accountId>` and
@@ -368,8 +408,12 @@ everything to cents at the boundary.
 | Path | Role |
 | --- | --- |
 | `manifest.json` | MV3 manifest — permissions, host permissions, service worker, popup |
-| `background.js` | Service worker: auth, fetching, caching, writes |
-| `popup.html` / `popup.js` / `popup.css` | The dashboard, popup and full-tab alike |
+| `index.html` / `popup.js` / `popup.css` | The dashboard — the extension popup, the full tab, and the website, all the same page |
+| `main.js` | Entry point for both builds; starts the controller once the platform is chosen |
+| `lib/platform.js` | Picks the world at load: chrome storage + background worker, or web storage + inline backend |
+| `background.js` | Extension only — the service worker: cookie auth, fetching, caching, writes |
+| `lib/core.js` | The API orchestration both builds share, with nothing of where it runs |
+| `lib/webbackend.js` | Web only — login, an inline stand-in for the worker, localStorage caching |
 | `theme.js` | Applies the saved theme before first paint (a classic, non-deferred script — MV3's CSP forbids inline scripts, so it can't live in the HTML) |
 | `lib/analytics.js` | Metric computation over the ledger |
 | `lib/ledger.js` | Reconciles Sandpiper and Quail into one set of numbers |

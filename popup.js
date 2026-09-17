@@ -10,6 +10,8 @@ import {
   splitLotCost, blankRow, isRowEmpty, validateRow, draftNumberCounts,
   buildCreatePayload, draftTotals
 } from './lib/stock.js';
+import { platform, IS_WEB } from './lib/platform.js';
+import { webLogin, isWebAuthed, signOutWeb } from './lib/webbackend.js';
 import {
   lineChart, barChart, donut, hbar, scatter, empty, hideTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
@@ -643,7 +645,7 @@ async function saveVenueName(id, name) {
   const trimmed = name.trim();
   if (trimmed) state.venueNames[id] = trimmed;
   else delete state.venueNames[id];
-  await chrome.storage.local.set({ sp_venue_names: state.venueNames });
+  await platform.storage.set({ sp_venue_names: state.venueNames });
   renderVenueSelector();
 }
 
@@ -1771,7 +1773,7 @@ function render() {
   const scope = s.venue
     ? ` · sales scoped to ${venueLabel(s.venue.id, s.venue.kind)} (stock on hand stays account-wide)`
     : '';
-  const build = chrome.runtime.getManifest().version;
+  const build = platform.version();
   $('#footnote').innerHTML =
     `${fmt(state.start)} – ${fmt(state.end)} · ${int(s.counts.total)} items tracked · ` +
     `${int(s.counts.sold)} sold, ${int(s.counts.onHand)} on hand in range` +
@@ -1788,7 +1790,7 @@ function showEmptyState(on = true) {
 /* ------------------------------------------------------------------ data */
 
 function send(type, payload = {}) {
-  return new Promise((resolve) => chrome.runtime.sendMessage({ type, ...payload }, resolve));
+  return platform.send(type, payload);
 }
 
 function loadInto(res) {
@@ -1943,14 +1945,14 @@ function saveDraft() {
   const as = state.addStock;
   const rows = as.rows.filter((r) => !isRowEmpty(r));
   try {
-    if (rows.length) chrome.storage.local.set({ [DRAFT_KEY]: { acquired: as.acquired, rows } });
-    else chrome.storage.local.remove(DRAFT_KEY);
+    if (rows.length) platform.storage.set({ [DRAFT_KEY]: { acquired: as.acquired, rows } });
+    else platform.storage.remove(DRAFT_KEY);
   } catch (e) { /* a lost draft is not worth breaking the screen over */ }
 }
 
 async function loadDraft() {
   try {
-    const got = await chrome.storage.local.get(DRAFT_KEY);
+    const got = await platform.storage.get(DRAFT_KEY);
     const draft = got[DRAFT_KEY];
     if (draft && Array.isArray(draft.rows) && draft.rows.length) {
       state.addStock.rows = draft.rows;
@@ -2239,17 +2241,86 @@ function initAddStock() {
   });
 }
 
+/* ---------------------------------------------------------------- web sign-in
+
+   The gate exists in the markup for both builds and is shown only here, when the
+   web app has no session yet. The extension never reaches it — it is already
+   authenticated by the browser's cookies. */
+
+function renderLoginGate(message) {
+  const gate = $('#login-gate');
+  gate.hidden = false;
+  if (message) {
+    const err = $('#login-error');
+    err.textContent = message;
+    err.hidden = false;
+  }
+  const form = $('#login-form');
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $('#login-submit');
+    const err = $('#login-error');
+    err.hidden = true;
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+      const sandpiper = {
+        username: $('#sp-user').value.trim(),
+        password: $('#sp-pass').value
+      };
+      if (!sandpiper.username || !sandpiper.password) throw new Error('Enter your Sandpiper email and password.');
+      const qEmail = $('#q-user').value.trim();
+      const qPass = $('#q-pass').value;
+      const quail = qEmail && qPass ? { email: qEmail, password: qPass } : null;
+
+      const { quailError, quailConnected } = await webLogin({ sandpiper, quail });
+
+      // A page holding a live token should not keep the passwords a keystroke away.
+      $('#sp-pass').value = '';
+      $('#q-pass').value = '';
+
+      await init();
+      if (quail && !quailConnected) {
+        banner(`Signed in to Sandpiper. Quail did not connect: ${quailError} — register data is unavailable until you sign in to it.`, 'info');
+      }
+      await refresh();
+    } catch (e2) {
+      err.textContent = e2.message || String(e2);
+      err.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  };
+}
+
+/** The web build gets a sign-out control in the top bar; the extension does not. */
+function wireWebAccount() {
+  const btn = $('#signout');
+  if (!btn) return;
+  btn.hidden = false;
+  btn.onclick = () => {
+    signOutWeb();
+    location.reload();
+  };
+}
+
 async function init() {
-  if (new URLSearchParams(location.search).get('full') === '1') {
+  if (IS_WEB) {
+    document.body.classList.add('expanded', 'web');
+    $('#expand').style.display = 'none';
+    if (!isWebAuthed()) { renderLoginGate(); return; }
+  } else if (new URLSearchParams(location.search).get('full') === '1') {
     document.body.classList.add('expanded');
     $('#expand').style.display = 'none';
   }
+  $('#login-gate').hidden = true;
+  if (IS_WEB) wireWebAccount();
   initNav();
   renderPresets();
 
   $('#refresh').onclick = refresh;
   initAddStock();
-  $('#expand').onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?full=1') });
+  $('#expand').onclick = () => platform.openFull();
   $('#theme-toggle').onclick = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
@@ -2302,14 +2373,14 @@ async function init() {
   });
 
   try {
-    const stored = await chrome.storage.local.get(['sp_venue_names', 'sp_venues']);
+    const stored = await platform.storage.get(['sp_venue_names', 'sp_venues']);
     state.venueNames = stored.sp_venue_names || {};
     state.venueInfo = stored.sp_venues || { stores: {}, booths: {} };
   } catch (e) { /* names are cosmetic; fall back to short ids */ }
 
   // If the worker predates this popup, every background change (venue lookups
   // included) is silently absent. Detect it instead of leaving the user guessing.
-  const expected = chrome.runtime.getManifest().version;
+  const expected = platform.version();
   const pong = await send('ping');
   if (!pong || !pong.ok || pong.build !== expected) {
     const running = pong && pong.build ? `build ${pong.build}` : 'an older build';
@@ -2338,4 +2409,4 @@ async function init() {
   }
 }
 
-init();
+export { init };

@@ -41,6 +41,9 @@
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
         <span>Add stock</span>
       </button>
+      <button id="signout" class="icon-btn" title="Sign out" hidden>
+        <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button id="refresh" class="btn primary">
         <svg class="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span id="refresh-label">Fetch latest data</span>
@@ -67,6 +70,51 @@
   </div>
 
   <nav class="tabs" id="tabs"></nav>
+
+
+  <!-- Web sign-in. Present in both builds, shown only by the web app when it has
+       no session; the extension is already authenticated by the browser. -->
+  <section id="login-gate" class="login-gate" hidden>
+    <div class="login-card">
+      <div class="login-brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="15.5" fill="#e09322"/>
+          <ellipse cx="16" cy="20.16" rx="12.16" ry="7.81" fill="#fff"/>
+          <ellipse cx="16" cy="17.28" rx="8.58" ry="5.76" fill="#e09322"/>
+          <ellipse cx="12.74" cy="15.58" rx="2.97" ry="2.81" fill="#e09322"/>
+          <ellipse cx="12.74" cy="15.58" rx="2.37" ry="2.21" fill="#fff"/>
+          <ellipse cx="19.26" cy="15.58" rx="2.97" ry="2.81" fill="#e09322"/>
+          <ellipse cx="19.26" cy="15.58" rx="2.37" ry="2.21" fill="#fff"/>
+          <ellipse cx="16" cy="14.56" rx="3.06" ry="2.90" fill="#e09322"/>
+          <ellipse cx="16" cy="14.56" rx="2.46" ry="2.30" fill="#fff"/>
+        </svg>
+        <h1>Roost</h1>
+      </div>
+      <p class="login-lead">Sign in to Sandpiper and Quail. Your credentials are exchanged for
+        session tokens in your browser and never sent anywhere else.</p>
+
+      <form id="login-form" autocomplete="on">
+        <fieldset class="login-set">
+          <legend>Sandpiper <span class="req">required</span></legend>
+          <input id="sp-user" type="email" placeholder="Email" autocomplete="username" aria-label="Sandpiper email">
+          <input id="sp-pass" type="password" placeholder="Password" autocomplete="current-password" aria-label="Sandpiper password">
+        </fieldset>
+
+        <fieldset class="login-set">
+          <legend>Quail <span class="opt">recommended</span></legend>
+          <p class="login-hint">Without Quail you lose real sale times, booth rent and the Sync page.</p>
+          <input id="q-user" type="email" placeholder="Vendor email" autocomplete="off" aria-label="Quail vendor email">
+          <input id="q-pass" type="password" placeholder="Password" autocomplete="off" aria-label="Quail password">
+        </fieldset>
+
+        <p id="login-error" class="login-error" hidden></p>
+        <button type="submit" id="login-submit" class="btn primary login-submit">Sign in</button>
+      </form>
+
+      <p class="login-foot">Roost talks to Sandpiper and Quail directly from your browser. It is
+        not affiliated with either.</p>
+    </div>
+  </section>
 
   <main id="main">
     <div id="empty-state" class="empty-state hidden">
@@ -394,6 +442,6 @@
     <span id="footnote">—</span>
   </footer>
 
-  <script type="module" src="popup.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
