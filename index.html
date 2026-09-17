@@ -90,20 +90,18 @@
         </svg>
         <h1>Roost</h1>
       </div>
-      <p class="login-lead">Connect each system on its own. Everything happens in your browser —
-        nothing is sent anywhere but to Sandpiper and Quail themselves.</p>
+      <p class="login-lead">Connect your Sandpiper and Quail accounts to open your dashboard.</p>
 
       <div class="sys-row" id="sys-sandpiper">
         <div class="sys-head">
           <span class="sys-name">Sandpiper</span>
           <span class="sys-status" id="sp-status" data-state="off">Not connected</span>
         </div>
-        <p class="sys-hint">Sandpiper won't take a password from another site. Sign in on its own
-          tab, then click the bookmark to bring your session here.</p>
-        <div class="sys-actions">
-          <a class="btn small" href="https://app.sandpiperhq.com" target="_blank" rel="noopener">Open Sandpiper ↗</a>
-          <a class="bm-link" id="sp-bookmarklet" href="#" draggable="true">🪺 Connect Sandpiper</a>
-        </div>
+        <ol class="sys-steps">
+          <li><a href="https://app.sandpiperhq.com" target="_blank" rel="noopener">Open Sandpiper</a> and sign in.</li>
+          <li>Drag <a class="bm-link" id="sp-bookmarklet" href="#" draggable="true">🪺 Connect Sandpiper</a> to your bookmarks bar.</li>
+          <li>On the Sandpiper tab, click it. You'll land back here, connected.</li>
+        </ol>
         <details class="login-help">
           <summary>Prefer to paste it?</summary>
           <p>On <a href="https://app.sandpiperhq.com" target="_blank" rel="noopener">app.sandpiperhq.com</a>,

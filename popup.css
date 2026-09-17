@@ -827,6 +827,9 @@ body.web { min-height: 100vh; }
 }
 .sys-status[data-state="on"] { background: rgba(52,211,153,.16); color: var(--green); }
 .sys-hint { margin: 7px 0 9px; font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+.sys-steps { margin: 8px 0 4px; padding-left: 18px; font-size: 11.5px; line-height: 1.9; color: var(--muted); }
+.sys-steps li { margin-bottom: 2px; }
+.sys-steps a:not(.bm-link) { color: var(--brass); }
 .sys-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .sys-actions input {
   flex: 1 1 130px; min-width: 0; box-sizing: border-box;
