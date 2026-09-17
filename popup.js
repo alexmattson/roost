@@ -2288,6 +2288,9 @@ function paintLoginStatus() {
   };
   set('#sp-status', st.sandpiper.connected, st.sandpiper.user ? `Connected · ${st.sandpiper.user}` : 'Connected');
   set('#q-status', st.quail.connected, st.quail.email ? `Connected · ${st.quail.email}` : 'Connected');
+  // A connected system collapses to just its header — nothing left to do there.
+  $('#sys-sandpiper').classList.toggle('connected', st.sandpiper.connected);
+  $('#sys-quail').classList.toggle('connected', st.quail.connected);
   $('#login-enter').disabled = !st.sandpiper.connected;
 }
 
@@ -2306,26 +2309,15 @@ function renderLoginGate(message) {
 
   // Connect Sandpiper independently — from a pasted token, or the one the
   // bookmarklet dropped in the fragment (which never reaches a server).
-  const connectSp = async (token, viaBookmarklet) => {
-    loginError('');
-    try {
-      await connectSandpiper(token);
-      $('#sp-token').value = '';
-      paintLoginStatus();
-    } catch (e) {
-      loginError(e.message || String(e));
-    }
-  };
-
+  // The bookmark drops the token in the fragment, which never reaches a server.
   const fromHash = /[#&]sp=([^&]+)/.exec(location.hash || '');
   if (fromHash) {
     let tok = fromHash[1];
     try { tok = decodeURIComponent(tok); } catch (e) { /* use as-is */ }
     history.replaceState(null, '', location.pathname + location.search);
-    connectSp(tok, true);
+    loginError('');
+    connectSandpiper(tok).then(paintLoginStatus).catch((e) => loginError(e.message || String(e)));
   }
-
-  $('#sp-token-use').onclick = () => connectSp($('#sp-token').value.trim(), false);
 
   // Connect Quail independently, with its own password.
   $('#q-connect').onclick = async () => {
