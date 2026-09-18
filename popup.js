@@ -629,6 +629,21 @@ async function syncNewSales(entries) {
   }
 }
 
+/** A playful, time-of-day greeting — steady through the day, different tomorrow. */
+function homeGreeting(now) {
+  const h = now.getHours();
+  const bucket = h < 12
+    ? ['Rise and resell ☀️', 'Morning — let’s go treasure hunting', 'Coffee’s brewing, so are the numbers', 'Top of the morning, picker']
+    : h < 17
+      ? ['Afternoon — anything good move today?', 'Back at the booth', 'How’s the hustle going?', 'Mid-day check-in ✨']
+      : h < 22
+        ? ['Evening — let’s tally the wins', 'Closing-time numbers', 'Good evening, treasure hunter', 'Another day, another find']
+        : ['Burning the midnight oil? 🌙', 'The booth never sleeps', 'Late-night bookkeeping, respect'];
+  // Steady within a day, rotating day to day.
+  const seed = now.getFullYear() * 366 + (now.getMonth() * 31 + now.getDate());
+  return bucket[seed % bucket.length];
+}
+
 /**
  * The Home briefing: the money that matters, the short list of things that need
  * doing, and the last few sales — each a doorway into the depth elsewhere. It is
@@ -650,8 +665,7 @@ function renderHome(s) {
   const monthName = now.toLocaleDateString(undefined, { month: 'long' });
   const lastName = new Date(lastStart).toLocaleDateString(undefined, { month: 'long' });
 
-  const hour = now.getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greet = homeGreeting(now);
 
   $('#home-hero').innerHTML = `
     <div class="home-greet">${greet}</div>
