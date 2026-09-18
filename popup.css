@@ -205,6 +205,7 @@ body.expanded .table-scroll { max-height: none; }
   display: flex; align-items: center; justify-content: space-between; gap: 8px 10px;
   padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; flex-wrap: wrap;
 }
+.rangebar[hidden] { display: none; }   /* authored display beats the attribute */
 .chips { display: flex; gap: 5px; flex-wrap: wrap; }
 .chip {
   padding: 4.5px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 560;
@@ -942,50 +943,65 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 
 /* --------------------------------------------------------------------- Home
 
-   The calm landing: one big number, a short list of what needs doing, and the
-   last few sales. Roomy on purpose — it is the antidote to the dense views. */
+   The calm landing. Built from the same cards, tokens and type scale as the
+   rest of the app, so it reads as the front of the same product — just roomier,
+   with one figure that matters and short lists that lead inward. */
 
-.home { max-width: 760px; margin: 0 auto; padding-top: 6px; }
-.home-hero {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 22px 22px 18px; margin-bottom: 14px;
+.home { max-width: 720px; margin: 0 auto; }
+
+.home-hero { padding: 22px 22px 18px; margin-bottom: 12px; }
+.home-greet { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+.home-take-num {
+  font-size: 42px; font-weight: 680; letter-spacing: -.025em; line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.home-greet { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-.home-take-num { font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
-.home-trend { font-size: 15px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
-.home-take-sub { font-size: 12.5px; color: var(--muted); margin-top: 7px; }
-.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.home-actions .btn.ghost { margin-left: auto; }
-
-.home-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
-@media (max-width: 640px) { .home-cols { grid-template-columns: 1fr; } }
-.home-col {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 14px 15px;
+.home-take-sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.home-lastmonth {
+  display: inline-block; margin-top: 12px; padding: 4px 11px;
+  font-size: 11.5px; color: var(--muted);
+  background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 999px;
 }
-.home-h { margin: 0 0 10px; font-size: 12px; font-weight: 620; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.home-lastmonth b { color: var(--text); font-weight: 640; font-variant-numeric: tabular-nums; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.home-actions .btn.ghost { margin-left: auto; color: var(--muted); }
+.home-actions .btn.ghost:hover { color: var(--text); }
 
+.home-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 620px) { .home-cols { grid-template-columns: 1fr; } }
+.home-card { padding: 12px 13px 13px; }
+
+/* Attention rows read like the KPI status stripe: a coloured dot, the fact, and
+   the action it leads to. */
 .home-item {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  background: none; border: 0; border-radius: 8px; padding: 9px 8px;
+  background: none; border: 0; padding: 9px 6px;
   font: inherit; color: var(--text); text-align: left; cursor: pointer;
+  border-radius: 8px;
 }
 .home-item + .home-item { border-top: 1px solid var(--border-soft); }
 .home-item:hover { background: var(--btn-hover); }
 .home-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.home-item-text { flex: 1; font-size: 12.5px; line-height: 1.4; }
-.home-item-text b { font-weight: 650; }
-.home-item-cta { font-size: 11.5px; font-weight: 600; color: var(--brass); white-space: nowrap; }
-.home-clear { font-size: 13px; color: var(--green); padding: 8px 4px; }
-
-.home-sale {
-  display: flex; align-items: baseline; gap: 8px; padding: 7px 4px; font-size: 12.5px;
+.home-dot.is-warn { background: var(--brass); }
+.home-dot.is-bad { background: var(--red); }
+.home-item-text { flex: 1; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.home-item-text b { color: var(--text); font-weight: 640; }
+.home-item-cta {
+  font-size: 11px; font-weight: 600; color: var(--brass); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 3px;
 }
+.home-item-cta::after { content: '→'; opacity: .6; }
+.home-item:hover .home-item-cta::after { opacity: 1; }
+.home-clear { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); padding: 8px 6px; }
+.home-check { color: var(--green); font-weight: 700; }
+
+.home-sale { display: flex; align-items: baseline; gap: 8px; padding: 8px 6px; font-size: 12.5px; }
 .home-sale + .home-sale { border-top: 1px solid var(--border-soft); }
-.home-sale-desc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.home-sale-price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-sale-desc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.home-sale-price { font-weight: 620; font-variant-numeric: tabular-nums; }
 .home-sale-when { color: var(--faint); font-size: 11px; white-space: nowrap; }
+.home-empty { font-size: 12.5px; color: var(--faint); padding: 8px 6px; }
 .home-more {
-  margin-top: 8px; background: none; border: 0; padding: 4px;
+  margin-top: 6px; background: none; border: 0; padding: 6px;
   color: var(--brass); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
 }
+.home-more:hover { text-decoration: underline; }

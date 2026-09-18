@@ -551,25 +551,26 @@ function jumpToItems(filter) {
 function renderHome(s) {
   if (state.mode !== 'home') return;
 
-  // Take-home over the last 30 days, with a trend against the 30 before it.
-  const end = Date.now();
-  const winStart = end - 30 * DAY;
-  const m = analyze(state.ledger, { start: winStart, end });
+  // Take-home this month so far, with last month's total for reference.
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
   const rentRows = scopedRentRows();
-  const takeHome = m.sales.net - rentForRange(rentRows, winStart, end).cents;
-  const priorHasData = !!(m.previous && m.previous.hasData);
-  const priorTakeHome = priorHasData
-    ? m.previous.net - rentForRange(rentRows, winStart - 30 * DAY, winStart).cents
-    : null;
-  const t = trend(takeHome, priorTakeHome, { hasData: priorHasData });
+  const takeHome = (start, end) =>
+    analyze(state.ledger, { start, end }).sales.net - rentForRange(rentRows, start, end).cents;
+  const thisMonth = takeHome(monthStart, now.getTime());
+  const lastMonth = takeHome(lastStart, monthStart - 1);
+  const monthName = now.toLocaleDateString(undefined, { month: 'long' });
+  const lastName = new Date(lastStart).toLocaleDateString(undefined, { month: 'long' });
 
-  const hour = new Date().getHours();
+  const hour = now.getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   $('#home-hero').innerHTML = `
-    <div class="home-greet">${greet}.</div>
-    <div class="home-take-num">${money(takeHome, { compact: true })}${t ? ` <span class="home-trend">${t}</span>` : ''}</div>
-    <div class="home-take-sub">taken home in the last 30 days, after commission${rentRows.length ? ' and rent' : ''}</div>
+    <div class="home-greet">${greet}</div>
+    <div class="home-take-num">${money(thisMonth)}</div>
+    <div class="home-take-sub">taken home in ${monthName}, so far</div>
+    <div class="home-lastmonth">${lastName}, in full &nbsp;<b>${money(lastMonth)}</b></div>
     <div class="home-actions">
       <button class="btn primary" id="home-add">+ Add stock</button>
       ${s.inventory.stale ? `<button class="btn" id="home-reprice">Reprice slow stock (${int(s.inventory.stale)})</button>` : ''}
@@ -580,7 +581,6 @@ function renderHome(s) {
   $('#home-analytics').onclick = () => selectMode('analyze');
 
   // Only the actionable things — each with where it goes.
-  const color = { warn: PALETTE.brass, bad: PALETTE.red };
   const items = [];
   const add = (tone, text, cta, to) => { if (to) items.push({ tone, text, cta, to }); };
 
@@ -603,13 +603,13 @@ function renderHome(s) {
 
   const att = $('#home-attention');
   if (!items.length) {
-    att.innerHTML = '<div class="home-clear">✓ Nothing needs attention — you\'re all caught up.</div>';
+    att.innerHTML = '<div class="home-clear"><span class="home-check">✓</span> All caught up — nothing needs attention.</div>';
   } else {
-    att.innerHTML = '<h2 class="home-h">Needs attention</h2>' + items.map((r, i) => `
+    att.innerHTML = items.map((r, i) => `
       <button class="home-item" data-i="${i}">
-        <span class="home-dot" style="background:${color[r.tone]}"></span>
+        <span class="home-dot is-${r.tone}"></span>
         <span class="home-item-text">${r.text}</span>
-        <span class="home-item-cta">${r.cta} →</span>
+        <span class="home-item-cta">${r.cta}</span>
       </button>`).join('');
     $$('#home-attention .home-item').forEach((el) => {
       const to = items[Number(el.dataset.i)].to;
@@ -620,18 +620,17 @@ function renderHome(s) {
   // The last handful of sales, newest first.
   const recent = state.ledger.filter((i) => i.isSold && i.sold).sort((a, b) => b.sold - a.sold).slice(0, 5);
   const rec = $('#home-recent');
-  if (!recent.length) {
-    rec.innerHTML = '';
-  } else {
-    rec.innerHTML = '<h2 class="home-h">Recent sales</h2>' + recent.map((r) => `
+  rec.innerHTML = recent.length
+    ? recent.map((r) => `
       <div class="home-sale">
         <span class="home-sale-desc">${esc(r.desc)}</span>
         <span class="home-sale-price">${money(r.soldPrice)}</span>
         <span class="home-sale-when">${relativeTime(r.sold)}</span>
       </div>`).join('') +
-      '<button class="home-more" id="home-sales-more">See all sales →</button>';
-    $('#home-sales-more').onclick = () => { selectMode('records'); selectTab('pos'); };
-  }
+      '<button class="home-more" id="home-sales-more">See all sales →</button>'
+    : '<div class="home-empty">No sales recorded yet.</div>';
+  const more = $('#home-sales-more');
+  if (more) more.onclick = () => { selectMode('records'); selectTab('pos'); };
 }
 
 /** One reconciled set of sales for every figure outside the Sync tab. */

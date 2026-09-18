@@ -138,10 +138,16 @@
 
     <section class="tab-panel active" data-panel="home">
       <div class="home">
-        <div class="home-hero" id="home-hero"></div>
+        <div class="card home-hero" id="home-hero"></div>
         <div class="home-cols">
-          <div class="home-col" id="home-attention"></div>
-          <div class="home-col" id="home-recent"></div>
+          <div class="card home-card">
+            <div class="card-head"><h2>Needs attention</h2></div>
+            <div id="home-attention"></div>
+          </div>
+          <div class="card home-card">
+            <div class="card-head"><h2>Recent sales</h2><span class="hint">Newest first</span></div>
+            <div id="home-recent"></div>
+          </div>
         </div>
       </div>
     </section>
