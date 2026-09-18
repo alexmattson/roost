@@ -671,7 +671,7 @@ function renderHome(s) {
     <div class="home-greet">${greet}</div>
     <div class="home-take-num">${money(thisMonth)}</div>
     <div class="home-take-sub">taken home in ${monthName}, so far</div>
-    <div class="home-lastmonth">${lastName}, in full &nbsp;<b>${money(lastMonth)}</b></div>
+    <div class="home-lastmonth">${lastName} &nbsp;<b>${money(lastMonth)}</b></div>
     <div class="home-actions">
       <button class="btn primary" id="home-add">+ Add stock</button>
       ${s.inventory.stale ? `<button class="btn" id="home-reprice">Reprice slow stock (${int(s.inventory.stale)})</button>` : ''}
