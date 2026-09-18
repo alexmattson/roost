@@ -14,7 +14,7 @@ import { barcodeSVG, canBarcode } from './lib/barcode.js';
 import { platform, IS_WEB } from './lib/platform.js';
 import { connectSandpiper, connectQuail, webStatus, isWebAuthed, signOutWeb } from './lib/webbackend.js';
 import {
-  lineChart, barChart, donut, hbar, scatter, empty, hideTip,
+  lineChart, barChart, donut, hbar, scatter, empty, hideTip, showTip,
   money, pct, int, PALETTE, SERIES_COLORS, refreshPalette
 } from './lib/charts.js';
 
@@ -1327,7 +1327,7 @@ function renderReconcile() {
       title: 'Match',
       render: (e) => {
         const m = matchOf(e);
-        return `<span class="pill ${m}" title="${esc(MATCH_HINT[m])}">${m}</span>`;
+        return `<span class="pill ${m}" data-tip="${esc(MATCH_HINT[m])}">${m}</span>`;
       }
     },
     { title: 'Severity', render: (e) => `<span class="pill ${e.finding.severity}">${e.finding.severity}</span>` },
@@ -2386,6 +2386,19 @@ function initPrintTags() {
   $('#print-tags-go').onclick = () => window.print();
 }
 
+/**
+ * A hover tooltip for any element carrying data-tip, using the same styled
+ * bubble the charts use. Delegated once on the body, and scoped to data-tip
+ * elements only so it never fights the charts' own tooltips.
+ */
+function initTooltips() {
+  const tipEl = (e) => (e.target.closest ? e.target.closest('[data-tip]') : null);
+  const show = (e) => { const el = tipEl(e); if (el) showTip(esc(el.getAttribute('data-tip')), e); };
+  document.body.addEventListener('mouseover', show);
+  document.body.addEventListener('mousemove', show);   // follows the cursor while over it
+  document.body.addEventListener('mouseout', (e) => { if (tipEl(e)) hideTip(); });
+}
+
 function initAddStock() {
   // Add stock is opened from Home and from the Inventory toolbar, not the header.
   $('#add-stock-close').onclick = closeAddStock;
@@ -2520,6 +2533,7 @@ async function init() {
   $('#refresh').onclick = refresh;
   initAddStock();
   initPrintTags();
+  initTooltips();
   $('#expand').onclick = () => platform.openFull();
   $('#theme-toggle').onclick = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

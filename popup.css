@@ -439,8 +439,6 @@ td.name { max-width: 152px; min-width: 120px; white-space: nowrap; overflow: hid
 .pill.probable { background: rgba(240,180,41,.16); color: var(--brass); }
 .pill.manual { background: var(--pill-bg); color: var(--faint); }
 
-/* Match chips carry their meaning in a hover tooltip now, so hint that. */
-.pill.exact, .pill.probable, .pill.manual { cursor: help; }
 
 th.pick input[type="checkbox"] { vertical-align: middle; }
 .pill.medium { background: rgba(240,180,41,.16); color: var(--brass); }
