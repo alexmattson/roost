@@ -94,22 +94,13 @@ const MODES = [
     ]
   },
   {
-    /* The id stays 'review': it keys the panel element, the remembered range and
-     * the saved tab, and renaming it would strand both on upgrade for no gain. */
-    id: 'review',
-    label: 'Sync',
-    /* No range picker at all: reconciliation exists to prove the two systems
-     * agree, and a window can only hide a disagreement that is still live. */
-    presets: [],
-    fullRange: true,
-    defaultPreset: 'all',
-    tabs: [['review', 'Sync']]
-  },
-  {
     id: 'records',
     label: 'Records',
     presets: [['90d', '90D'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
-    tabs: [['items', 'Items'], ['pos', 'POS sales']]
+    // Sync sits here as a lookup page like the others; it ignores the range,
+    // and the bar is hidden on its tab (see renderRangeControls). The tab id
+    // stays 'review' — it keys the panel and the saved tab.
+    tabs: [['items', 'Inventory'], ['pos', 'POS sales'], ['review', 'Sync']]
   }
 ];
 
@@ -177,13 +168,14 @@ function applyPreset(preset) {
 }
 
 function renderModes() {
-  // The anomaly count rides on the Sync button so it is visible from any mode.
+  // The anomaly count rides on Records, which holds Sync, so it stays visible
+  // from any mode.
   const count = (state.badge && state.badge.count) || 0;
   const urgent = (state.badge && state.badge.urgent) || false;
   $('#modes').innerHTML = MODES
     .map((m) => {
-      const badge = m.id === 'review' && count
-        ? ` <span class="mode-badge${urgent ? ' urgent' : ''}" title="${count} anomal${count === 1 ? 'y' : 'ies'} in range">${count > 99 ? '99+' : count}</span>`
+      const badge = m.id === 'records' && count
+        ? ` <span class="mode-badge${urgent ? ' urgent' : ''}" title="${count} anomal${count === 1 ? 'y' : 'ies'} to reconcile">${count > 99 ? '99+' : count}</span>`
         : '';
       return `<button data-mode="${m.id}" class="${state.mode === m.id ? 'active' : ''}">${m.label}${badge}</button>`;
     })
@@ -213,6 +205,7 @@ function selectTab(tabId) {
     localStorage.setItem('sp_tab_' + state.mode, tabId);
   } catch (e) { /* nav state is a convenience only */ }
   renderTabs();
+  renderRangeControls();   // the Sync tab has no range bar; the others do
   hideTip();
   repaintCharts();
 }
@@ -266,13 +259,13 @@ function repaintCharts() {
 }
 
 function renderRangeControls() {
-  // Home is a briefing with no controls, so the whole bar goes.
-  const home = state.mode === 'home';
-  document.querySelector('.rangebar').hidden = home;
+  // No controls on Home (a briefing) or the Sync tab (always full-range).
+  const bare = state.mode === 'home' || state.tab === 'review';
+  document.querySelector('.rangebar').hidden = bare;
   const full = !!modeById(state.mode).fullRange;
   $('#presets').hidden = full;
   document.querySelector('.custom-range').hidden = full;
-  $('#range-note').hidden = !full || home;
+  $('#range-note').hidden = !full || bare;
 }
 
 function renderPresets() {
@@ -542,6 +535,21 @@ function jumpToItems(filter) {
   selectTab('items');
 }
 
+/** Opens the Sync page, now a tab under Records. */
+function openSync() {
+  selectMode('records');
+  selectTab('review');
+}
+
+/** Routes an attention item's destination — a filtered Records view, the Sync
+ *  page, or another mode. */
+function goTo(to) {
+  if (!to) return;
+  if (to.filter) return jumpToItems(to.filter);
+  if (to.mode === 'review') return openSync();
+  if (to.mode) return selectMode(to.mode);
+}
+
 /** New register sales Sandpiper still shows unsold — the ones a click can settle. */
 function fixableNewSales() {
   if (!state.quailSales.length) return [];
@@ -674,7 +682,7 @@ function renderHome(s) {
       </button>`).join('');
     $$('#home-attention .home-item').forEach((el) => {
       const to = items[Number(el.dataset.i)].to;
-      el.onclick = () => (to.mode ? selectMode(to.mode) : jumpToItems(to.filter));
+      el.onclick = () => goTo(to);
     });
   }
 
@@ -1255,7 +1263,11 @@ function renderReconcile() {
     renderModes();               // otherwise the badge keeps a stale count
     return;
   }
-  const r = reconcile(state.items, state.quailSales, { start: state.start, end: state.end });
+  // Always full-range: reconciliation proves the two systems agree, and a
+  // window can only hide a disagreement that is still live. Sync is now a
+  // Records tab, so it can't lean on a mode-level range any more.
+  const bounds = dataBounds(state.ledger.length ? state.ledger : state.items);
+  const r = reconcile(state.items, state.quailSales, { start: bounds.min, end: Math.max(Date.now(), bounds.max) });
   state.recon = r;
 
   // Pair every finding with the edit that would settle it, if one exists.
@@ -2367,7 +2379,7 @@ function initPrintTags() {
 }
 
 function initAddStock() {
-  $('#add-stock-open').onclick = openAddStock;
+  // Add stock is opened from Home and from the Inventory toolbar, not the header.
   $('#add-stock-close').onclick = closeAddStock;
   $('#as-discard').onclick = () => {
     if (state.addStock.rows.some((r) => !isRowEmpty(r)) &&

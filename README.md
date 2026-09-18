@@ -56,10 +56,9 @@ Roost opens on **Home**, a calm briefing; the analytical depth is a click away, 
 
 | Mode | Tabs | Kind of question |
 | --- | --- | --- |
-| **Home** | *(single page)* | "what should I care about" — take-home for the last 30 days, a short list of what needs attention, and the last few sales, each a doorway into the depth |
+| **Home** | *(single page)* | "what should I care about" — take-home this month, a short list of what needs attention, and the last few sales, each a doorway into the depth |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | "how is the business doing" — Overview carries the money ladder and the register's daily view |
-| **Sync** | *(single page)* | a task list — "what needs fixing", and where the two systems are brought into line |
-| **Records** | Items · POS sales | lookup — "find this specific thing", each page answering for one system |
+| **Records** | Inventory · POS sales · Sync | lookup and reconciliation — Inventory is what Sandpiper holds, POS sales what the register rang, and Sync is where the two are brought into line |
 
 **Home is the entry point, not a dashboard.** It answers the two questions a booth owner actually
 has on arrival — did I make money, and what do I need to do — and every panel is a doorway rather
@@ -186,12 +185,12 @@ applied one at a time so a partial failure stops somewhere understandable, and t
 updates in place as each succeeds, so resolved findings disappear immediately without a full
 re-sync.
 
-The Sync tab carries a badge with the number of anomalies in range, turning red when any are
-high severity, so it is visible from any mode.
+Records carries a badge with the number of anomalies to reconcile, turning red when any are high
+severity, so Sync stays visible from any mode even though it now lives a tab in.
 
 ### Price tags
 
-Records → Items can print price tags for whatever the filters are showing — each with the
+Records → Inventory can print price tags for whatever the filters are showing — each with the
 description, asking price, inventory number, and a **Code 128 barcode** of that number. That's the
 same symbology Sandpiper prints and the value the register scans, so a tag from here scans and
 reconciles like a Sandpiper one, drawn as inline SVG with no dependency. The **No barcode yet**
@@ -307,11 +306,11 @@ sales with their Sandpiper counterpart, and adds any sale the register saw that 
 not recorded. Every **business figure** reads that one ledger, so two views cannot disagree
 about the same window.
 
-Records is the deliberate exception. Its two pages are lookup, not analysis, and each answers
-for a single system: **Items** is what Sandpiper holds, **POS sales** is what the register
-rang. Merging them there would mean editing a row while looking at another system's version of
-it — which is also why Items is the one place edits can be trusted to show up exactly as typed.
-Sync is where the two are held against each other.
+Records is the deliberate exception. Its lookup pages answer for a single system each:
+**Inventory** is what Sandpiper holds, **POS sales** is what the register rang. Merging them
+would mean editing a row while looking at another system's version of it — which is also why
+Inventory is the one place edits can be trusted to show up exactly as typed. **Sync**, the third
+tab, is where the two are held against each other.
 
 ### Units
 
