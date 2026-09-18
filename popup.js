@@ -542,6 +542,50 @@ function jumpToItems(filter) {
   selectTab('items');
 }
 
+/** New register sales Sandpiper still shows unsold — the ones a click can settle. */
+function fixableNewSales() {
+  if (!state.quailSales.length) return [];
+  const ctx = buildVenueContext(state.venueInfo);
+  const bounds = dataBounds(state.ledger.length ? state.ledger : state.items);
+  const rec = reconcile(state.items, state.quailSales, { start: bounds.min, end: Math.max(Date.now(), bounds.max) });
+  return rec.findings
+    .filter((f) => f.type === 'sold-in-quail-not-in-sandpiper')
+    .map((f) => ({ finding: f, plan: planResolution(f, ctx) }))
+    .filter((e) => e.plan);
+}
+
+/** Records those sales in Sandpiper in one shot, then repaints. */
+async function syncNewSales(entries) {
+  const btn = $('#home-sync-go');
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+  try {
+    const res = await send('applyEdits', {
+      plans: entries.map((e) => ({
+        itemId: e.plan.itemId,
+        changes: e.plan.changes.map((c) => ({ field: c.field, to: c.to }))
+      }))
+    });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The sync failed.');
+    const failed = res.results.filter((r) => !r.ok);
+    if (res.items) {
+      state.items = normalize(res.items);
+      state.venueList = listVenues(state.items);
+      rebuildLedger();
+    }
+    banner(
+      failed.length
+        ? `Synced ${int(res.applied)} of ${int(entries.length)} — ${failed.length} failed: ${failed[0].error}`
+        : `Recorded ${int(res.applied)} sale${res.applied === 1 ? '' : 's'} in Sandpiper.`,
+      failed.length ? 'error' : 'ok'
+    );
+    if (!failed.length) setTimeout(() => banner(''), 3600);
+    render();
+  } catch (e) {
+    banner(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Sync now'; }
+  }
+}
+
 /**
  * The Home briefing: the money that matters, the short list of things that need
  * doing, and the last few sales — each a doorway into the depth elsewhere. It is
@@ -580,14 +624,31 @@ function renderHome(s) {
   const rp = $('#home-reprice'); if (rp) rp.onclick = () => jumpToItems('aged');
   $('#home-analytics').onclick = () => selectMode('analyze');
 
-  // Only the actionable things — each with where it goes.
+  // New sales the register caught that Sandpiper still shows unsold — the happy
+  // case, and one Roost can settle in a click. Its own card, celebrated, apart
+  // from the chores below.
+  const newSales = fixableNewSales();
+  const sync = $('#home-sync');
+  if (!newSales.length) {
+    sync.hidden = true;
+  } else {
+    sync.hidden = false;
+    const n = newSales.length;
+    const value = newSales.reduce((a, e) => a + (e.finding.quail ? e.finding.quail.price : 0), 0);
+    sync.innerHTML = `
+      <div class="home-sync-burst">✦</div>
+      <div class="home-sync-body">
+        <div class="home-sync-num">${int(n)} new sale${n === 1 ? '' : 's'}</div>
+        <div class="home-sync-sub">worth <b>${money(value)}</b>, caught by the register. Sync to record ${n === 1 ? 'it' : 'them'} in Sandpiper.</div>
+      </div>
+      <button class="home-sync-go" id="home-sync-go">Sync now</button>`;
+    $('#home-sync-go').onclick = () => syncNewSales(newSales);
+  }
+
+  // The chores — each with where it goes.
   const items = [];
   const add = (tone, text, cta, to) => { if (to) items.push({ tone, text, cta, to }); };
 
-  const badge = state.badge || { count: 0, urgent: false };
-  add(badge.urgent ? 'bad' : 'warn',
-    `<b>${int(badge.count)}</b> sale${badge.count === 1 ? '' : 's'} to reconcile with the register`,
-    'Review', badge.count ? { mode: 'review' } : null);
   add('warn', `<b>${int(s.counts.unpriced)}</b> unsold items have no asking price`,
     'Add prices', s.counts.unpriced ? { filter: 'noprice' } : null);
   add('warn', `<b>${int(s.counts.zeroCost)}</b> unsold items recorded at $0 cost`,

@@ -950,6 +950,44 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .home { max-width: 720px; margin: 0 auto; }
 
 .home-hero { padding: 22px 22px 18px; margin-bottom: 12px; }
+
+/* The new-sales card — the one celebratory surface. A warm brass panel with dark
+   ink, so it stands apart from the dark cards around it and reads as good news. */
+.home-sync {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 12px; padding: 16px 18px;
+  border-radius: var(--radius);
+  color: #2a2003;
+  background:
+    radial-gradient(120% 180% at 0% 0%, #ffdf8a 0%, transparent 55%),
+    linear-gradient(135deg, #f7cf58, #e2a521);
+  border: 1px solid #c68e14;
+  box-shadow: 0 8px 26px rgba(224,163,34,.28);
+  position: relative; overflow: hidden;
+}
+.home-sync[hidden] { display: none; }
+.home-sync-burst {
+  font-size: 22px; line-height: 1; flex: none;
+  width: 42px; height: 42px; display: grid; place-items: center;
+  background: rgba(255,255,255,.35); border-radius: 12px; color: #a5730a;
+}
+.home-sync-body { flex: 1; min-width: 0; }
+.home-sync-num { font-size: 19px; font-weight: 720; letter-spacing: -.01em; }
+.home-sync-sub { font-size: 12.5px; line-height: 1.4; margin-top: 3px; color: #5a4408; }
+.home-sync-sub b { color: #2a2003; font-weight: 700; }
+.home-sync-go {
+  flex: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 680;
+  padding: 10px 18px; border-radius: 9px;
+  background: #2a2003; color: #ffe8a3; border: 0;
+  transition: transform .08s, filter .15s;
+}
+.home-sync-go:hover { filter: brightness(1.15); }
+.home-sync-go:active { transform: translateY(1px); }
+.home-sync-go[disabled] { opacity: .7; cursor: progress; }
+@media (max-width: 560px) {
+  .home-sync { flex-wrap: wrap; }
+  .home-sync-go { width: 100%; }
+}
 .home-greet { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
 .home-take-num {
   font-size: 42px; font-weight: 680; letter-spacing: -.025em; line-height: 1;

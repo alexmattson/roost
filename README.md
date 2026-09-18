@@ -64,8 +64,13 @@ Roost opens on **Home**, a calm briefing; the analytical depth is a click away, 
 **Home is the entry point, not a dashboard.** It answers the two questions a booth owner actually
 has on arrival — did I make money, and what do I need to do — and every panel is a doorway rather
 than a destination. The actionable data-quality findings (stock with no price, stock at $0 cost,
-stock held too long, register sales not yet in Sandpiper) live here now, since those are the most
-pressing things and a briefing is where you want to meet them.
+stock held too long) live here now, since those are the most pressing things and a briefing is
+where you want to meet them.
+
+When the register has caught sales Sandpiper still shows unsold, they get their own **celebratory
+card** — "3 new sales, worth $510" — with a **Sync now** button that records them in Sandpiper in
+one shot, right there. It's the reconciliation's happy path lifted out of the task list and turned
+into good news; the card is hidden when there's nothing new to sync.
 
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
 switching back restores what that mode was showing, custom ranges included. On a fresh open
