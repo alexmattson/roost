@@ -136,7 +136,17 @@
       <p id="loading-note">Fetching inventory and reconciling it against the register. This can take a minute the first time.</p>
     </div>
 
-    <section class="tab-panel active" data-panel="overview">
+    <section class="tab-panel active" data-panel="home">
+      <div class="home">
+        <div class="home-hero" id="home-hero"></div>
+        <div class="home-cols">
+          <div class="home-col" id="home-attention"></div>
+          <div class="home-col" id="home-recent"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="overview">
       <div class="note" id="quail-note" hidden></div>
       <div class="kpi-grid" id="kpis"></div>
       <div class="kpi-legend">
@@ -327,16 +337,6 @@
 
     <section class="tab-panel" data-panel="review">
       <div class="kpi-grid" id="kpis-recon"></div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head"><h2>Findings by type</h2></div>
-          <div class="chart-box" id="c-findings"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Data quality</h2><span class="hint">Sandpiper records only</span></div>
-          <div id="health" class="health"></div>
-        </div>
-      </div>
       <div class="card">
         <div class="card-head">
           <h2>Anomalies</h2>

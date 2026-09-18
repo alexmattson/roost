@@ -939,3 +939,53 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   }
   .tag { border: 1px dashed #c4c4c4; page-break-inside: avoid; break-inside: avoid; }
 }
+
+/* --------------------------------------------------------------------- Home
+
+   The calm landing: one big number, a short list of what needs doing, and the
+   last few sales. Roomy on purpose — it is the antidote to the dense views. */
+
+.home { max-width: 760px; margin: 0 auto; padding-top: 6px; }
+.home-hero {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 22px 22px 18px; margin-bottom: 14px;
+}
+.home-greet { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.home-take-num { font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.home-trend { font-size: 15px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
+.home-take-sub { font-size: 12.5px; color: var(--muted); margin-top: 7px; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.home-actions .btn.ghost { margin-left: auto; }
+
+.home-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 640px) { .home-cols { grid-template-columns: 1fr; } }
+.home-col {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 15px;
+}
+.home-h { margin: 0 0 10px; font-size: 12px; font-weight: 620; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+.home-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: 0; border-radius: 8px; padding: 9px 8px;
+  font: inherit; color: var(--text); text-align: left; cursor: pointer;
+}
+.home-item + .home-item { border-top: 1px solid var(--border-soft); }
+.home-item:hover { background: var(--btn-hover); }
+.home-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.home-item-text { flex: 1; font-size: 12.5px; line-height: 1.4; }
+.home-item-text b { font-weight: 650; }
+.home-item-cta { font-size: 11.5px; font-weight: 600; color: var(--brass); white-space: nowrap; }
+.home-clear { font-size: 13px; color: var(--green); padding: 8px 4px; }
+
+.home-sale {
+  display: flex; align-items: baseline; gap: 8px; padding: 7px 4px; font-size: 12.5px;
+}
+.home-sale + .home-sale { border-top: 1px solid var(--border-soft); }
+.home-sale-desc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-sale-price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-sale-when { color: var(--faint); font-size: 11px; white-space: nowrap; }
+.home-more {
+  margin-top: 8px; background: none; border: 0; padding: 4px;
+  color: var(--brass); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+}

@@ -72,6 +72,15 @@ const state = {
  * months — but never overrides a range the user set explicitly. */
 const MODES = [
   {
+    // The calm front door: a briefing, no controls of its own.
+    id: 'home',
+    label: 'Home',
+    presets: [],
+    fullRange: true,
+    defaultPreset: 'all',
+    tabs: [['home', 'Home']]
+  },
+  {
     id: 'analyze',
     label: 'Analyze',
     presets: [['today', 'Today'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['ytd', 'YTD'],
@@ -257,10 +266,13 @@ function repaintCharts() {
 }
 
 function renderRangeControls() {
+  // Home is a briefing with no controls, so the whole bar goes.
+  const home = state.mode === 'home';
+  document.querySelector('.rangebar').hidden = home;
   const full = !!modeById(state.mode).fullRange;
   $('#presets').hidden = full;
   document.querySelector('.custom-range').hidden = full;
-  $('#range-note').hidden = !full;
+  $('#range-note').hidden = !full || home;
 }
 
 function renderPresets() {
@@ -530,69 +542,96 @@ function jumpToItems(filter) {
   selectTab('items');
 }
 
-function renderHealth(s) {
-  const rows = [];
-  /* `to` is what makes a finding a thing you can act on rather than a thing you
-   * are told: a filter to see the offending items, or a mode to go and fix
-   * them in. Findings that describe a rate rather than a set of rows have no
-   * destination, and stay as text. */
-  const add = (tone, text, val, to = null) => rows.push({ tone, text, val, to });
-  const color = { good: PALETTE.green, warn: PALETTE.brass, bad: PALETTE.red };
+/**
+ * The Home briefing: the money that matters, the short list of things that need
+ * doing, and the last few sales — each a doorway into the depth elsewhere. It is
+ * where the actionable data-quality findings live now, since those are the most
+ * pressing things and a briefing is where you want to meet them.
+ */
+function renderHome(s) {
+  if (state.mode !== 'home') return;
 
-  add(s.counts.unpriced ? 'warn' : 'good',
-    `<b>${int(s.counts.unpriced)}</b> unsold items have no asking price`,
-    s.counts.unpriced ? 'Needs pricing' : 'All priced',
-    s.counts.unpriced ? { filter: 'noprice' } : null);
-  add(s.counts.zeroCost ? 'warn' : 'good',
-    `<b>${int(s.counts.zeroCost)}</b> unsold items are recorded at $0 cost`,
-    s.counts.zeroCost ? 'Check costs' : 'Costs set',
-    s.counts.zeroCost ? { filter: 'zerocost' } : null);
-  add(s.inventory.stale > s.inventory.units * 0.3 ? 'bad' : s.inventory.stale ? 'warn' : 'good',
-    `<b>${int(s.inventory.stale)}</b> items have been held over 180 days`,
-    money(s.inventory.staleCost, { compact: true }),
-    s.inventory.stale ? { filter: 'aged' } : null);
-  add(s.sales.discountRate > 0.1 ? 'warn' : 'good',
-    `Items sell for <b>${pct(s.sales.discountRate)}</b> below asking price on average`,
-    pct(s.sales.fullPriceRate) + ' at full');
-  add(s.sales.profit >= 0 ? 'good' : 'bad',
-    `Every $1 of cost returned <b>${s.sales.roi != null ? (1 + s.sales.roi).toFixed(2) : '—'}</b> in this range`,
-    pct(s.sales.roi));
+  // Take-home over the last 30 days, with a trend against the 30 before it.
+  const end = Date.now();
+  const winStart = end - 30 * DAY;
+  const m = analyze(state.ledger, { start: winStart, end });
+  const rentRows = scopedRentRows();
+  const takeHome = m.sales.net - rentForRange(rentRows, winStart, end).cents;
+  const priorHasData = !!(m.previous && m.previous.hasData);
+  const priorTakeHome = priorHasData
+    ? m.previous.net - rentForRange(rentRows, winStart - 30 * DAY, winStart).cents
+    : null;
+  const t = trend(takeHome, priorTakeHome, { hasData: priorHasData });
 
-  // Register-only sales carry no cost basis, so profit is optimistic by whatever
-  // that stock actually cost. Worth saying rather than quietly flattering the number.
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  $('#home-hero').innerHTML = `
+    <div class="home-greet">${greet}.</div>
+    <div class="home-take-num">${money(takeHome, { compact: true })}${t ? ` <span class="home-trend">${t}</span>` : ''}</div>
+    <div class="home-take-sub">taken home in the last 30 days, after commission${rentRows.length ? ' and rent' : ''}</div>
+    <div class="home-actions">
+      <button class="btn primary" id="home-add">+ Add stock</button>
+      ${s.inventory.stale ? `<button class="btn" id="home-reprice">Reprice slow stock (${int(s.inventory.stale)})</button>` : ''}
+      <button class="btn ghost" id="home-analytics">See full analytics →</button>
+    </div>`;
+  $('#home-add').onclick = openAddStock;
+  const rp = $('#home-reprice'); if (rp) rp.onclick = () => jumpToItems('aged');
+  $('#home-analytics').onclick = () => selectMode('analyze');
+
+  // Only the actionable things — each with where it goes.
+  const color = { warn: PALETTE.brass, bad: PALETTE.red };
+  const items = [];
+  const add = (tone, text, cta, to) => { if (to) items.push({ tone, text, cta, to }); };
+
+  const badge = state.badge || { count: 0, urgent: false };
+  add(badge.urgent ? 'bad' : 'warn',
+    `<b>${int(badge.count)}</b> sale${badge.count === 1 ? '' : 's'} to reconcile with the register`,
+    'Review', badge.count ? { mode: 'review' } : null);
+  add('warn', `<b>${int(s.counts.unpriced)}</b> unsold items have no asking price`,
+    'Add prices', s.counts.unpriced ? { filter: 'noprice' } : null);
+  add('warn', `<b>${int(s.counts.zeroCost)}</b> unsold items recorded at $0 cost`,
+    'Set costs', s.counts.zeroCost ? { filter: 'zerocost' } : null);
+  add(s.inventory.stale > s.inventory.units * 0.3 ? 'bad' : 'warn',
+    `<b>${int(s.inventory.stale)}</b> items held over 180 days`,
+    money(s.inventory.staleCost, { compact: true }), s.inventory.stale ? { filter: 'aged' } : null);
   const led = state.ledgerSummary;
-  if (led) {
-    add(led.costUnknown ? 'warn' : 'good',
-      led.costUnknown
-        ? `<b>${int(led.costUnknown)}</b> sale(s) rang up with no Sandpiper record, so profit ignores their cost`
-        : 'Every sale counted has a cost basis behind it',
-      led.costUnknown ? 'profit is optimistic' : 'costs complete',
-      led.costUnknown ? { mode: 'review' } : null);
-    add(led.corrected ? 'warn' : 'good',
-      led.corrected
-        ? `<b>${int(led.corrected)}</b> sale(s) use register values where Sandpiper disagreed`
-        : 'Sandpiper matches the register on every sale',
-      led.corrected ? 'see Anomalies' : 'in step',
-      led.corrected ? { mode: 'review' } : null);
+  if (led && led.costUnknown) {
+    add('warn', `<b>${int(led.costUnknown)}</b> register sales aren't in Sandpiper yet`,
+      'Review', { mode: 'review' });
   }
 
-  $('#health').innerHTML = rows.map((r, i) => {
-    const tag = r.to ? 'button' : 'div';
-    const extra = r.to
-      ? ` data-i="${i}" title="${r.to.mode ? 'Open Sync' : 'Show these items'}"`
-      : '';
-    return `<${tag} class="health-row${r.to ? ' actionable' : ''}"${extra}>
-      <span class="health-icon" style="background:${color[r.tone]}"></span>
-      <span class="health-text">${r.text}</span>
-      <span class="health-val" style="color:${color[r.tone]}">${r.val}</span>
-      <span class="health-go" aria-hidden="true">${r.to ? '→' : ''}</span>
-    </${tag}>`;
-  }).join('');
+  const att = $('#home-attention');
+  if (!items.length) {
+    att.innerHTML = '<div class="home-clear">✓ Nothing needs attention — you\'re all caught up.</div>';
+  } else {
+    att.innerHTML = '<h2 class="home-h">Needs attention</h2>' + items.map((r, i) => `
+      <button class="home-item" data-i="${i}">
+        <span class="home-dot" style="background:${color[r.tone]}"></span>
+        <span class="home-item-text">${r.text}</span>
+        <span class="home-item-cta">${r.cta} →</span>
+      </button>`).join('');
+    $$('#home-attention .home-item').forEach((el) => {
+      const to = items[Number(el.dataset.i)].to;
+      el.onclick = () => (to.mode ? selectMode(to.mode) : jumpToItems(to.filter));
+    });
+  }
 
-  $$('#health .health-row.actionable').forEach((el) => {
-    const to = rows[Number(el.dataset.i)].to;
-    el.onclick = () => (to.mode ? selectMode(to.mode) : jumpToItems(to.filter));
-  });
+  // The last handful of sales, newest first.
+  const recent = state.ledger.filter((i) => i.isSold && i.sold).sort((a, b) => b.sold - a.sold).slice(0, 5);
+  const rec = $('#home-recent');
+  if (!recent.length) {
+    rec.innerHTML = '';
+  } else {
+    rec.innerHTML = '<h2 class="home-h">Recent sales</h2>' + recent.map((r) => `
+      <div class="home-sale">
+        <span class="home-sale-desc">${esc(r.desc)}</span>
+        <span class="home-sale-price">${money(r.soldPrice)}</span>
+        <span class="home-sale-when">${relativeTime(r.sold)}</span>
+      </div>`).join('') +
+      '<button class="home-more" id="home-sales-more">See all sales →</button>';
+    $('#home-sales-more').onclick = () => { selectMode('records'); selectTab('pos'); };
+  }
 }
 
 /** One reconciled set of sales for every figure outside the Sync tab. */
@@ -1147,7 +1186,6 @@ async function applyPlans(entries) {
 function renderReconcile() {
   if (!state.quailSales.length) {
     $('#kpis-recon').innerHTML = '';
-    empty($('#c-findings'), 'No POS data to compare');
     $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
     state.fixable = [];
     state.visibleFixable = [];
@@ -1192,14 +1230,6 @@ function renderReconcile() {
       `${int(r.totals.sandpiperSales)} Sandpiper / ${int(r.totals.quailSales)} register sales`,
       { status: r.findings.length ? 'watch' : 'good' })
   ].join('');
-
-  hbar($('#c-findings'), {
-    rows: Object.entries(r.byType)
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => ({ label: FINDING_LABELS[type] || type, value: count })),
-    format: (v) => int(v),
-    colorFor: (row) => (/disagree|unknown|unsold/i.test(row.label) ? PALETTE.red : PALETTE.brass)
-  });
 
   const pickable = state.visibleFixable;
   const allPicked = pickable.length > 0 && pickable.every((e) => state.selected.has(e.key));
@@ -1765,12 +1795,12 @@ function render() {
   renderKpis(s);
   renderCharts(s);
   renderTables(s);
-  renderHealth(s);
   renderVenues(s);
   renderPosCharts();
   renderReconcile();
   renderPosLedger();
   renderItems();
+  renderHome(s);
 
   const fmt = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const scope = s.venue

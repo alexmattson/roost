@@ -49,16 +49,23 @@ stays with you. No accounts to create, no third-party scripts, nothing phones ho
 
 ## Features
 
-### Three modes
+### Modes
 
 Views are grouped by the kind of question they answer, not by which system the data came from.
-Each mode has its own tabs and its own range presets.
+Roost opens on **Home**, a calm briefing; the analytical depth is a click away, not the front door.
 
 | Mode | Tabs | Kind of question |
 | --- | --- | --- |
+| **Home** | *(single page)* | "what should I care about" — take-home for the last 30 days, a short list of what needs attention, and the last few sales, each a doorway into the depth |
 | **Analyze** | Overview · Sales · Inventory · Catalog · Venues | "how is the business doing" — Overview carries the money ladder and the register's daily view |
 | **Sync** | *(single page)* | a task list — "what needs fixing", and where the two systems are brought into line |
 | **Records** | Items · POS sales | lookup — "find this specific thing", each page answering for one system |
+
+**Home is the entry point, not a dashboard.** It answers the two questions a booth owner actually
+has on arrival — did I make money, and what do I need to do — and every panel is a doorway rather
+than a destination. The actionable data-quality findings (stock with no price, stock at $0 cost,
+stock held too long, register sales not yet in Sandpiper) live here now, since those are the most
+pressing things and a briefing is where you want to meet them.
 
 **Each mode owns its date range.** Changing the window in one mode leaves the others alone, and
 switching back restores what that mode was showing, custom ranges included. On a fresh open
@@ -131,15 +138,14 @@ The Sync page joins the two systems on inventory number and reports what disagre
 | Duplicate inventory number | Sandpiper reuses numbers, making any join ambiguous |
 
 An untagged POS sale and an unrecorded Sandpiper sale at the same price within two days are
-reported as **one** probable pairing rather than two separate anomalies. Data-quality checks on
-the Sandpiper records themselves sit on the same page, since both are things to act on.
+reported as **one** probable pairing rather than two separate anomalies, so Sync stays a clean
+list of what disagrees.
 
-Those checks are the way into the work rather than a report about it: a finding that stands for
-a set of items — stock with no asking price, stock recorded at $0 cost, anything held over 180
-days, sales the register saw that Sandpiper never recorded — is a button, and pressing it opens
-Records filtered to exactly those items, where they can be corrected. The window travels with
-the click, so the rows listed are the same rows the number counted. Findings that describe a
-rate rather than a set, like the average discount off asking, stay as text.
+The data-quality findings that used to sit beside it — stock with no asking price, stock at $0
+cost, stock held over 180 days, register sales not yet in Sandpiper — now live on **Home**, since
+those are the most pressing things to act on. Each is a button that opens Records filtered to
+exactly those items, and the window travels with the click, so the rows listed are the same rows
+the number counted.
 
 ### Resolving anomalies
 
