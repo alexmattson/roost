@@ -10,6 +10,7 @@ import {
   splitLotCost, blankRow, isRowEmpty, validateRow, draftNumberCounts,
   buildCreatePayload, draftTotals
 } from './lib/stock.js';
+import { barcodeSVG, canBarcode } from './lib/barcode.js';
 import { platform, IS_WEB } from './lib/platform.js';
 import { connectSandpiper, connectQuail, webStatus, isWebAuthed, signOutWeb } from './lib/webbackend.js';
 import {
@@ -1490,7 +1491,7 @@ function renderItems() {
   else if (filter === 'noprice') rows = rows.filter((i) => heldAtEnd(i) && i.ask <= 0);
   else if (filter === 'zerocost') rows = rows.filter((i) => heldAtEnd(i) && i.cost <= 0);
   else if (filter === 'aged') rows = rows.filter((i) => heldAtEnd(i) && (ageAtEnd(i) || 0) > 180);
-
+  else if (filter === 'nobarcode') rows = rows.filter((i) => heldAtEnd(i) && !i.hasBarcode);
 
   if (q) rows = rows.filter((i) => i.desc.toLowerCase().includes(q) || String(i.inv).toLowerCase().includes(q));
 
@@ -1505,6 +1506,8 @@ function renderItems() {
     return (av - bv) * dir;
   });
 
+  // The print-tags flow works from exactly what the filters show.
+  state.itemRows = rows;
   const shown = rows.slice(0, 400);
 
   /* An editor left open on a row the filters have since hidden would be
@@ -2227,6 +2230,52 @@ async function submitStock() {
   }
 }
 
+/* ================================================================ Print tags
+
+   A price tag per item — description, asking price, inventory number, and a
+   Code 128 barcode of that number, the same symbology and value the register
+   scans. It prints exactly the items the Items filters are showing, so
+   narrowing to "No barcode yet" and printing is the way to tag a fresh box. */
+
+const TAG_LIMIT = 600;
+
+function openPrintTags() {
+  const all = (state.itemRows || []).filter((r) => r.source !== 'quail');
+  const printable = all.filter((r) => canBarcode(r.inv));
+  const skipped = all.length - printable.length;
+  const tags = printable.slice(0, TAG_LIMIT);
+
+  const grid = $('#tag-grid');
+  grid.innerHTML = tags.map((r) => `
+    <div class="tag">
+      <div class="tag-desc">${esc(r.desc)}</div>
+      <div class="tag-price">${r.ask > 0 ? money(r.ask) : '&nbsp;'}</div>
+      ${barcodeSVG(String(r.inv))}
+      <div class="tag-inv">${esc(r.inv)}</div>
+    </div>`).join('');
+
+  const notes = [];
+  if (tags.length < printable.length) notes.push(`showing the first ${int(TAG_LIMIT)}`);
+  if (skipped) notes.push(`${int(skipped)} without a usable number skipped`);
+  $('#print-tags-sub').textContent = tags.length
+    ? `${int(tags.length)} tag${tags.length === 1 ? '' : 's'} from the current view${notes.length ? ' · ' + notes.join(' · ') : ''}.`
+    : 'No taggable items in the current view.';
+  $('#print-tags-go').disabled = !tags.length;
+
+  $('#print-tags').hidden = false;
+}
+
+function closePrintTags() {
+  $('#print-tags').hidden = true;
+  $('#tag-grid').innerHTML = '';   // don't keep hundreds of SVGs around
+}
+
+function initPrintTags() {
+  $('#item-print').onclick = openPrintTags;
+  $('#print-tags-close').onclick = closePrintTags;
+  $('#print-tags-go').onclick = () => window.print();
+}
+
 function initAddStock() {
   $('#add-stock-open').onclick = openAddStock;
   $('#add-stock-close').onclick = closeAddStock;
@@ -2247,6 +2296,7 @@ function initAddStock() {
    * the two ever disagree again, Escape should still be a way out. */
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    if (!$('#print-tags').hidden) { closePrintTags(); return; }
     if (!$('#add-stock').hidden) { closeAddStock(); return; }
     if (state.itemEditing) { state.itemEditing = null; renderItems(); }
   });
@@ -2359,6 +2409,7 @@ async function init() {
 
   $('#refresh').onclick = refresh;
   initAddStock();
+  initPrintTags();
   $('#expand').onclick = () => platform.openFull();
   $('#theme-toggle').onclick = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

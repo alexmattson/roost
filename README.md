@@ -178,6 +178,16 @@ re-sync.
 The Sync tab carries a badge with the number of anomalies in range, turning red when any are
 high severity, so it is visible from any mode.
 
+### Price tags
+
+Records → Items can print price tags for whatever the filters are showing — each with the
+description, asking price, inventory number, and a **Code 128 barcode** of that number. That's the
+same symbology Sandpiper prints and the value the register scans, so a tag from here scans and
+reconciles like a Sandpiper one, drawn as inline SVG with no dependency. The **No barcode yet**
+filter narrows to on-hand stock that hasn't been tagged, so adding a box and tagging it is filter
+→ Print → done. The preview on screen is exactly what prints; everything else is hidden from the
+page at print time.
+
 ### Stores and booths
 
 Sandpiper stamps a store and booth onto an item **only when it sells** (`inBooth` is unused), so

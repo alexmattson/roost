@@ -383,7 +383,9 @@
               <option value="noprice">Missing asking price</option>
               <option value="zerocost">No cost recorded</option>
               <option value="aged">Held over 180 days</option>
+              <option value="nobarcode">No barcode yet</option>
             </select>
+            <button id="item-print" class="btn small">Print tags</button>
             <button id="item-add" class="btn small">+ Add stock</button>
           </div>
         </div>
@@ -413,6 +415,21 @@
   <!-- Batch entry. An overlay rather than a tab: adding stock is a task you
        finish and leave, not a view you navigate around in, and it wants the
        full width for its grid. -->
+  <!-- Printable price tags: a preview on screen, and the only thing that prints. -->
+  <section id="print-tags" class="sheet" hidden aria-labelledby="print-tags-title">
+    <div class="sheet-head no-print">
+      <div>
+        <h2 id="print-tags-title">Print tags</h2>
+        <p class="sheet-sub" id="print-tags-sub"></p>
+      </div>
+      <div class="sheet-actions">
+        <button id="print-tags-go" class="btn primary">Print</button>
+        <button id="print-tags-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+    <div class="tag-grid" id="tag-grid"></div>
+  </section>
+
   <section id="add-stock" class="sheet" hidden aria-labelledby="add-stock-title">
     <div class="sheet-head">
       <div>

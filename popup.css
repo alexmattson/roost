@@ -899,3 +899,43 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .login-submit { width: 100%; justify-content: center; padding: 11px; font-size: 13.5px; }
 .login-submit[disabled] { opacity: .6; cursor: default; }
 .login-foot { margin: 16px 0 0; font-size: 10.5px; line-height: 1.5; color: var(--faint); text-align: center; }
+
+/* ------------------------------------------------------------------ Print tags
+
+   Tags render light (white, black ink) on screen too, so the preview is exactly
+   what prints — and a Code 128 barcode reads only against white. */
+
+.tag-grid {
+  flex: 1; overflow-y: auto; padding: 16px 18px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px; align-content: start; background: var(--bg);
+}
+.tag {
+  background: #fff; color: #111; border: 1px solid #dcdcdc; border-radius: 8px;
+  padding: 9px 10px 7px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  break-inside: avoid;
+}
+.tag-desc {
+  font-size: 11px; color: #333; line-height: 1.3;
+  max-height: 2.6em; overflow: hidden; width: 100%;
+}
+.tag-price { font-size: 21px; font-weight: 700; color: #111; letter-spacing: -.01em; }
+.tag .bc { width: 100%; height: 42px; margin-top: 2px; }
+.tag-inv { font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: #000; }
+
+@media print {
+  @page { margin: 0.4in; }
+  html, body { width: auto; height: auto; overflow: visible; background: #fff; }
+  body > *:not(#print-tags) { display: none !important; }
+  #print-tags {
+    position: static; inset: auto; display: block !important;
+    height: auto; padding: 0; background: #fff;
+  }
+  #print-tags .no-print { display: none !important; }
+  .tag-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(2.1in, 1fr));
+    gap: 0.12in; padding: 0; overflow: visible; background: #fff;
+  }
+  .tag { border: 1px dashed #c4c4c4; page-break-inside: avoid; break-inside: avoid; }
+}
