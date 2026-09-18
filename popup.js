@@ -1134,9 +1134,9 @@ const findingKey = (f, i) => `${f.type}|${(f.item && f.item.id) || (f.quail && f
 const matchOf = (entry) => (entry.plan ? entry.plan.confidence : 'manual');
 
 const MATCH_HINT = {
-  exact: 'Matched on inventory number in both systems, so the correction is certain.',
-  probable: 'Inferred from a matching price and time. Worth a look before applying.',
-  manual: 'No automatic fix — this one needs a person.'
+  exact: 'Same inventory number in both systems — the correction is certain.',
+  probable: 'Inferred from price and timing — check before applying.',
+  manual: 'No automatic fix; needs a person.'
 };
 
 function visibleFindings(entries) {
