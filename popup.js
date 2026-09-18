@@ -274,13 +274,18 @@ function repaintCharts() {
 }
 
 function renderRangeControls() {
-  // No controls on Home (a briefing) or the Sync tab (always full-range).
-  const bare = state.mode === 'home' || state.tab === 'review';
-  document.querySelector('.rangebar').hidden = bare;
-  const full = !!modeById(state.mode).fullRange;
-  $('#presets').hidden = full;
-  document.querySelector('.custom-range').hidden = full;
-  $('#range-note').hidden = !full || bare;
+  const bar = document.querySelector('.rangebar');
+  // Home has no bar at all; every other page shows one.
+  if (state.mode === 'home') { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  // On Sync the bar carries an explainer instead of controls — reconciliation
+  // always covers everything, so there is no range to pick.
+  const sync = state.tab === 'review';
+  $('#presets').hidden = sync;
+  document.querySelector('.custom-range').hidden = sync;
+  $('#range-note').hidden = !sync;
+  if (state.venueList) renderVenueSelector();   // hides itself on Sync
 }
 
 function renderPresets() {
@@ -792,8 +797,10 @@ function renderVenueSelector() {
   }
   sel.innerHTML = opts.join('');
   sel.value = state.venue.kind === 'all' ? 'all' : `${state.venue.kind}:${state.venue.id}`;
-  // Only worth showing when there is actually something to choose between.
-  sel.style.display = stores.length > 1 || booths.length > 1 ? '' : 'none';
+  // Only worth showing when there is something to choose between, and never on
+  // Sync, which ignores venue scope.
+  const worth = stores.length > 1 || booths.length > 1;
+  sel.style.display = worth && state.tab !== 'review' ? '' : 'none';
 }
 
 function venueRows(rows, kind) {
