@@ -1139,6 +1139,15 @@ const MATCH_HINT = {
   manual: 'No automatic fix; needs a person.'
 };
 
+/* The tooltip lists all three matches so the choices are always in view, with
+ * the hovered one lit and the others dimmed. */
+function matchTip(current) {
+  return ['exact', 'probable', 'manual'].map((k) =>
+    `<div class="tip-match${k === current ? ' on' : ''}">`
+    + `<span class="pill ${k}">${k}</span><span>${esc(MATCH_HINT[k])}</span></div>`
+  ).join('');
+}
+
 function visibleFindings(entries) {
   const f = state.findingFilters;
   return entries.filter((e) => (f.severity === 'all' || e.finding.severity === f.severity)
@@ -1327,7 +1336,7 @@ function renderReconcile() {
       title: 'Match',
       render: (e) => {
         const m = matchOf(e);
-        return `<span class="pill ${m}" data-tip="${esc(MATCH_HINT[m])}">${m}</span>`;
+        return `<span class="pill ${m}" data-match="${m}">${m}</span>`;
       }
     },
     { title: 'Severity', render: (e) => `<span class="pill ${e.finding.severity}">${e.finding.severity}</span>` },
@@ -2392,8 +2401,9 @@ function initPrintTags() {
  * elements only so it never fights the charts' own tooltips.
  */
 function initTooltips() {
-  const tipEl = (e) => (e.target.closest ? e.target.closest('[data-tip]') : null);
-  const show = (e) => { const el = tipEl(e); if (el) showTip(esc(el.getAttribute('data-tip')), e); };
+  const tipEl = (e) => (e.target.closest ? e.target.closest('[data-match],[data-tip]') : null);
+  const html = (el) => (el.dataset.match ? matchTip(el.dataset.match) : esc(el.getAttribute('data-tip')));
+  const show = (e) => { const el = tipEl(e); if (el) showTip(html(el), e); };
   document.body.addEventListener('mouseover', show);
   document.body.addEventListener('mousemove', show);   // follows the cursor while over it
   document.body.addEventListener('mouseout', (e) => { if (tipEl(e)) hideTip(); });

@@ -410,6 +410,13 @@ body.expanded .table-scroll { max-height: none; }
 .tip-row { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
 .tip-row b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; padding-left: 10px; }
 
+/* The match key inside a tooltip: all three, the hovered one lit, the rest dimmed. */
+.tip-match { display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; padding: 2px 0; color: var(--muted); }
+.tip-match + .tip-match { border-top: 1px solid var(--border-soft); }
+.tip-match .pill { flex: none; margin-top: 1px; }
+.tip-match.on { color: var(--text); }
+.tip-match:not(.on) { opacity: .5; }
+
 /* -------------------------------------------------------------- tables */
 
 table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
