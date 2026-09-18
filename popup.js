@@ -339,7 +339,8 @@ function kpi(label, value, sub, opts = {}) {
   // cards are meant to be compared, so the exact figure is always one hover away.
   const exact = opts.exact != null ? ` title="${esc(opts.exact)}"` : '';
   const accent = opts.status ? STATUS_COLOR[opts.status] : opts.accent;
-  return `<div class="kpi${opts.status ? ' is-' + opts.status : ''}" style="--accent:${accent || 'transparent'}">
+  const hero = opts.hero ? ' kpi-hero' : '';
+  return `<div class="kpi${opts.status ? ' is-' + opts.status : ''}${hero}" style="--accent:${accent || 'transparent'}">
     <div class="kpi-label">${label}</div>
     <div class="kpi-value ${cls}"${exact}>${value}</div>
     <div class="kpi-sub">${sub || '&nbsp;'}</div>
@@ -388,10 +389,10 @@ function renderKpis(s) {
       rentInfo.partial
         ? `less rent ${money(rentInfo.cents, { compact: true })} of ${money(rentInfo.full, { compact: true })} so far`
         : `less ${money(rentInfo.cents, { compact: true })} booth rent`,
-      { status: bandSign(takeHome), exact: money(takeHome) }),
+      { status: bandSign(takeHome), exact: money(takeHome), hero: true }),
     kpi('Net profit', money(netProfit, { compact: true }),
       `less ${money(s.sales.cogs, { compact: true })} cost of goods${netMargin == null ? '' : ` · ${pct(netMargin)} margin`}`,
-      { status: bandSign(netProfit), exact: money(netProfit) }),
+      { status: bandSign(netProfit), exact: money(netProfit), hero: true }),
 
     kpi('Stock at cost', money(s.inventory.cost, { compact: true }),
       plural(s.inventory.units, 'item') + ' unsold',

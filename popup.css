@@ -323,6 +323,38 @@ body.expanded .table-scroll { max-height: none; }
 }
 .kpi-sub { font-size: 10.5px; color: var(--faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .kpi-value.pos { color: var(--green); }
+
+/* Hero tiles — take-home and net profit — get the filled accent treatment of the
+   Home sync card, but coloured by their own good/alert status. */
+.kpi-hero {
+  border: 0;
+  color: var(--hero-ink);
+  box-shadow: 0 6px 20px var(--hero-glow);
+}
+.kpi-hero::after { display: none; }
+.kpi-hero .kpi-label { color: var(--hero-ink); opacity: .72; }
+.kpi-hero .kpi-value,
+.kpi-hero .kpi-value.pos { color: var(--hero-ink); }
+.kpi-hero .kpi-sub { color: var(--hero-ink); opacity: .68; }
+.kpi-hero .trend.up, .kpi-hero .trend.down { color: var(--hero-ink); }
+.kpi-hero.is-good {
+  --hero-ink: #05321f; --hero-glow: rgba(52,211,153,.24);
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.34), transparent 55%),
+    linear-gradient(135deg, #56d98c, #1f9d5b);
+}
+.kpi-hero.is-watch {
+  --hero-ink: #2a2003; --hero-glow: rgba(224,163,34,.24);
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.35), transparent 55%),
+    linear-gradient(135deg, #f7cf58, #e2a521);
+}
+.kpi-hero.is-alert {
+  --hero-ink: #3a0c0c; --hero-glow: rgba(248,113,113,.24);
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.30), transparent 55%),
+    linear-gradient(135deg, #f98a8a, #db5757);
+}
 .trend { font-weight: 650; }
 .trend.up { color: var(--green); }
 .trend.down { color: var(--red); }
