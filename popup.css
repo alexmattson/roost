@@ -276,6 +276,17 @@ body.expanded .table-scroll { max-height: none; }
 .tabs button:hover { color: var(--text); }
 .tabs button.active { color: var(--brass); border-bottom-color: var(--brass); }
 
+/* Severity counts on the Sync tab. */
+.sev-pills { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 5px; }
+.sev-pill {
+  min-width: 15px; padding: 0 4px; height: 15px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.sev-pill.sev-high { background: rgba(248,113,113,.2); color: var(--red); }
+.sev-pill.sev-med  { background: rgba(240,180,41,.2);  color: var(--brass); }
+.sev-pill.sev-low  { background: rgba(96,165,250,.18); color: var(--blue); }
+
 /* ---------------------------------------------------------------- main */
 
 #main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 16px 20px; }

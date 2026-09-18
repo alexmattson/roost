@@ -185,11 +185,27 @@ function renderModes() {
   });
 }
 
+/* The Sync tab wears its severity counts — high, then medium, then low — as
+ * small coloured pills, so the shape of what's outstanding shows before you
+ * open it. Zero counts are dropped. */
+function severityPills() {
+  const sev = state.reconSev || { high: 0, medium: 0, low: 0 };
+  const order = [['high', 'sev-high'], ['medium', 'sev-med'], ['low', 'sev-low']];
+  const pills = order
+    .filter(([k]) => sev[k] > 0)
+    .map(([k, cls]) => `<span class="sev-pill ${cls}" title="${sev[k]} ${k}">${sev[k]}</span>`)
+    .join('');
+  return pills ? ` <span class="sev-pills">${pills}</span>` : '';
+}
+
 function renderTabs() {
   const mode = modeById(state.mode);
   const strip = $('#tabs');
   strip.innerHTML = mode.tabs
-    .map(([id, label]) => `<button data-tab="${id}" class="${state.tab === id ? 'active' : ''}">${label}</button>`)
+    .map(([id, label]) => {
+      const extra = id === 'review' ? severityPills() : '';
+      return `<button data-tab="${id}" class="${state.tab === id ? 'active' : ''}">${label}${extra}</button>`;
+    })
     .join('');
   // A single-tab mode has nothing to choose, so the strip only adds noise.
   strip.hidden = mode.tabs.length < 2;
@@ -1253,14 +1269,15 @@ async function applyPlans(entries) {
 
 function renderReconcile() {
   if (!state.quailSales.length) {
-    $('#kpis-recon').innerHTML = '';
     $('#t-findings').innerHTML = '<div class="empty-row">Sign in at vendor.quailhq.com and fetch again.</div>';
     state.fixable = [];
     state.visibleFixable = [];
     state.findingsTotal = 0;
     state.findingsShown = 0;
+    state.reconSev = { high: 0, medium: 0, low: 0 };
     $('#fix-bar').hidden = true;
     renderModes();               // otherwise the badge keeps a stale count
+    renderTabs();
     return;
   }
   // Always full-range: reconciliation proves the two systems agree, and a
@@ -1286,22 +1303,13 @@ function renderReconcile() {
    * reach something the filters are hiding. */
   const visibleKeys = new Set(visible.map((e) => e.key));
   for (const key of [...state.selected]) if (!visibleKeys.has(key)) state.selected.delete(key);
+  state.reconSev = {
+    high: r.findings.filter((f) => f.severity === 'high').length,
+    medium: r.findings.filter((f) => f.severity === 'medium').length,
+    low: r.findings.filter((f) => f.severity === 'low').length
+  };
   renderModes();
-
-  const high = r.findings.filter((f) => f.severity === 'high').length;
-  $('#kpis-recon').innerHTML = [
-    kpi('Sales matched', pct(r.totals.matchRate, 0),
-      `${int(r.totals.matched)} of ${int(r.totals.quailSales)} register sales`,
-      { status: bandUp(r.totals.matchRate, 1, 0.9) }),
-    kpi('Needs attention', int(high), high ? 'high-severity findings' : 'nothing serious',
-      { status: high ? 'alert' : 'good' }),
-    kpi('Sales difference', money(r.totals.grossDelta, { compact: true }),
-      'Sandpiper minus the register',
-      { status: bandDown(Math.abs(r.totals.grossDelta), 0, 500), exact: money(r.totals.grossDelta) }),
-    kpi('Total findings', int(r.findings.length),
-      `${int(r.totals.sandpiperSales)} Sandpiper / ${int(r.totals.quailSales)} register sales`,
-      { status: r.findings.length ? 'watch' : 'good' })
-  ].join('');
+  renderTabs();   // keep the Sync tab's severity counts current
 
   const pickable = state.visibleFixable;
   const allPicked = pickable.length > 0 && pickable.every((e) => state.selected.has(e.key));
