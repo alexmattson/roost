@@ -184,35 +184,6 @@ body.expanded .table-scroll { max-height: none; }
 }
 .icon-btn:hover { color: var(--text); background: var(--btn-hover); }
 .icon-btn svg { width: 15px; height: 15px; }
-
-/* Top-bar buttons: icon only, the label unfurling on hover, focus, or while a
-   fetch is running. */
-.pill {
-  display: inline-flex; align-items: center;
-  height: 32px; padding: 0 8px; box-sizing: border-box;
-  border-radius: 9px; border: 1px solid var(--border);
-  background: var(--panel-2); color: var(--muted);
-  font: inherit; font-size: 12.5px; font-weight: 570; cursor: pointer;
-  overflow: hidden; white-space: nowrap;
-  transition: background .15s, border-color .15s, color .15s;
-}
-.pill:hover { background: var(--btn-hover); color: var(--text); }
-.pill:active { transform: translateY(1px); }
-.pill svg { width: 15px; height: 15px; flex: none; }
-.pill .label {
-  max-width: 0; opacity: 0; margin-left: 0; overflow: hidden;
-  transition: max-width .22s ease, opacity .16s ease, margin-left .22s ease;
-}
-.pill:hover .label,
-.pill:focus-visible .label,
-.pill.loading .label { max-width: 180px; opacity: 1; margin-left: 7px; }
-.pill.primary {
-  background: linear-gradient(180deg, #f7c948, #dfa018);
-  color: #221a06; border-color: #b8830f; font-weight: 650;
-}
-.pill.primary:hover { filter: brightness(1.07); color: #221a06; }
-.pill[disabled] { opacity: .6; cursor: progress; }
-.pill.loading .spin-target { animation: spin .9s linear infinite; transform-origin: 50% 50%; }
 :root[data-theme="light"] .icon-moon,
 :root:not([data-theme="light"]) .icon-sun { display: none; }
 
