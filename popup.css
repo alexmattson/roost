@@ -332,28 +332,28 @@ body.expanded .table-scroll { max-height: none; }
   box-shadow: 0 6px 20px var(--hero-glow);
 }
 .kpi-hero::after { display: none; }
-.kpi-hero .kpi-label { color: var(--hero-ink); opacity: .72; }
+.kpi-hero .kpi-label { color: var(--hero-ink); opacity: .85; }
 .kpi-hero .kpi-value,
 .kpi-hero .kpi-value.pos { color: var(--hero-ink); }
-.kpi-hero .kpi-sub { color: var(--hero-ink); opacity: .68; }
+.kpi-hero .kpi-sub { color: var(--hero-ink); opacity: .82; }
 .kpi-hero .trend.up, .kpi-hero .trend.down { color: var(--hero-ink); }
 .kpi-hero.is-good {
-  --hero-ink: #05321f; --hero-glow: rgba(52,211,153,.24);
+  --hero-ink: #ecfff5; --hero-glow: rgba(20,120,70,.32);
   background:
-    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.34), transparent 55%),
-    linear-gradient(135deg, #56d98c, #1f9d5b);
+    linear-gradient(180deg, rgba(255,255,255,.09), transparent 42%),
+    linear-gradient(135deg, #1f9d5b, #146b3d);
 }
 .kpi-hero.is-watch {
-  --hero-ink: #2a2003; --hero-glow: rgba(224,163,34,.24);
+  --hero-ink: #2a2003; --hero-glow: rgba(224,163,34,.26);
   background:
-    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.35), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.12), transparent 42%),
     linear-gradient(135deg, #f7cf58, #e2a521);
 }
 .kpi-hero.is-alert {
-  --hero-ink: #3a0c0c; --hero-glow: rgba(248,113,113,.24);
+  --hero-ink: #fff0f0; --hero-glow: rgba(180,50,50,.32);
   background:
-    radial-gradient(120% 180% at 0% 0%, rgba(255,255,255,.30), transparent 55%),
-    linear-gradient(135deg, #f98a8a, #db5757);
+    linear-gradient(180deg, rgba(255,255,255,.08), transparent 42%),
+    linear-gradient(135deg, #d24747, #a52f2f);
 }
 .trend { font-weight: 650; }
 .trend.up { color: var(--green); }
