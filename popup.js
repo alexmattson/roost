@@ -129,6 +129,20 @@ function relativeTime(t) {
   return new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+/** Always relative, and always short enough to fit a narrow column. */
+function timeAgo(t) {
+  const day = 86400000;
+  const diff = Date.now() - t;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`;
+  if (diff < day) return `${Math.round(diff / 3600000)}h ago`;
+  const d = Math.round(diff / day);
+  if (d < 7) return `${d}d ago`;
+  if (d < 30) return `${Math.round(d / 7)}w ago`;
+  if (d < 365) return `${Math.round(d / 30)}mo ago`;
+  return `${Math.round(d / 365)}y ago`;
+}
+
 function banner(msg, kind = 'info') {
   const b = $('#banner');
   if (!msg) { b.classList.add('hidden'); return; }
@@ -717,7 +731,7 @@ function renderHome(s) {
       <div class="home-sale">
         <span class="home-sale-desc">${esc(r.desc)}</span>
         <span class="home-sale-price">${money(r.soldPrice)}</span>
-        <span class="home-sale-when">${relativeTime(r.sold)}</span>
+        <span class="home-sale-when">${timeAgo(r.sold)}</span>
       </div>`).join('') +
       '<button class="home-more" id="home-sales-more">See all sales →</button>'
     : '<div class="home-empty">No sales recorded yet.</div>';
