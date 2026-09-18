@@ -405,9 +405,7 @@ function renderKpis(s) {
       withTrend(`less ${money(s.sales.commissions, { compact: true })} commission`, s.sales.net, prev.net),
       { exact: money(s.sales.net) }),
     kpi('Take-home', money(takeHome, { compact: true }),
-      rentInfo.partial
-        ? `less rent ${money(rentInfo.cents, { compact: true })} of ${money(rentInfo.full, { compact: true })} so far`
-        : `less ${money(rentInfo.cents, { compact: true })} booth rent`,
+      `less rent ${money(rentInfo.cents, { compact: true })}`,
       { status: bandSign(takeHome), exact: money(takeHome), hero: true }),
     kpi('Net profit', money(netProfit, { compact: true }),
       `less ${money(s.sales.cogs, { compact: true })} cost of goods${netMargin == null ? '' : ` · ${pct(netMargin)} margin`}`,
