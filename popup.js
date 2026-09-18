@@ -1144,7 +1144,8 @@ const MATCH_HINT = {
 function matchTip(current) {
   return ['exact', 'probable', 'manual'].map((k) =>
     `<div class="tip-match${k === current ? ' on' : ''}">`
-    + `<span class="pill ${k}">${k}</span><span>${esc(MATCH_HINT[k])}</span></div>`
+    + `<span class="tip-key"><span class="pill ${k}">${k}</span></span>`
+    + `<span>${esc(MATCH_HINT[k])}</span></div>`
   ).join('');
 }
 
