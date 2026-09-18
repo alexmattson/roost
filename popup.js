@@ -2253,36 +2253,6 @@ function initAddStock() {
    web app has no session yet. The extension never reaches it — it is already
    authenticated by the browser's cookies. */
 
-/**
- * Builds the drag-to-bookmarks link.
- *
- * Sandpiper keeps its session in a script-readable cookie, so a bookmarklet run
- * on the Sandpiper tab can read it and hand it back. It returns here through the
- * URL fragment — after the '#', which browsers never send to a server — so the
- * token travels from Sandpiper's page to Roost's without passing through
- * GitHub or anyone else. The destination is this page's own address, so the
- * bookmark points wherever Roost is actually served.
- */
-function installBookmarklet() {
-  const link = $('#sp-bookmarklet');
-  if (!link) return;
-  const back = location.origin + location.pathname;
-  const code =
-    "(function(){" +
-    "var m=document.cookie.match(/(?:^|;\\s*)sandpiper_s=([^;]+)/);" +
-    "if(!m){alert('No Sandpiper session found. Sign in at app.sandpiperhq.com first.');return;}" +
-    "location.href=" + JSON.stringify(back) + "+'#sp='+encodeURIComponent(m[1]);" +
-    "})();";
-  link.setAttribute('href', 'javascript:' + encodeURIComponent(code));
-  // A javascript: link clicked here would run in Roost's own origin, where the
-  // cookie is not — so it only works dragged to the bar and clicked on Sandpiper.
-  link.onclick = (e) => {
-    e.preventDefault();
-    banner('Drag this link to your bookmarks bar, then click it while signed in to Sandpiper.', 'info');
-    setTimeout(() => banner(''), 4200);
-  };
-}
-
 /** Paints the two status rows from what is actually connected, and gates entry
  *  on Sandpiper — Quail is optional. */
 function paintLoginStatus() {
@@ -2307,32 +2277,14 @@ function loginError(msg, note) {
   err.hidden = !msg;
 }
 
-function renderLoginGate(message) {
-  $('#login-gate').hidden = false;
-  installBookmarklet();
-  paintLoginStatus();
-  if (message) loginError(message);
-
-  // Connect Sandpiper independently — from a pasted token, or the one the
-  // bookmarklet dropped in the fragment (which never reaches a server).
-  // The bookmark drops the token in the fragment, which never reaches a server.
-  const fromHash = /[#&]sp=([^&]+)/.exec(location.hash || '');
-  if (fromHash) {
-    let tok = fromHash[1];
-    try { tok = decodeURIComponent(tok); } catch (e) { /* use as-is */ }
-    history.replaceState(null, '', location.pathname + location.search);
+/** Wires one system's Connect button: run it, repaint, report failure in place. */
+function wireConnect(btnId, connect) {
+  $(btnId).onclick = async () => {
     loginError('');
-    connectSandpiper(tok).then(paintLoginStatus).catch((e) => loginError(e.message || String(e)));
-  }
-
-  // Connect Quail independently, with its own password.
-  $('#q-connect').onclick = async () => {
-    loginError('');
-    const btn = $('#q-connect');
+    const btn = $(btnId);
     btn.disabled = true; btn.textContent = 'Connecting…';
     try {
-      await connectQuail({ email: $('#q-user').value.trim(), password: $('#q-pass').value });
-      $('#q-pass').value = '';
+      await connect();
       paintLoginStatus();
     } catch (e) {
       loginError(e.message || String(e));
@@ -2340,6 +2292,22 @@ function renderLoginGate(message) {
       btn.disabled = false; btn.textContent = 'Connect';
     }
   };
+}
+
+function renderLoginGate(message) {
+  $('#login-gate').hidden = false;
+  paintLoginStatus();
+  if (message) loginError(message);
+
+  // Each system connects on its own, both with a plain email and password.
+  wireConnect('#sp-connect', async () => {
+    await connectSandpiper({ username: $('#sp-user').value.trim(), password: $('#sp-pass').value });
+    $('#sp-pass').value = '';
+  });
+  wireConnect('#q-connect', async () => {
+    await connectQuail({ email: $('#q-user').value.trim(), password: $('#q-pass').value });
+    $('#q-pass').value = '';
+  });
 
   // Enter once Sandpiper is live; Quail rides along if it is too.
   $('#login-enter').onclick = async () => {

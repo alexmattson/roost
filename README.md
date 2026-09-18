@@ -207,37 +207,27 @@ duplicated colour logic.
 
 ## Get started
 
-Open **[alexmattson.github.io/roost](https://alexmattson.github.io/roost/)** and connect your two
-accounts. There's nothing to install — it runs in any modern browser on a computer.
+Open **[alexmattson.github.io/roost](https://alexmattson.github.io/roost/)** and sign in to your
+two accounts, each in its own row:
 
-### Connect Sandpiper
+- **Sandpiper** — your Sandpiper email and password. Required; it's where inventory comes from.
+- **Quail** — your Quail vendor email and password. Optional, but without it you lose real sale
+  times, booth rent, and the whole Sync page.
 
-Sandpiper doesn't allow sign-in from another site, so you bring your session across with a small
-bookmark:
+Click **Connect** on each. Once Sandpiper shows connected, click **Enter Roost**, then **Fetch
+latest data**. The first load takes up to a minute while it pulls everything down; after that the
+dashboard opens instantly and refreshes only when you ask.
 
-1. Drag the **Roost** bookmark from the start screen up to your bookmarks bar.
-2. Open [app.sandpiperhq.com](https://app.sandpiperhq.com) and sign in as usual.
-3. On that Sandpiper tab, click the **Roost** bookmark. You land back on Roost, connected.
-
-### Connect Quail
-
-Enter your Quail vendor email and password in the Quail row and click **Connect**. Quail is
-optional, but without it you lose real sale times, booth rent, and the whole Sync page.
-
-Once Sandpiper shows connected, click **Enter Roost**, then **Fetch latest data**. The first load
-takes a few seconds; after that the dashboard opens instantly and refreshes only when you ask.
-
-Your logins never leave your browser: the Quail password is exchanged for a session token and
-discarded, the Sandpiper token comes straight from your own Sandpiper tab, and both are held only
-until you close it.
+There's nothing to install — it runs in any modern browser on a computer. Your passwords never
+leave your browser: each is sent straight to its own service, exchanged for a session token, and
+the password itself is discarded. The tokens are held only until you close the tab.
 
 ### If something goes wrong
 
 | What you're seeing | What it means |
 | --- | --- |
-| **Sandpiper won't turn green after clicking the bookmark** | Click it *on the Sandpiper tab* while signed in, not on the Roost page. If a red "rejected that token" shows, sign in to Sandpiper again and re-click. |
-| **The Roost bookmark does nothing** | It only works on the Sandpiper tab; anywhere else it just shows a reminder. |
-| **A message about your session** | The token expired — re-click the Roost bookmark, or reconnect Quail. |
+| **"Sandpiper rejected the sign-in"** (or Quail) | Wrong email or password, or the account has no access. Try signing in on the vendor's own site to check. |
+| **A message about your session** | The token expired — reconnect that system. |
 | **Everything is empty** | You haven't pressed **Fetch latest data** yet. |
 | **Signed out when you reopen** | Tokens are kept only for the tab's lifetime, so closing it signs you out. Connect again. |
 
@@ -246,9 +236,9 @@ until you close it.
 - **Your data stays in your browser.** The page talks to Sandpiper and Quail directly; there is
   no Roost server to send anything to. Tokens live in `sessionStorage` (gone when the tab closes),
   the fetched data in `localStorage`, both on your machine only.
-- **A Quail password is typed into a page that isn't Quail.** Roost only exchanges it for a token
-  and never stores or forwards it — but if that gives you pause, that's a fair instinct. Sandpiper
-  avoids it entirely, since its password is only ever entered on Sandpiper itself.
+- **You are typing vendor passwords into a page that isn't the vendor.** Roost only exchanges each
+  for a token and never stores or forwards it — but if that gives you pause, that's a fair
+  instinct, and a good reason to run [your own copy](#host-your-own-copy) on a domain you trust.
 - **It leans on how the two APIs are configured today.** Both currently allow a browser on another
   site to call them; if either changes that, the site would need adjusting.
 
@@ -265,15 +255,12 @@ No build step and no dependencies — the repository is the site.
 
 ## How it works
 
-- **Auth** — every request carries a token, obtained differently for each system because the two
-  differ. **Quail** signs in on the page: its `api/auth/login` sends CORS and returns a session
-  id in the body, which becomes `Authorization: Basic base64(<vendor email>:<session id>)`.
-  **Sandpiper** can't sign in on the page — its `login` route sends no CORS headers, so a browser
-  on another origin can't exchange a password for a token, only use one it already holds. Its
-  `sandpiper_s` cookie is script-readable, so the Roost bookmark, run on the Sandpiper tab, reads
-  the token and hands it back through the URL fragment (never sent to a server); the account id is
-  decoded from that token's JWT, and it rides on every call as `Authorization: Bearer`. Nothing is
-  stored anywhere but your own browser.
+- **Auth** — both systems sign in on the page, since both login endpoints live under `/api`, which
+  sends CORS. **Sandpiper**'s `api/login/do-login` takes `{username, password}` and returns a JWT
+  in the body; the account id is decoded from it, and it rides on every call as
+  `Authorization: Bearer`. **Quail**'s `api/auth/login` returns a session id in the body, which
+  becomes `Authorization: Basic base64(<vendor email>:<session id>)`. Each password is sent only
+  to its own service and never stored; nothing is kept anywhere but your own browser.
 - **Requests** — `POST /api/items/v2/<account>/items?from=0&to=10000000` with
   `{"filters":[],"orderBy":"ACQUIRED","reverse":true}`. The range is deliberately huge so a
   single call returns everything. Then `GET /api/stores/<accountId>` and

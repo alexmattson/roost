@@ -97,11 +97,11 @@
           <span class="sys-name">Sandpiper</span>
           <span class="sys-status" id="sp-status" data-state="off">Not connected</span>
         </div>
-        <ol class="sys-steps">
-          <li>Drag <a class="bm-link" id="sp-bookmarklet" href="#" draggable="true">Roost</a> to your bookmarks bar.</li>
-          <li><a href="https://app.sandpiperhq.com">Open Sandpiper</a> and sign in.</li>
-          <li>Once signed in, click the Roost bookmark. You'll come straight back here, connected.</li>
-        </ol>
+        <div class="sys-actions">
+          <input id="sp-user" type="email" placeholder="Email" autocomplete="username" aria-label="Sandpiper email">
+          <input id="sp-pass" type="password" placeholder="Password" autocomplete="current-password" aria-label="Sandpiper password">
+          <button type="button" class="btn small" id="sp-connect">Connect</button>
+        </div>
       </div>
 
       <div class="sys-row" id="sys-quail">
