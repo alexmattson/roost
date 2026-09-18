@@ -1835,6 +1835,9 @@ async function refresh() {
   try {
     const res = await send('refresh');
     if (!res || !res.ok) throw new Error((res && res.error) || 'Could not reach the extension background worker.');
+    // Reveal the panels before rendering: a chart measured while its container
+    // is display:none reads zero width and then stretches to fill when shown.
+    $('#main').classList.remove('busy');
     loadInto(res);
     updateSubline();
     const v = res.venues || { stores: {}, booths: {}, errors: [] };
