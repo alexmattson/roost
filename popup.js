@@ -692,8 +692,10 @@ function renderHome(s) {
     att.innerHTML = items.map((r, i) => `
       <button class="home-item" data-i="${i}">
         <span class="home-dot is-${r.tone}"></span>
-        <span class="home-item-text">${r.text}</span>
-        <span class="home-item-cta">${r.cta}</span>
+        <span class="home-item-body">
+          <span class="home-item-text">${r.text}</span>
+          <span class="home-item-cta">${r.cta}</span>
+        </span>
       </button>`).join('');
     $$('#home-attention .home-item').forEach((el) => {
       const to = items[Number(el.dataset.i)].to;
