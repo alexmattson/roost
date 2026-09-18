@@ -1852,6 +1852,8 @@ async function refresh() {
     }
   } catch (e) {
     banner(e.message, 'error');
+    // A failed first fetch would otherwise leave blank panels behind the error.
+    if (!state.items.length) showEmptyState();
   } finally {
     $('#main').classList.remove('busy');
     btn.disabled = false;
@@ -2309,11 +2311,19 @@ function renderLoginGate(message) {
     $('#q-pass').value = '';
   });
 
-  // Enter once Sandpiper is live; Quail rides along if it is too.
+  // Enter in a row's fields is the same as pressing its Connect.
+  const enterClicks = (fieldIds, btnId) => fieldIds.forEach((id) =>
+    $(id).addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $(btnId).click(); }
+    }));
+  enterClicks(['#sp-user', '#sp-pass'], '#sp-connect');
+  enterClicks(['#q-user', '#q-pass'], '#q-connect');
+
+  // Enter once Sandpiper is live; Quail rides along if it is too. init() pulls
+  // the data itself, so there is no separate fetch to kick off here.
   $('#login-enter').onclick = async () => {
     if (!webStatus().sandpiper.connected) return;
     await init();
-    await refresh();
   };
 }
 
@@ -2428,10 +2438,16 @@ async function init() {
       banner('This data is over 12 hours old — fetch again for the latest.', 'info');
     }
   } else {
-    showEmptyState();
     updateSubline();
     const session = await send('getSession');
-    if (!session || !session.ok) banner((session && session.error) || 'Sign in to Sandpiper first.', 'error');
+    if (session && session.ok) {
+      // Signed in but nothing cached — pull it straight away rather than parking
+      // on an empty screen with a button to find.
+      await refresh();
+    } else {
+      showEmptyState();
+      banner((session && session.error) || 'Sign in to Sandpiper first.', 'error');
+    }
   }
 }
 
