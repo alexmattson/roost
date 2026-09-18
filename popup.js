@@ -170,12 +170,11 @@ function applyPreset(preset) {
 function renderModes() {
   // The anomaly count rides on Records, which holds Sync, so it stays visible
   // from any mode.
-  const count = (state.badge && state.badge.count) || 0;
-  const urgent = (state.badge && state.badge.urgent) || false;
+  const count = (state.badge && state.badge.count) || 0;   // high-priority only
   $('#modes').innerHTML = MODES
     .map((m) => {
       const badge = m.id === 'records' && count
-        ? ` <span class="mode-badge${urgent ? ' urgent' : ''}" title="${count} anomal${count === 1 ? 'y' : 'ies'} to reconcile">${count > 99 ? '99+' : count}</span>`
+        ? ` <span class="mode-badge urgent" title="${count} high-priority to reconcile">${count > 99 ? '99+' : count}</span>`
         : '';
       return `<button data-mode="${m.id}" class="${state.mode === m.id ? 'active' : ''}">${m.label}${badge}</button>`;
     })
@@ -732,9 +731,10 @@ function rebuildLedger() {
   const full = state.quailSales.length
     ? reconcile(state.items, state.quailSales, { start: bounds.min, end: Math.max(Date.now(), bounds.max) })
     : { findings: [] };
+  const high = full.findings.filter((f) => f.severity === 'high').length;
   state.badge = {
-    count: full.findings.length,
-    urgent: full.findings.some((f) => f.severity === 'high')
+    count: high,           // the Records badge is the high-priority count only
+    urgent: high > 0
   };
 }
 
