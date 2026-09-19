@@ -60,6 +60,7 @@ export function NavProvider({ children }) {
   const [ranges, setRanges] = useState({});          // per-mode {preset, start, end}
   const [venue, setVenue] = useState({ kind: 'all', id: null });
   const [inventoryFilter, setInventoryFilter] = useState('all');
+  const [addStockOpen, setAddStockOpen] = useState(false);
 
   const active = modeById(mode);
   const tab = tabByMode[mode] || restore('sp_tab_' + mode, active.tabs[0][0]);
@@ -102,9 +103,11 @@ export function NavProvider({ children }) {
   }, []);
 
   const value = {
-    mode, tab, range, venue, active, inventoryFilter,
+    mode, tab, range, venue, active, inventoryFilter, addStockOpen,
     selectMode, selectTab, setPreset, setCustomRange, setVenue, setInventoryFilter,
-    goToInventory, goToSync
+    goToInventory, goToSync,
+    openAddStock: () => setAddStockOpen(true),
+    closeAddStock: () => setAddStockOpen(false)
   };
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

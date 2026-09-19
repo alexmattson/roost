@@ -6,7 +6,6 @@ import {
   ITEM_COLUMNS, ITEM_ACTS_W, filterItems, sortItems, collectChanges, editFields
 } from '../lib/items.js';
 import { Card, Button } from '../components/ui.jsx';
-import { AddStock } from './AddStock.jsx';
 import { PrintTags } from './PrintTags.jsx';
 
 const FILTERS = [
@@ -16,7 +15,7 @@ const FILTERS = [
 
 export function Inventory() {
   const { items, applyEdits, deleteItems } = useData();
-  const { range, inventoryFilter, setInventoryFilter } = useNav();
+  const { range, inventoryFilter, setInventoryFilter, openAddStock } = useNav();
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(inventoryFilter || 'all');
@@ -26,7 +25,7 @@ export function Inventory() {
   const [deletePending, setDeletePending] = useState(null);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState(null);
-  const [overlay, setOverlay] = useState(null); // 'add' | 'print' | null
+  const [showPrint, setShowPrint] = useState(false);
 
   // Home's attention links preset the filter through nav.
   useEffect(() => { if (inventoryFilter) setFilter(inventoryFilter); }, [inventoryFilter]);
@@ -95,8 +94,8 @@ export function Inventory() {
           <select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-          <Button small onClick={() => setOverlay('print')}>Print tags</Button>
-          <Button small onClick={() => setOverlay('add')}>+ Add stock</Button>
+          <Button small onClick={() => setShowPrint(true)}>Print tags</Button>
+          <Button small onClick={openAddStock}>+ Add stock</Button>
         </div>
       </div>
 
@@ -132,8 +131,7 @@ export function Inventory() {
         {rows.length > shown.length && <div className="empty-row">Showing first {shown.length} of {rows.length} items</div>}
       </div>
 
-      {overlay === 'add' && <AddStock onClose={() => setOverlay(null)} />}
-      {overlay === 'print' && <PrintTags rows={rows} onClose={() => setOverlay(null)} />}
+      {showPrint && <PrintTags rows={rows} onClose={() => setShowPrint(false)} />}
     </Card>
   );
 }

@@ -81,4 +81,11 @@ describe('Roost app', () => {
     render(<App />);
     expect(await screen.findByText('Vintage oak chair')).toBeTruthy();
   });
+
+  it('opens the Add stock sheet from Home', async () => {
+    seed('home');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: '+ Add stock' }));
+    expect(await screen.findByText(/Split across rows/i)).toBeTruthy(); // the sheet is open
+  });
 });

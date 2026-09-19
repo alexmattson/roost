@@ -8,6 +8,7 @@ import { Sync } from './pages/Sync.jsx';
 import { PosSales } from './pages/PosSales.jsx';
 import { Inventory } from './pages/Inventory.jsx';
 import { Analyze } from './pages/Analyze.jsx';
+import { AddStock } from './pages/AddStock.jsx';
 import { useTooltips } from './hooks/useTooltips.js';
 
 export default function App() {
@@ -89,8 +90,17 @@ function Dashboard() {
       <main id="main">
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>
+      <AddStockHost />
     </>
   );
+}
+
+/** Add stock is a full-screen sheet openable from anywhere (Home, Inventory),
+ *  so it lives at the app level rather than inside one page. */
+function AddStockHost() {
+  const { addStockOpen, closeAddStock } = useNav();
+  if (!addStockOpen) return null;
+  return <AddStock onClose={closeAddStock} />;
 }
 
 function Page() {

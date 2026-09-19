@@ -27,7 +27,7 @@ function homeGreeting(now) {
 
 export function Home() {
   const { ledger, items, quailSales, ledgerSummary, venueInfo, applyEdits, raw } = useData();
-  const { selectMode, selectTab, goToInventory, goToSync, setInventoryFilter } = useNav();
+  const { selectMode, selectTab, goToInventory, goToSync, openAddStock } = useNav();
   const [banner, setBanner] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -111,7 +111,7 @@ export function Home() {
         <div className="home-take-sub">taken home in {monthName}, so far</div>
         <div className="home-lastmonth">{lastName}&nbsp;&nbsp;<b>{money(lastMonth)}</b></div>
         <div className="home-actions">
-          <Button variant="primary" onClick={() => { setInventoryFilter('nobarcode'); goToInventory('all'); }}>+ Add stock</Button>
+          <Button variant="primary" onClick={openAddStock}>+ Add stock</Button>
           {stats.inventory.stale > 0 &&
             <Button onClick={() => goToInventory('aged')}>Reprice slow stock ({int(stats.inventory.stale)})</Button>}
           <Button variant="ghost" onClick={() => selectMode('analyze')}>See full analytics →</Button>
