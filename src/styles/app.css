@@ -1,0 +1,25 @@
+/* The reused design system (theme.css) was written for the extension popup,
+   which sized `body` to 780×600. On the web the React app mounts into #root and
+   fills the viewport; body carries `expanded web` so theme.css's full-width
+   rules apply. This file just makes #root the flex column body used to be. */
+
+#root {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-x {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.banner-x:hover { opacity: 1; }
