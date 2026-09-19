@@ -2,10 +2,9 @@ import { useMemo, useState, useEffect } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
-import {
-  ITEM_COLUMNS, ITEM_ACTS_W, filterItems, sortItems, collectChanges, editFields
-} from '../lib/items.js';
+import { ITEM_COLUMNS, ITEM_ACTS_W, filterItems, collectChanges, editFields } from '../lib/items.js';
 import { Card, Button } from '../components/ui.jsx';
+import { SortableTable } from '../components/SortableTable.jsx';
 import { PrintTags } from './PrintTags.jsx';
 
 const FILTERS = [
@@ -19,7 +18,6 @@ export function Inventory() {
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(inventoryFilter || 'all');
-  const [sort, setSort] = useState({ key: 'acquired', dir: -1 });
   const [editingId, setEditingId] = useState(null);
   const [fields, setFields] = useState(null);
   const [deletePending, setDeletePending] = useState(null);
@@ -27,17 +25,14 @@ export function Inventory() {
   const [banner, setBanner] = useState(null);
   const [showPrint, setShowPrint] = useState(false);
 
-  // Home's attention links preset the filter through nav.
   useEffect(() => { if (inventoryFilter) setFilter(inventoryFilter); }, [inventoryFilter]);
 
   const rows = useMemo(
-    () => sortItems(filterItems(items, { start: range.start, end: range.end, filter, search }), sort),
-    [items, range, filter, search, sort]
+    () => filterItems(items, { start: range.start, end: range.end, filter, search }),
+    [items, range, filter, search]
   );
-  const shown = rows.slice(0, 400);
 
   const flash = (kind, text, ms = 2600) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
-
   const startEdit = (r) => { setEditingId(r.id); setFields(editFields(r)); };
   const cancelEdit = () => { setEditingId(null); setFields(null); };
 
@@ -82,7 +77,9 @@ export function Inventory() {
     finally { setBusy(false); }
   };
 
-  const sortBy = (key) => setSort((s) => ({ key, dir: s.key === key ? -s.dir : -1 }));
+  const renderRow = (r) => (editingId === r.id
+    ? <EditorRow key={r.id} r={r} fields={fields} setFields={setFields} onSave={() => save(r)} onCancel={cancelEdit} />
+    : <ItemRow key={r.id} r={r} onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />);
 
   return (
     <Card className="records-card">
@@ -104,31 +101,11 @@ export function Inventory() {
         onCancel={() => setDeletePending(null)} onGo={() => doDelete(deletePending)} />
 
       <div className="table-scroll">
-        {rows.length === 0
-          ? <div className="empty-row">No items match those filters</div>
-          : (
-            <table className="items-table">
-              <colgroup>
-                {ITEM_COLUMNS.map((c) => <col key={c.key} style={{ width: `${c.w}%` }} />)}
-                <col style={{ width: `${ITEM_ACTS_W}%` }} />
-              </colgroup>
-              <thead><tr>
-                {ITEM_COLUMNS.map((c) => (
-                  <th key={c.key} className={`sortable ${c.num ? 'num' : ''}`} onClick={() => sortBy(c.key)}>
-                    {c.title}{sort.key === c.key && <span className="arrow"> {sort.dir > 0 ? '▲' : '▼'}</span>}
-                  </th>
-                ))}
-                <th className="row-acts" />
-              </tr></thead>
-              <tbody>
-                {shown.map((r) => (editingId === r.id
-                  ? <EditorRow key={r.id} r={r} fields={fields} setFields={setFields} onSave={() => save(r)} onCancel={cancelEdit} />
-                  : <ItemRow key={r.id} r={r} onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />
-                ))}
-              </tbody>
-            </table>
-          )}
-        {rows.length > shown.length && <div className="empty-row">Showing first {shown.length} of {rows.length} items</div>}
+        <SortableTable
+          columns={ITEM_COLUMNS} rows={rows} fixed actsWidth={ITEM_ACTS_W}
+          initialSort={{ key: 'acquired', dir: -1 }} limit={400}
+          trailingHeader={<th className="row-acts" />} renderRow={renderRow}
+          empty="No items match those filters" />
       </div>
 
       {showPrint && <PrintTags rows={rows} onClose={() => setShowPrint(false)} />}

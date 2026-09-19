@@ -3,7 +3,7 @@ import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { money, dateTime } from '../lib/format.js';
 import { Card } from '../components/ui.jsx';
-
+import { SortableTable } from '../components/SortableTable.jsx';
 
 /** Sales scoped to the selected booth (by its Quail external id), if any. */
 function scopeQuail(quailSales, venue, venueInfo) {
@@ -12,6 +12,20 @@ function scopeQuail(quailSales, venue, venueInfo) {
   const ext = info && info.externalId != null ? info.externalId : null;
   return ext == null ? quailSales : quailSales.filter((s) => s.boothId === ext);
 }
+
+// Identity first (#, description), then when, then the money ladder, then how it
+// was paid — the same left-to-right logic as the Inventory table.
+const COLUMNS = [
+  { key: 'inv', title: '#', render: (r) => r.inv || '—' },
+  { key: 'desc', title: 'Description', cls: 'name', render: (r) => r.desc },
+  { key: 'soldAt', title: 'When', render: (r) => dateTime(r.soldAt) },
+  { key: 'price', title: 'Price', num: true, render: (r) => money(r.price, { compact: true }) },
+  { key: 'tax', title: 'Tax', num: true, render: (r) => money(r.tax, { compact: true }) },
+  { key: 'consignment', title: 'Commission', num: true, render: (r) => money(-r.consignment, { compact: true }) },
+  { key: 'net', title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
+  { key: 'method', title: 'Paid', render: (r) => r.method },
+  { key: 'transactionId', title: 'Txn', num: true, render: (r) => (r.transactionId == null ? '—' : String(r.transactionId)) }
+];
 
 export function PosSales() {
   const { quailSales, venueInfo, meta } = useData();
@@ -26,10 +40,8 @@ export function PosSales() {
     let r = scopeQuail(quailSales, venue, venueInfo).filter((s) => s.soldAt >= range.start && s.soldAt <= range.end);
     if (method !== 'all') r = r.filter((s) => s.method === method);
     if (q) r = r.filter((s) => s.desc.toLowerCase().includes(q) || String(s.inv).toLowerCase().includes(q));
-    return r.sort((a, b) => b.soldAt - a.soldAt);
+    return r;
   }, [quailSales, venue, venueInfo, range, method, search]);
-
-  const shown = rows.slice(0, 500);
 
   return (
     <Card className="records-card">
@@ -51,30 +63,8 @@ export function PosSales() {
           : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.'}</div>
       ) : (
         <div className="table-scroll">
-          <table>
-            <thead><tr>
-              <th>When</th><th>#</th><th>Item</th>
-              <th className="num">Price</th><th className="num">Tax</th><th className="num">Commission</th>
-              <th className="num">Net payout</th><th>Paid</th><th className="num">Txn</th>
-            </tr></thead>
-            <tbody>
-              {shown.length === 0 && <tr><td colSpan={9}><div className="empty-row">No register sales in this range</div></td></tr>}
-              {shown.map((r) => (
-                <tr key={r.id}>
-                  <td>{dateTime(r.soldAt)}</td>
-                  <td>{r.inv || '—'}</td>
-                  <td className="name">{r.desc}</td>
-                  <td className="num">{money(r.price, { compact: true })}</td>
-                  <td className="num">{money(r.tax, { compact: true })}</td>
-                  <td className="num">{money(-r.consignment, { compact: true })}</td>
-                  <td className="num">{money(r.net, { compact: true })}</td>
-                  <td>{r.method}</td>
-                  <td className="num">{r.transactionId == null ? '—' : String(r.transactionId)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length > shown.length && <div className="empty-row">Showing first {shown.length} of {rows.length}</div>}
+          <SortableTable columns={COLUMNS} rows={rows} initialSort={{ key: 'soldAt', dir: -1 }}
+            limit={500} empty="No register sales in this range" />
         </div>
       )}
     </Card>

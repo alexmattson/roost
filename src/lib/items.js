@@ -16,17 +16,17 @@ export const centsToText = (v) => (v == null ? '' : (v / 100).toFixed(2));
 
 /** Column definitions — same widths and renders as the vanilla table. */
 export const ITEM_COLUMNS = [
-  { key: 'inv', title: '#', w: 7, render: (r) => r.inv || '—' },
-  { key: 'desc', title: 'Description', w: 17, cls: 'name', render: (r) => r.desc },
-  { key: 'category', title: 'Category', w: 9, render: (r) => r.category },
-  { key: 'acquired', title: 'Acquired', w: 11, num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
-  { key: 'cost', title: 'Cost', w: 7, num: true, render: (r) => money(r.cost, { compact: true }) },
-  { key: 'ask', title: 'Ask', w: 7, num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
-  { key: 'sold', title: 'Sold on', w: 11, num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
-  { key: 'soldPrice', title: 'Sold for', w: 7, num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : null) },
-  { key: 'profit', title: 'Profit', w: 7, num: true, cls: (r) => signClass(r.profit || 0), render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })) },
-  { key: 'margin', title: 'Margin', w: 5, num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
-  { key: 'daysToSell', title: 'Days', w: 5, num: true, render: (r) => days(r.daysToSell) }
+  { key: 'inv', title: '#', width: 7, render: (r) => r.inv || '—' },
+  { key: 'desc', title: 'Description', width: 17, cls: 'name', render: (r) => r.desc },
+  { key: 'category', title: 'Category', width: 9, render: (r) => r.category },
+  { key: 'acquired', title: 'Acquired', width: 11, num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
+  { key: 'cost', title: 'Cost', width: 7, num: true, render: (r) => money(r.cost, { compact: true }) },
+  { key: 'ask', title: 'Ask', width: 7, num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
+  { key: 'sold', title: 'Sold on', width: 11, num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
+  { key: 'soldPrice', title: 'Sold for', width: 7, num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : null) },
+  { key: 'profit', title: 'Profit', width: 7, num: true, cls: (r) => signClass(r.profit || 0), render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })) },
+  { key: 'margin', title: 'Margin', width: 5, num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
+  { key: 'daysToSell', title: 'Days', width: 5, num: true, render: (r) => days(r.daysToSell) }
 ];
 export const ITEM_ACTS_W = 7;
 
@@ -53,17 +53,6 @@ export function filterItems(items, { start, end, filter, search }) {
   const q = (search || '').trim().toLowerCase();
   if (q) rows = rows.filter((i) => i.desc.toLowerCase().includes(q) || String(i.inv).toLowerCase().includes(q));
   return rows;
-}
-
-export function sortItems(rows, { key, dir }) {
-  return [...rows].sort((a, b) => {
-    const av = a[key], bv = b[key];
-    if (av == null && bv == null) return 0;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    if (typeof av === 'string') return av.localeCompare(bv) * dir;
-    return (av - bv) * dir;
-  });
 }
 
 /** The smallest set of changes an edited row implies, in the API's units. */

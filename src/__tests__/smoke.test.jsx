@@ -86,6 +86,16 @@ describe('Roost app', () => {
     expect(await screen.findByText('Vintage oak chair')).toBeTruthy();
   });
 
+  it('renders POS sales with sortable headers', async () => {
+    seed('records');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'POS sales' }));
+    expect(await screen.findByText('Point-of-sale ledger')).toBeTruthy();
+    const netPayout = await screen.findByText('Net payout');
+    fireEvent.click(netPayout);                 // sort by it — must not throw
+    expect(await screen.findByText('Brass lamp')).toBeTruthy();
+  });
+
   it('opens the Add stock sheet from Home', async () => {
     seed('home');
     render(<App />);
