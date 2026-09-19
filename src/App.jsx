@@ -20,9 +20,16 @@ export default function App() {
 
 function Root() {
   const { status } = useData();
+  // Returning sessions skip the gate; a fresh connect does not — you stay on the
+  // login screen until you press Enter Roost.
   const [entered, setEntered] = useState(() => status.sandpiper.connected);
 
-  if (!entered && !status.sandpiper.connected) {
+  // Signing out drops the session, so fall back to the gate.
+  useEffect(() => {
+    if (!status.sandpiper.connected) setEntered(false);
+  }, [status.sandpiper.connected]);
+
+  if (!entered) {
     return <LoginGate onEnter={() => setEntered(true)} />;
   }
   return (
