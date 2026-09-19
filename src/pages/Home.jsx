@@ -6,6 +6,7 @@ import { rentForRange } from '../lib/ledger.js';
 import { reconcile } from '../lib/reconcile.js';
 import { planResolution, buildVenueContext } from '../lib/resolve.js';
 import { money, int, timeAgo } from '../lib/format.js';
+import { format as fmtDate } from 'date-fns';
 import { Card, Button } from '../components/ui.jsx';
 
 const bandSign = (v) => (v == null || !isFinite(v) ? 'good' : v >= 0 ? 'good' : 'alert');
@@ -43,8 +44,8 @@ export function Home() {
   const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
   const thisMonth = takeHome(monthStart, now.getTime());
   const lastMonth = takeHome(lastStart, monthStart - 1);
-  const monthName = now.toLocaleDateString(undefined, { month: 'long' });
-  const lastName = new Date(lastStart).toLocaleDateString(undefined, { month: 'long' });
+  const monthName = fmtDate(now, 'MMMM');
+  const lastName = fmtDate(lastStart, 'MMMM');
 
   const newSales = useMemo(() => {
     if (!quailSales.length) return [];

@@ -4,9 +4,8 @@ import { dataBounds } from '../lib/analytics.js';
 import { reconcile } from '../lib/reconcile.js';
 import { planResolution, buildVenueContext, CONFIDENCE } from '../lib/resolve.js';
 import { FINDING_LABELS, findingKey, matchOf } from '../lib/reconcile-ui.js';
+import { dayMonth } from '../lib/format.js';
 import { Card } from '../components/ui.jsx';
-
-const shortDay = (t) => (t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—');
 
 export function Sync() {
   const { items, quailSales, venueInfo, applyEdits } = useData();
@@ -122,7 +121,7 @@ export function Sync() {
                   <td><span className={`pill ${m}`} data-match={m}>{m}</span></td>
                   <td><span className={`pill ${e.finding.severity}`}>{e.finding.severity}</span></td>
                   <td>{FINDING_LABELS[e.finding.type] || e.finding.type}</td>
-                  <td>{shortDay(e.finding.soldAt)}</td>
+                  <td>{e.finding.soldAt ? dayMonth(e.finding.soldAt) : "—"}</td>
                   <td className="wrap">
                     <div className="finding-detail">{e.finding.detail}</div>
                     {e.plan

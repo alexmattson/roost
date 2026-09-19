@@ -57,25 +57,20 @@ export function refreshPalette() {
 
 /* ------------------------------------------------------------ formatting */
 
+/* Currency goes through Intl.NumberFormat — the platform's own money formatter,
+   what libraries like dinero/numeral wrap — rather than any hand-rolled math.
+   Formatters are built once and reused; constructing them per call is slow. */
+const USD = { style: 'currency', currency: 'USD' };
+const fmtCompact = new Intl.NumberFormat(undefined, { ...USD, notation: 'compact', maximumFractionDigits: 1 });
+const fmtWhole = new Intl.NumberFormat(undefined, { ...USD, minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtCents = new Intl.NumberFormat(undefined, { ...USD, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export function money(cents, { compact = false, centsPrecision = false } = {}) {
   const v = (cents || 0) / 100;
   const abs = Math.abs(v);
   if (abs < 0.005) return '$0';
-  if (compact && abs >= 1000) {
-    const units = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
-    for (const [div, suf] of units) {
-      if (abs >= div) {
-        const n = v / div;
-        return `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(Math.abs(n) < 10 ? 1 : 0)}${suf}`;
-      }
-    }
-  }
-  return v.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: centsPrecision || abs < 100 ? 2 : 0,
-    maximumFractionDigits: centsPrecision || abs < 100 ? 2 : 0
-  });
+  if (compact && abs >= 1000) return fmtCompact.format(v);
+  return (centsPrecision || abs < 100 ? fmtCents : fmtWhole).format(v);
 }
 
 export const pct = (n, digits = 1) =>

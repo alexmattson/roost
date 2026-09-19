@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
-import { money } from '../lib/format.js';
+import { money, dateTime } from '../lib/format.js';
 import { Card } from '../components/ui.jsx';
 
-const when = (t) => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 /** Sales scoped to the selected booth (by its Quail external id), if any. */
 function scopeQuail(quailSales, venue, venueInfo) {
@@ -62,7 +61,7 @@ export function PosSales() {
               {shown.length === 0 && <tr><td colSpan={9}><div className="empty-row">No register sales in this range</div></td></tr>}
               {shown.map((r) => (
                 <tr key={r.id}>
-                  <td>{when(r.soldAt)}</td>
+                  <td>{dateTime(r.soldAt)}</td>
                   <td>{r.inv || '—'}</td>
                   <td className="name">{r.desc}</td>
                   <td className="num">{money(r.price, { compact: true })}</td>

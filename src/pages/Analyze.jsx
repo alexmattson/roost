@@ -6,7 +6,8 @@ import { rentForRange } from '../lib/ledger.js';
 import { analyzeQuail } from '../lib/quail.js';
 import { makeVenueLabels } from '../lib/venues.js';
 import { PALETTE, SERIES_COLORS, lineChart, barChart, donut, hbar, scatter } from '../lib/charts.js';
-import { money, int, pct, days, signClass } from '../lib/format.js';
+import { money, int, pct, days, signClass, dayMonth } from '../lib/format.js';
+import { format as fmtDate } from 'date-fns';
 import { Card, CardHead, Kpi } from '../components/ui.jsx';
 import { Chart } from '../components/Chart.jsx';
 import { Legend, DataTable, Trend, bandUp, bandDown, bandSign, nameCell } from '../components/analyze-ui.jsx';
@@ -83,7 +84,7 @@ function Overview({ s, q, rentInfo, range, ledger, scopedRent, venue }) {
         <Kpi label="Rent covered" status={bandUp(rentCover, 1, 0.6)} value={pct(rentCover, 0)} sub="gross profit against booth rent" />
         <Kpi label="Sell-through" status={s.counts.sold + s.counts.onHand ? bandUp(s.velocity.sellThrough, 0.4, 0.2) : null} value={pct(s.velocity.sellThrough)} sub={`${int(s.counts.sold)} of ${int(s.counts.sold + s.counts.onHand)} available`} />
         <Kpi label="Aged over 180 days" status={s.inventory.units ? bandDown(staleShare, 0.001, 0.2) : null} value={int(s.inventory.stale)} sub={s.inventory.stale ? `${money(s.inventory.staleCost, { compact: true })} tied up` : 'nothing sitting long'} />
-        <Kpi label="Since last sale" status={q ? bandDown(q.daysSinceLastSale, 7, 21) : null} value={q && q.daysSinceLastSale != null ? days(q.daysSinceLastSale) : '—'} sub={q && q.lastSaleAt ? new Date(q.lastSaleAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'from the register'} />
+        <Kpi label="Since last sale" status={q ? bandDown(q.daysSinceLastSale, 7, 21) : null} value={q && q.daysSinceLastSale != null ? days(q.daysSinceLastSale) : '—'} sub={q && q.lastSaleAt ? dayMonth(q.lastSaleAt) : 'from the register'} />
       </div>
 
       <DailyCard q={q} />
@@ -165,7 +166,7 @@ function RentChart({ scopedRent, ledger, venue }) {
   const months = [];
   for (let k = 11; k >= 0; k--) {
     const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
-    months.push({ label: d.toLocaleDateString(undefined, { month: 'short' }), start: d.getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime() });
+    months.push({ label: fmtDate(d, 'MMM'), start: d.getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime() });
   }
   const inScope = (i) => !venue || venue.kind === 'all' || !venue.id || (venue.kind === 'store' ? i.store : i.booth) === (venue.id === UNASSIGNED ? null : venue.id);
   const sales = ledger.filter((i) => i.isSold && i.sold != null && inScope(i));

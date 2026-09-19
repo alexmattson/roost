@@ -1082,7 +1082,7 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .home-check { color: var(--green); font-weight: 700; }
 
 .home-sale {
-  display: grid; grid-template-columns: 1fr auto 68px; gap: 10px;
+  display: grid; grid-template-columns: 1fr auto 92px; gap: 10px;
   align-items: baseline; padding: 8px 6px; font-size: 12.5px;
 }
 .home-sale + .home-sale { border-top: 1px solid var(--border-soft); }

@@ -1,3 +1,5 @@
+import { format, formatDistanceToNowStrict } from 'date-fns';
+
 export { money, int, pct } from './charts.js';
 import { int } from './charts.js';
 
@@ -5,28 +7,19 @@ export const days = (n) => (n == null ? '—' : `${Math.round(n)}d`);
 export const plural = (n, one, many) => `${int(n)} ${n === 1 ? one : many || one + 's'}`;
 export const signClass = (v) => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
 
-/** Compact, always-relative — fits a narrow column at any age. */
-export function timeAgo(t) {
-  const day = 86400000;
-  const diff = Date.now() - t;
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`;
-  if (diff < day) return `${Math.round(diff / 3600000)}h ago`;
-  const d = Math.round(diff / day);
-  if (d < 7) return `${d}d ago`;
-  if (d < 30) return `${Math.round(d / 7)}w ago`;
-  if (d < 365) return `${Math.round(d / 30)}mo ago`;
-  return `${Math.round(d / 365)}y ago`;
-}
+/* Dates go through date-fns rather than hand-rolled string math. */
 
-/** Relative for recent, absolute date+time once older — for "updated …" lines. */
-export function relativeTime(t) {
-  const diff = Date.now() - t;
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.round(diff / 3600000)}h ago`;
-  return new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
+/** "Sep 9, 26" — the compact date used in tables. */
+export const shortDate = (t) => (t ? format(t, 'MMM d, yy') : '—');
 
-export const shortDate = (t) =>
-  new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+/** "Sep 9, 1:30 PM" — date with clock time, for the register ledger. */
+export const dateTime = (t) => (t ? format(t, 'MMM d, h:mm a') : '—');
+
+/** "Sep 9" — day only. */
+export const dayMonth = (t) => (t ? format(t, 'MMM d') : '—');
+
+/** "5 days ago", "2 months ago" — always relative, never falls back to a date. */
+export const timeAgo = (t) => (t ? formatDistanceToNowStrict(t, { addSuffix: true }) : '');
+
+/** Alias kept for the "updated …" subline; same behaviour now. */
+export const relativeTime = timeAgo;
