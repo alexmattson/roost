@@ -1,7 +1,7 @@
 import { Brand } from './Brand.jsx';
 import { useData } from '../store/data.jsx';
 import { useNav, MODES, modeById } from '../store/nav.jsx';
-import { useTheme } from '../hooks/useTheme.js';
+import { useTheme } from '../hooks/useTheme.jsx';
 import { int } from '../lib/format.js';
 import { relativeTime } from '../lib/format.js';
 

@@ -37,14 +37,16 @@ export function Pill({ tone, className = '', dataMatch, children }) {
   );
 }
 
-const STATUS_COLOR = { good: PALETTE.green, watch: PALETTE.brass, alert: PALETTE.red };
+// Resolved at render, not snapshotted — PALETTE is mutated in place by the
+// theme's refreshPalette(), so the accent tracks light/dark.
+const STATUS_KEY = { good: 'green', watch: 'brass', alert: 'red' };
 
 /**
  * A KPI tile. `status` (good | watch | alert) drives the accent; `hero` swaps
  * the thin stripe for the filled accent card used for the headline figures.
  */
 export function Kpi({ label, value, sub, status, hero, exact, valueClass = '' }) {
-  const accent = status ? STATUS_COLOR[status] : 'transparent';
+  const accent = status ? PALETTE[STATUS_KEY[status]] : 'transparent';
   const cls = ['kpi', status && `is-${status}`, hero && 'kpi-hero'].filter(Boolean).join(' ');
   return (
     <div className={cls} style={{ '--accent': accent }}>

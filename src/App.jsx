@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DataProvider, useData } from './store/data.jsx';
 import { NavProvider, useNav } from './store/nav.jsx';
+import { ThemeProvider, useTheme } from './hooks/useTheme.jsx';
 import { LoginGate } from './pages/LoginGate.jsx';
 import { TopBar, ModesNav, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
 import { Home } from './pages/Home.jsx';
@@ -13,9 +14,11 @@ import { useTooltips } from './hooks/useTooltips.js';
 
 export default function App() {
   return (
-    <DataProvider>
-      <Root />
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <Root />
+      </DataProvider>
+    </ThemeProvider>
   );
 }
 
@@ -42,6 +45,10 @@ function Root() {
 
 function Dashboard() {
   const { hasData, loadCache, refresh } = useData();
+  const { theme } = useTheme();
+  // ThemeProvider re-syncs the palette on a theme change; remount the pages
+  // (key) so every chart — even ones whose data didn't change — rebuilds its
+  // series with the new colours.
   useTooltips();
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,7 +94,7 @@ function Dashboard() {
       <ModesNav />
       <RangeBar />
       <Tabs />
-      <main id="main">
+      <main id="main" key={theme}>
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>
       <AddStockHost />

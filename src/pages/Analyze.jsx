@@ -13,7 +13,9 @@ import { Chart } from '../components/Chart.jsx';
 import { Legend, DataTable, Trend, bandUp, bandDown, bandSign, nameCell } from '../components/analyze-ui.jsx';
 
 const SPEED = [['0–7 d', 0, 7], ['8–30 d', 7, 30], ['31–60 d', 30, 60], ['61–90 d', 60, 90], ['91–180 d', 90, 180], ['180+ d', 180, Infinity]];
-const AGE_COLORS = [PALETTE.green, PALETTE.teal, PALETTE.blue, PALETTE.purple, PALETTE.brass, PALETTE.red];
+// Resolved at call time, never snapshotted — PALETTE is mutated in place by
+// refreshPalette(), so a module-level array of its values would go stale.
+const ageColor = (i) => [PALETTE.green, PALETTE.teal, PALETTE.blue, PALETTE.purple, PALETTE.brass, PALETTE.red][i];
 
 export function Analyze({ tab }) {
   const { ledger, quailSales, raw, venueInfo, venueNames } = useData();
@@ -268,7 +270,7 @@ function SalesTab({ s }) {
       <Chart deps={[s]} draw={(el) => barChart(el, { labels: s.buckets.map((b) => b.label), height: 180, series: [{ name: 'Gross profit', color: PALETTE.green, values: s.buckets.map((b) => b.profit) }] })} /></Card>
     <div className="grid-2">
       <Card><CardHead title="Cost vs. sold price" /><Chart deps={[s]} draw={(el) => scatter(el, { points: s.scatter, height: 190 })} /></Card>
-      <Card><CardHead title="Time to sell" /><Chart deps={[s]} draw={(el) => hbar(el, { rows: speedRows, format: (v) => `${int(v)} sold`, colorFor: (_, i) => AGE_COLORS[i] })} /></Card>
+      <Card><CardHead title="Time to sell" /><Chart deps={[s]} draw={(el) => hbar(el, { rows: speedRows, format: (v) => `${int(v)} sold`, colorFor: (_, i) => ageColor(i) })} /></Card>
     </div>
     <div className="grid-2">
       <Card><CardHead title="Top profit" /><DataTable rows={s.lists.topProfit} columns={profitCols} empty="No sales in this range" /></Card>
@@ -294,7 +296,7 @@ function InventoryTab({ s }) {
     </div>
     <div className="grid-2">
       <Card><CardHead title="Stock aging" hint="Stock at cost by age" />
-        <Chart deps={[s]} draw={(el) => hbar(el, { rows: s.aging.map((a) => ({ label: a.label, value: a.cost, sub: `${a.count} items · ${money(a.ask)} ask` })), format: (v) => money(v, { compact: true }), colorFor: (_, i) => AGE_COLORS[i] })} /></Card>
+        <Chart deps={[s]} draw={(el) => hbar(el, { rows: s.aging.map((a) => ({ label: a.label, value: a.cost, sub: `${a.count} items · ${money(a.ask)} ask` })), format: (v) => money(v, { compact: true }), colorFor: (_, i) => ageColor(i) })} /></Card>
       <Card><CardHead title="Asking-price bands" hint="Items unsold" />
         <Chart deps={[s]} draw={(el) => barChart(el, { labels: s.bands.map((b) => b.label), height: 170, integerY: true, yFormat: (v) => int(v), tipFormat: (v) => `${int(v)} items`, series: [{ name: 'On hand', color: PALETTE.brass, values: s.bands.map((b) => b.count) }, { name: 'Sold in range', color: PALETTE.green, values: s.bands.map((b) => b.sold) }] })} /></Card>
     </div>
