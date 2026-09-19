@@ -4,7 +4,11 @@ import { NavProvider, useNav } from './store/nav.jsx';
 import { LoginGate } from './pages/LoginGate.jsx';
 import { TopBar, ModesNav, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
 import { Home } from './pages/Home.jsx';
-import { Placeholder } from './pages/Placeholder.jsx';
+import { Sync } from './pages/Sync.jsx';
+import { PosSales } from './pages/PosSales.jsx';
+import { Inventory } from './pages/Inventory.jsx';
+import { Analyze } from './pages/Analyze.jsx';
+import { useTooltips } from './hooks/useTooltips.js';
 
 export default function App() {
   return (
@@ -30,6 +34,7 @@ function Root() {
 
 function Dashboard() {
   const { hasData, loadCache, refresh } = useData();
+  useTooltips();
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [banner, setBanner] = useState(null);
@@ -88,13 +93,11 @@ function Page() {
     return <div className="empty-state"><h3>No data yet</h3><p>Hit <b>Fetch latest data</b> to pull your inventory and build the dashboard.</p></div>;
   }
   if (mode === 'home') return <Home />;
-  if (mode === 'analyze') return <Placeholder title="Analyze" subtitle={`${cap(tab)} — charts and KPIs`} />;
+  if (mode === 'analyze') return <Analyze tab={tab} />;
   if (mode === 'records') {
-    if (tab === 'items') return <Placeholder title="Inventory" subtitle="The editable Sandpiper item table, add stock and print tags" />;
-    if (tab === 'pos') return <Placeholder title="POS sales" subtitle="The Quail register ledger" />;
-    if (tab === 'review') return <Placeholder title="Sync" subtitle="The reconciliation worktable" />;
+    if (tab === 'items') return <Inventory />;
+    if (tab === 'pos') return <PosSales />;
+    if (tab === 'review') return <Sync />;
   }
   return null;
 }
-
-const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);

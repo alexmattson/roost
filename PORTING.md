@@ -41,23 +41,31 @@ guarantee the vanilla app had, now enforced by `useMemo` dependencies instead of
 a manual `rebuildLedger()`. Navigation state is separate, so changing the date
 window never invalidates the ledger.
 
-## Status
+## Status — complete
 
-Done and building:
+Every page is ported and the app builds and passes its render tests.
+
 - Toolchain (Vite), CI deploy to Pages (`.github/workflows/deploy.yml`)
 - Design system, component library, theme
 - Data + nav stores wired to the reused logic
-- Login gate, app shell (top bar, nav, range bar, tabs, badges, severity pills)
-- **Home** page — fully ported: month-to-date take-home, the celebratory
-  new-sales sync card with one-click sync, the attention list, recent sales.
+- Login gate, app shell (top bar, nav, range bar with the Sync explainer, tabs,
+  Records badge, severity pills, loading state)
+- **Home** — month-to-date take-home, the celebratory new-sales sync card with
+  one-click sync, attention list, recent sales
+- **Analyze** — Overview, Sales, Inventory, Catalog, Venues: every KPI, table
+  and chart, with the $/units toggles and editable venue names
+- **Records → Inventory** — the fixed-layout editable table (click-to-edit,
+  delete confirmation), the batch add-stock sheet with lot-splitting and price
+  hints, and print tags with Code 128 barcodes
+- **Records → POS sales** — the searchable register ledger
+- **Records → Sync** — anomalies table, filters, single and bulk fixes with the
+  confirm flow, and the match tooltip
 
-Remaining (each is now a mechanical port against the established pattern — the
-logic already exists in `src/lib`):
-- **Analyze** — Overview/Sales/Inventory/Catalog/Venues KPIs, tables and the
-  ~9 charts (each a `<Chart draw={el => barChart(el, …)} />`).
-- **Records → Inventory** — the editable table, add-stock sheet, print tags.
-- **Records → POS sales** — the register ledger table.
-- **Records → Sync** — anomalies table, bulk fixes, match tooltip.
+### Tests
+
+`npm test` mounts the whole app against seeded session + cache data and asserts
+Home, Analyze, Sync and Inventory all render — real runtime coverage, not just a
+compile. `src/__tests__/smoke.test.jsx`.
 
 ## Deploying
 
@@ -68,4 +76,5 @@ The build ships to GitHub Pages via Actions, not committed files. After merge to
 npm install
 npm run dev      # http://localhost:5173/roost/
 npm run build    # → dist/
+npm test         # render smoke tests
 ```

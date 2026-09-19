@@ -271,7 +271,7 @@ The site is just static files, served by GitHub Pages straight from the reposito
    branch*, pick **main** and **/ (root)**, and **Save**.
 3. A minute later it is live at `https://<you>.github.io/roost/`.
 
-No build step and no dependencies — the repository is the site.
+The GitHub Actions workflow builds it and deploys to Pages; enable Pages with Source “GitHub Actions.”
 
 ## How it works
 
@@ -321,7 +321,7 @@ everything to cents at the boundary.
 
 ### Layout
 
-A static site: one HTML page, plain ES modules, no build step, no dependencies.
+A React + Vite app. The pure logic is framework-agnostic and reused as-is; only the UI layer is React.
 
 | Path | Role |
 | --- | --- |
@@ -384,15 +384,20 @@ rather than a flattering green.
 These are for people working on Roost itself — if you're just using it, the
 [help table above](#if-something-goes-wrong) is the one you want.
 
-**Running it locally.** Any static server works, since ES modules won't load over `file://`:
+**Running it locally.** Roost is a React + Vite app:
 
 ```bash
 git clone https://github.com/alexmattson/roost.git
 cd roost
-python3 -m http.server        # then open http://localhost:8000/
+npm install
+npm run dev      # http://localhost:5173/roost/
+npm run build    # → dist/, deployed to Pages by the Actions workflow
+npm test         # render smoke tests
 ```
 
-No install and no build — edit a file, reload the page.
+The pure logic (analytics, ledger, reconcile, stock, the SVG charts) lives in
+`src/lib` and is framework-agnostic; the UI is React components in `src/pages`
+and `src/components`, fed by two stores in `src/store`. See `PORTING.md`.
 
 **Watching the requests.** Every fetch goes straight from the page, so it all shows up in the
 browser's own Network tab. Each sync also logs a `[Roost]` line with the venue counts it resolved,
