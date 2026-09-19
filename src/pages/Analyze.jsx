@@ -249,7 +249,7 @@ function SalesTab({ s }) {
       <Kpi label="Gross sales" value={money(s.sales.gross, { compact: true })} exact={money(s.sales.gross)} sub={<>{s.counts.sold} sales <Trend current={s.sales.gross} prior={prev.gross} hasData={prev.hasData} /></>} />
       <Kpi label="Commission" value={money(s.sales.commissions, { compact: true })} exact={money(s.sales.commissions)} sub={`${pct(s.inventory.commissionRate, 1)} of gross sales`} />
       <Kpi label="Cost of goods" value={money(s.sales.cogs, { compact: true })} exact={money(s.sales.cogs)} sub={`avg ${money(s.counts.sold ? s.sales.cogs / s.counts.sold : 0, { compact: true })} per item`} />
-      <Kpi label="Gross profit" status={bandSign(s.sales.profit)} value={money(s.sales.profit, { compact: true })} exact={money(s.sales.profit)} sub={<>{money(s.sales.avgProfit, { compact: true })} per item <Trend current={s.sales.profit} prior={prev.profit} hasData={prev.hasData} /></>} />
+      <Kpi label="Gross profit" hero status={bandSign(s.sales.profit)} value={money(s.sales.profit, { compact: true })} exact={money(s.sales.profit)} sub={<>{money(s.sales.avgProfit, { compact: true })} per item <Trend current={s.sales.profit} prior={prev.profit} hasData={prev.hasData} /></>} />
       <Kpi label="Margin" status={s.counts.sold ? bandUp(s.sales.margin, 0.4, 0.2) : null} value={pct(s.sales.margin)} sub="gross profit as a share of sales" />
       <Kpi label="Return on cost" status={s.counts.sold ? bandUp(s.sales.roi, 1, 0.4) : null} value={pct(s.sales.roi)} sub="gross profit per $1 of stock" />
       <Kpi label="Avg sale price" value={money(s.sales.avgSale, { compact: true })} exact={money(s.sales.avgSale)} sub={`best period ${s.sales.bestMonth ? s.sales.bestMonth.label : '—'}`} />
@@ -277,7 +277,7 @@ function InventoryTab({ s }) {
       <Kpi label="Items unsold" status={s.counts.unpriced ? 'watch' : null} value={int(s.inventory.units)} sub={`${s.counts.unpriced} items without an asking price`} />
       <Kpi label="Stock at cost" value={money(s.inventory.cost, { compact: true })} exact={money(s.inventory.cost)} sub={`avg ${money(s.inventory.units ? s.inventory.cost / s.inventory.units : 0, { compact: true })} per item`} />
       <Kpi label="Asking value" value={money(s.inventory.ask, { compact: true })} exact={money(s.inventory.ask)} sub={`${money(s.inventory.potentialNet, { compact: true })} after commission`} />
-      <Kpi label="Potential profit" status={s.inventory.units ? bandSign(s.inventory.potentialProfit) : null} value={money(s.inventory.potentialProfit, { compact: true })} exact={money(s.inventory.potentialProfit)} sub="if it all sells at asking" />
+      <Kpi label="Potential profit" hero={s.inventory.units > 0} status={s.inventory.units ? bandSign(s.inventory.potentialProfit) : null} value={money(s.inventory.potentialProfit, { compact: true })} exact={money(s.inventory.potentialProfit)} sub="if it all sells at asking" />
       <Kpi label="Median age" status={bandDown(s.inventory.medianAge, 90, 180)} value={days(s.inventory.medianAge)} sub={`avg ${days(s.inventory.avgAge)}`} />
       <Kpi label="Aged over 180 days" status={s.inventory.units ? bandDown(staleShare, 0.001, 0.2) : null} value={int(s.inventory.stale)} sub={s.inventory.stale ? `${money(s.inventory.staleCost, { compact: true })} tied up` : 'nothing sitting long'} />
       <Kpi label="Stock turns" status={bandUp(s.velocity.turns, 1, 0.3)} value={`${s.velocity.turns.toFixed(2)}×`} sub="cost of goods ÷ stock at cost" />
