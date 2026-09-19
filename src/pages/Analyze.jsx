@@ -116,10 +116,8 @@ function Overview({ s, q, rentInfo, range, ledger, scopedRent, venue }) {
       </Card>
 
       <div className="grid-2">
-        <Card><CardHead title="Is the booth paying for itself?" hint="Net payout against rent, last 12 months" />
-          <RentChart scopedRent={scopedRent} ledger={ledger} venue={venue} /></Card>
-        <Card><CardHead title="Register rhythm" hint="Day of week / hour" />
-          <DowHourMini q={q} /></Card>
+        <DowCard q={q} />
+        <HourCard q={q} />
       </div>
     </>
   );
@@ -160,28 +158,6 @@ function FlowChart({ s, asMoney }) {
   </>);
 }
 
-function RentChart({ scopedRent, ledger, venue }) {
-  if (!scopedRent.length) return <div className="chart-empty">No booth rent recorded</div>;
-  const now = new Date();
-  const months = [];
-  for (let k = 11; k >= 0; k--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
-    months.push({ label: fmtDate(d, 'MMM'), start: d.getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime() });
-  }
-  const inScope = (i) => !venue || venue.kind === 'all' || !venue.id || (venue.kind === 'store' ? i.store : i.booth) === (venue.id === UNASSIGNED ? null : venue.id);
-  const sales = ledger.filter((i) => i.isSold && i.sold != null && inScope(i));
-  const payout = months.map((m) => sales.reduce((a, i) => a + (i.sold >= m.start && i.sold <= m.end ? i.net : 0), 0));
-  const rent = months.map((m) => rentForRange(scopedRent, m.start, m.end).cents);
-  const series = [{ name: 'Net payout', color: PALETTE.green, values: payout }, { name: 'Booth rent', color: PALETTE.brass, values: rent }];
-  return (<>
-    <Chart deps={[scopedRent, ledger, venue]} draw={(el) => barChart(el, {
-      labels: months.map((m) => m.label), series, height: 158,
-      tipFormat: (val, ser, i) => { const left = payout[i] - rent[i]; return ser.name === 'Net payout' ? money(payout[i]) : `${money(rent[i])} · ${left >= 0 ? 'kept' : 'short'} ${money(Math.abs(left))}`; }
-    })} />
-    <Legend series={series} />
-  </>);
-}
-
 function Toggle({ value, onChange }) {
   return (
     <div className="toggle">
@@ -212,21 +188,54 @@ function DailyCard({ q }) {
   );
 }
 
-function DowHourMini({ q }) {
+function DowCard({ q }) {
+  const [mode, setMode] = useState('money');
+  const asMoney = mode === 'money';
+  return (
+    <Card>
+      <CardHead title="By day of the week" hint="Averaged per occurrence">
+        <Toggle value={mode} onChange={setMode} />
+      </CardHead>
+      {!q ? <div className="chart-empty">No register data</div> : (
+        <Chart deps={[q, mode]} draw={(el) => barChart(el, {
+          labels: q.dayOfWeek.map((d) => d.label), height: 170,
+          series: [{ name: asMoney ? 'Avg takings' : 'Avg items', color: PALETTE.brass, values: q.dayOfWeek.map((d) => (asMoney ? d.avgGross : d.avgUnits)) }],
+          yFormat: asMoney ? (v) => money(v, { compact: true }) : (v) => (v >= 10 ? int(v) : v.toFixed(1)),
+          tipFormat: (v, ser, i) => {
+            const d = q.dayOfWeek[i]; const each = `over ${d.occurrences} × ${d.label}`;
+            return asMoney ? `${money(d.avgGross)} avg · ${d.avgUnits.toFixed(1)} items avg ${each}` : `${d.avgUnits.toFixed(1)} items avg · ${money(d.avgGross)} avg ${each}`;
+          }
+        })} />
+      )}
+    </Card>
+  );
+}
+
+function HourCard({ q }) {
   const [mode, setMode] = useState('units');
-  if (!q) return <div className="chart-empty">No register data</div>;
-  const hoursActive = q.hours.filter((h) => h.units > 0);
-  const lo = hoursActive.length ? Math.max(0, hoursActive[0].hour - 1) : 8;
-  const hi = hoursActive.length ? Math.min(23, hoursActive[hoursActive.length - 1].hour + 1) : 20;
-  const win = q.hours.slice(lo, hi + 1);
-  return (<>
-    <Chart deps={[q, mode]} draw={(el) => barChart(el, {
-      labels: win.map((h) => h.label), height: 150, integerY: mode !== 'money',
-      series: [{ name: mode === 'money' ? 'Gross sales' : 'Items', color: PALETTE.purple, values: win.map((h) => (mode === 'money' ? h.gross : h.units)) }],
-      yFormat: mode === 'money' ? (v) => money(v, { compact: true }) : (v) => int(v)
-    })} />
-    <div style={{ marginTop: 6 }}><Toggle value={mode} onChange={setMode} /></div>
-  </>);
+  const asMoney = mode === 'money';
+  const win = (() => {
+    if (!q) return [];
+    const active = q.hours.filter((h) => h.units > 0);
+    const lo = active.length ? Math.max(0, active[0].hour - 1) : 8;
+    const hi = active.length ? Math.min(23, active[active.length - 1].hour + 1) : 20;
+    return q.hours.slice(lo, hi + 1);
+  })();
+  return (
+    <Card>
+      <CardHead title="By hour" hint="Clock times that saw trade">
+        <Toggle value={mode} onChange={setMode} />
+      </CardHead>
+      {!q ? <div className="chart-empty">No register data</div> : (
+        <Chart deps={[q, mode]} draw={(el) => barChart(el, {
+          labels: win.map((h) => h.label), height: 170, integerY: !asMoney,
+          series: [{ name: asMoney ? 'Gross sales' : 'Items', color: PALETTE.purple, values: win.map((h) => (asMoney ? h.gross : h.units)) }],
+          yFormat: asMoney ? (v) => money(v, { compact: true }) : (v) => int(v),
+          tipFormat: (v, ser, i) => (asMoney ? `${money(win[i].gross)} · ${int(win[i].units)} items` : `${int(win[i].units)} items · ${money(win[i].gross)}`)
+        })} />
+      )}
+    </Card>
+  );
 }
 
 /* ------------------------------------------------------------------ Sales */

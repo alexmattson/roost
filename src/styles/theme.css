@@ -384,6 +384,8 @@ body.expanded .table-scroll { max-height: none; }
 /* Names the system a page answers for, so it belongs beside the title rather
    than out at the right edge where a card's stray note usually sits. */
 .card-head .hint.source { margin-right: auto; }
+/* A $/units (or similar) toggle always sits at the far right of the card head. */
+.card-head .toggle { margin-left: auto; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chart-box { width: 100%; min-height: 40px; }
 .chart-empty {
