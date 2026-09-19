@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App.jsx';
+import { signOutWeb } from '../lib/webbackend.js';
 
 /* The auth gate: a fresh connect must leave you on the login screen until you
    press Enter Roost, and signing out must return you to it. */
@@ -22,7 +23,7 @@ function mockFetch() {
 }
 
 describe('auth gate', () => {
-  beforeEach(() => { localStorage.clear(); sessionStorage.clear(); document.documentElement.dataset.theme = 'dark'; mockFetch(); });
+  beforeEach(() => { signOutWeb(); localStorage.clear(); sessionStorage.clear(); document.documentElement.dataset.theme = 'dark'; mockFetch(); });
 
   it('stays on the login screen after connecting, until Enter Roost', async () => {
     render(<App />);
@@ -41,11 +42,26 @@ describe('auth gate', () => {
 
   it('returns to the login screen on sign out', async () => {
     // Seed a live session + cache so the app opens on the dashboard.
-    sessionStorage.setItem('roost_web_session', JSON.stringify({ sandpiperToken: jwt, accounts: ['acct-1'], username: 'tester', accountId: 'acct-1', quailAuth: null, quailEmail: null }));
+    localStorage.setItem('roost_web_session', JSON.stringify({ sandpiperToken: jwt, accounts: ['acct-1'], username: 'tester', accountId: 'acct-1', quailAuth: null, quailEmail: null }));
     localStorage.setItem('roost_web_cache', JSON.stringify({ items: [], quail: null, venues: { stores: {}, booths: {} }, meta: { fetchedAt: Date.now(), count: 0 } }));
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByRole('button', { name: 'Enter Roost' })).toBeTruthy();
+  });
+
+  it('persists a stored session — opens the dashboard without logging in', async () => {
+    localStorage.setItem('roost_web_session', JSON.stringify({ sandpiperToken: jwt, accounts: ['acct-1'], username: 'tester', accountId: 'acct-1', quailAuth: null, quailEmail: null }));
+    localStorage.setItem('roost_web_cache', JSON.stringify({ items: [], quail: null, venues: { stores: {}, booths: {} }, meta: { fetchedAt: Date.now(), count: 0 } }));
+    render(<App />);
+    expect(await screen.findByText('Fetch latest data')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Enter Roost' })).toBeNull();
+  });
+
+  it('drops an expired token and shows the login gate', async () => {
+    const expired = `x.${b64url({ username: 'tester', exp: Math.floor(Date.now() / 1000) - 10, '@app-claim/@sandpiper/permissions': { accounts: ['acct-1'] } })}.y`;
+    localStorage.setItem('roost_web_session', JSON.stringify({ sandpiperToken: expired, accounts: ['acct-1'], username: 'tester', accountId: 'acct-1' }));
+    render(<App />);
     expect(await screen.findByRole('button', { name: 'Enter Roost' })).toBeTruthy();
   });
 });

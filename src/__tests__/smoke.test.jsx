@@ -9,8 +9,12 @@ import App from '../App.jsx';
 const nowSec = Math.floor(Date.now() / 1000);
 const daysAgo = (d) => nowSec - d * 86400;
 
+// A real JWT with a future expiry, so the session isn't dropped as stale on load.
+const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+const token = `x.${b64url({ username: 'tester', exp: Math.floor(Date.now() / 1000) + 9999, '@app-claim/@sandpiper/permissions': { accounts: ['acct-1'] } })}.y`;
+
 const session = {
-  sandpiperToken: 'test-token', accounts: ['acct-1'], username: 'tester',
+  sandpiperToken: token, accounts: ['acct-1'], username: 'tester',
   accountId: 'acct-1', quailAuth: 'Basic x', quailEmail: 'v@x.com'
 };
 
@@ -41,7 +45,7 @@ const cache = { items, quail, venues, meta: { fetchedAt: Date.now(), count: item
 
 function seed(mode) {
   localStorage.clear(); sessionStorage.clear();
-  sessionStorage.setItem('roost_web_session', JSON.stringify(session));
+  localStorage.setItem('roost_web_session', JSON.stringify(session));
   localStorage.setItem('roost_web_cache', JSON.stringify(cache));
   if (mode) localStorage.setItem('sp_mode', mode);
 }

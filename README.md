@@ -254,8 +254,9 @@ the password itself is discarded. The tokens are held only until you close the t
 ### Good to know
 
 - **Your data stays in your browser.** The page talks to Sandpiper and Quail directly; there is
-  no Roost server to send anything to. Tokens live in `sessionStorage` (gone when the tab closes),
-  the fetched data in `localStorage`, both on your machine only.
+  no Roost server to send anything to. Your session tokens and the fetched data both live in
+  `localStorage` on your machine, so you stay signed in across tabs and visits — until the
+  Sandpiper token expires (then you reconnect) or you sign out. Sign out clears both.
 - **You are typing vendor passwords into a page that isn't the vendor.** Roost only exchanges each
   for a token and never stores or forwards it — but if that gives you pause, that's a fair
   instinct, and a good reason to run [your own copy](#host-your-own-copy) on a domain you trust.
@@ -289,8 +290,9 @@ The GitHub Actions workflow builds it and deploys to Pages; enable Pages with So
   instead returns `403 Forbidden`. Venue failures are reported but never sink an item sync. Each
   Quail refresh pulls booth terms, line-item sales, and one rent call per calendar month; a
   missing Quail session is reported but never blocks an inventory sync.
-- **Storage** — the fetched data lands in `localStorage` and the dashboard renders from that cache
-  on every open; session tokens sit in `sessionStorage`, so they clear when the tab closes.
+- **Storage** — the fetched data and the session tokens both live in `localStorage`, so a sign-in
+  persists across tabs and reopens; a stored Sandpiper token past its expiry is dropped on load,
+  landing you on the sign-in screen rather than a stale dashboard. Sign out clears both.
 - **Charts** — hand-rolled SVG (`lib/charts.js`). The page loads no third-party scripts, so there
   are no charting libraries and nothing to phone home.
 - **Writes** — `POST /api/items/v2/<accountId>/edit` replaces the whole item rather than patching

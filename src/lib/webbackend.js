@@ -7,9 +7,11 @@
  * orchestration runs inline. `webSend` speaks the exact protocol the worker
  * does, so popup.js cannot tell which one it is talking to.
  *
- * Tokens sit in sessionStorage — they survive a reload but not closing the tab,
- * and they never leave the browser. The item cache sits in localStorage, the
- * same durable store the extension uses.
+ * Tokens sit in localStorage so a sign-in persists across tabs and across
+ * reopening the site — you don't log in every visit. They never leave the
+ * browser. A stored Sandpiper token past its expiry is dropped on load, so a
+ * stale session lands on the sign-in screen rather than a broken dashboard. The
+ * item cache sits alongside in localStorage.
  */
 
 import * as core from './core.js';
@@ -20,19 +22,33 @@ const CACHE_KEY = 'roost_web_cache';
 
 let session = null;
 
+/** The Sandpiper JWT carries an expiry; an unreadable token counts as expired. */
+function tokenExpired(token) {
+  try { const c = core.decodeJwt(token); return !!(c.exp && c.exp * 1000 < Date.now()); }
+  catch (e) { return true; }
+}
+
 function load() {
   if (session) return session;
-  try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { session = null; }
+  try {
+    const stored = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    if (stored && stored.sandpiperToken && tokenExpired(stored.sandpiperToken)) {
+      localStorage.removeItem(SESSION_KEY);
+      session = null;
+    } else {
+      session = stored;
+    }
+  } catch (e) { session = null; }
   return session;
 }
 function persist() {
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) { /* private window */ }
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) { /* private window */ }
 }
 export function currentWebSession() { return load(); }
 export function isWebAuthed() { return !!(load() && session.sandpiperToken); }
 export function signOutWeb() {
   session = null;
-  try { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(CACHE_KEY); } catch (e) { /* ignore */ }
+  try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(CACHE_KEY); } catch (e) { /* ignore */ }
 }
 
 /**
