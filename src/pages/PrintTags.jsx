@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
+import { useNav } from '../store/nav.jsx';
 import { int } from '../lib/format.js';
+import { makeVenueLabels } from '../lib/venues.js';
+import { UNASSIGNED } from '../lib/analytics.js';
 import {
   SHEET_TEMPLATES, LABEL_TEMPLATES, DEFAULT_SHEET_KEY,
-  findSheet, findLabel, defaultVendor
+  findSheet, findLabel
 } from '../lib/labels.js';
 
-const VENDOR_KEY = 'roost_tag_vendor';
 const CURRENCIES = ['USD', 'CAD', 'GBP', 'EUR', 'AUD', 'NZD'];
 
 /**
@@ -18,27 +20,37 @@ const CURRENCIES = ['USD', 'CAD', 'GBP', 'EUR', 'AUD', 'NZD'];
  *   printAll : true only for Code List.
  */
 export function PrintTags({ rows, onClose }) {
-  const { meta, printBarcodes } = useData();
+  const { printBarcodes, venueInfo, venueNames } = useData();
+  const { venue } = useNav();
 
   const ids = useMemo(
     () => rows.filter((r) => r.source !== 'quail' && r.id).map((r) => r.id),
     [rows]
   );
 
+  // The booth line on the tag is the booth name — the same value the Venues tab
+  // shows (a rename override, else Sandpiper's booth name).
+  const vl = useMemo(() => makeVenueLabels(venueInfo, venueNames), [venueInfo, venueNames]);
+  const booths = useMemo(
+    () => Object.keys((venueInfo && venueInfo.booths) || {})
+      .filter((id) => id && id !== UNASSIGNED)
+      .map((id) => ({ id, name: vl.label(id, 'booth') }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [venueInfo, vl]
+  );
+
   const [printer, setPrinter] = useState('sheet');   // sheet | label | codelist
   const [family, setFamily] = useState('letter');    // letter | a4
   const [sheetKey, setSheetKey] = useState('30up');
   const [labelKey, setLabelKey] = useState('2x1');
-  const [vendor, setVendor] = useState(() => {
-    try { const v = localStorage.getItem(VENDOR_KEY); if (v != null) return v; } catch { /* ignore */ }
-    return defaultVendor(meta && meta.user);
-  });
+  const [booth, setBooth] = useState(() =>
+    (venue.kind === 'booth' && venue.id && vl.label(venue.id, 'booth'))
+    || (booths[0] && booths[0].name) || '');
   const [currency, setCurrency] = useState('USD');
   const [skip, setSkip] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => { try { localStorage.setItem(VENDOR_KEY, vendor); } catch { /* ignore */ } }, [vendor]);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
     document.addEventListener('keydown', onKey);
@@ -63,7 +75,7 @@ export function PrintTags({ rows, onClose }) {
         template,
         skip: printer === 'sheet' ? Number(skip) || 0 : 0,
         ids,
-        boothNumber: vendor.trim(),
+        boothNumber: booth.trim(),
         currency,
         printAll: printer === 'codelist',
         pageSize
@@ -128,9 +140,16 @@ export function PrintTags({ rows, onClose }) {
           <h3>Details</h3>
           <div className="tagx-fields">
             <label className="tagx-field">
-              <span>Vendor code</span>
-              <input value={vendor} maxLength={6} placeholder="AGM"
-                onChange={(e) => setVendor(e.target.value.toUpperCase())} />
+              <span>Booth</span>
+              {booths.length ? (
+                <select value={booth} onChange={(e) => setBooth(e.target.value)}>
+                  {!booths.some((b) => b.name === booth) && booth && <option value={booth}>{booth}</option>}
+                  {booths.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+                </select>
+              ) : (
+                <input value={booth} placeholder="Booth name"
+                  onChange={(e) => setBooth(e.target.value)} />
+              )}
             </label>
             <label className="tagx-field">
               <span>Currency</span>

@@ -50,12 +50,3 @@ export function findSheet(family, key) {
 export function findLabel(key) {
   return LABEL_TEMPLATES.find((t) => t.key === key) || LABEL_TEMPLATES[0];
 }
-
-/** Booth/vendor code for the tag — the "AGM" line on a Sandpiper tag. */
-export function defaultVendor(user) {
-  const s = String(user || '').trim();
-  if (!s) return '';
-  const words = s.split(/[\s._-]+/).filter(Boolean);
-  const code = words.length > 1 ? words.map((w) => w[0]).join('') : s.slice(0, 3);
-  return code.toUpperCase().slice(0, 6);
-}

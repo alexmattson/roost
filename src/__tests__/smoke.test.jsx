@@ -110,8 +110,9 @@ describe('Roost app', () => {
     // Label printer stock.
     fireEvent.click(screen.getByText('Label'));
     expect(await screen.findByText('2.4" × 1.1"')).toBeTruthy();
-    // Vendor code carries a default derived from the account.
-    expect(await screen.findByPlaceholderText('AGM')).toBeTruthy();
+    // The Booth field is populated from the same venue data as the Venues tab.
+    expect(await screen.findByText('Booth')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'A1' })).toBeTruthy();
   });
 
   it('opens the Add stock sheet from Home', async () => {
