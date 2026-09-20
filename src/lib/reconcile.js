@@ -9,6 +9,7 @@
  */
 
 import { DAY } from './analytics.js';
+import { parsePins } from './pins.js';
 
 export const SEVERITY = { high: 3, medium: 2, low: 1 };
 
@@ -60,10 +61,90 @@ export function reconcile(items, quailSales, range) {
     void key;
   }
 
+  /* Durable links stamped into Sandpiper notes (see lib/pins.js): a Quail sale
+   * id pinned to an item, or an alternate inventory number the item also answers
+   * to. These override the number-based join, so a renumbered, duplicated or
+   * untagged sale still maps. Aliases are folded into the number index; sale
+   * pins take outright priority in the loop below. */
+  const salePinToItem = new Map();
+  for (const it of items) {
+    const p = parsePins(it.notes);
+    for (const sid of p.qsale) if (!salePinToItem.has(sid)) salePinToItem.set(sid, it);
+    for (const alias of p.qinv) {
+      const k = norm(alias);
+      if (!k) continue;
+      if (!spByInv.has(k)) spByInv.set(k, []);
+      if (!spByInv.get(k).includes(it)) spByInv.get(k).push(it);
+    }
+  }
+
   const matched = [];
   const untagged = [];
 
+  // A matched pair judged for value/timing disagreements, whichever way it was
+  // joined (by pin or by number).
+  const checkMatch = (pick, sale) => {
+    if (pick.sold == null) {
+      add({
+        type: 'sold-in-quail-not-in-sandpiper',
+        severity: 'high',
+        soldAt: sale.soldAt,
+        inv: pick.inv || sale.inv,
+        detail: `#${pick.inv || sale.inv} "${pick.desc}" sold in Quail but is still marked unsold in Sandpiper`,
+        quail: sale,
+        item: pick,
+        note: 'Inventory and potential-profit figures are overstated until this is recorded.'
+      });
+      return;
+    }
+    if (Math.abs(pick.soldPrice - sale.price) > CENT_TOLERANCE) {
+      add({
+        type: 'price-mismatch',
+        severity: 'high',
+        soldAt: sale.soldAt,
+        inv: pick.inv || sale.inv,
+        detail: `#${pick.inv || sale.inv} "${pick.desc}": Sandpiper ${usd(pick.soldPrice)}, Quail ${usd(sale.price)}`,
+        delta: pick.soldPrice - sale.price,
+        quail: sale,
+        item: pick
+      });
+    }
+    if (Math.abs(pick.commission - sale.consignment) > CENT_TOLERANCE) {
+      add({
+        type: 'commission-mismatch',
+        severity: 'medium',
+        soldAt: sale.soldAt,
+        inv: pick.inv || sale.inv,
+        detail: `#${pick.inv || sale.inv} "${pick.desc}": commission ${usd(pick.commission)} vs Quail ${usd(sale.consignment)}`,
+        delta: pick.commission - sale.consignment,
+        quail: sale,
+        item: pick
+      });
+    }
+    // Quail is authoritative on timing; a large gap means slow bookkeeping.
+    const lag = (pick.sold - sale.soldAt) / DAY;
+    if (lag > 3) {
+      add({
+        type: 'late-entry',
+        severity: 'low',
+        soldAt: sale.soldAt,
+        inv: pick.inv || sale.inv,
+        detail: `#${pick.inv || sale.inv} "${pick.desc}" recorded ${Math.round(lag)} days after it sold`,
+        lagDays: lag,
+        quail: sale,
+        item: pick
+      });
+    }
+  };
+
   for (const sale of quailInRange) {
+    // A durable pin wins over everything, even an untagged or mis-numbered sale.
+    const pinned = salePinToItem.get(String(sale.id));
+    if (pinned) {
+      matched.push({ sale, item: pinned });
+      checkMatch(pinned, sale);
+      continue;
+    }
     if (!sale.inv) {
       untagged.push(sale);
       continue;
@@ -87,61 +168,7 @@ export function reconcile(items, quailSales, range) {
       .sort((a, b) => Math.abs((a.sold || 0) - sale.soldAt) - Math.abs((b.sold || 0) - sale.soldAt))[0];
 
     matched.push({ sale, item: pick });
-
-    if (pick.sold == null) {
-      add({
-        type: 'sold-in-quail-not-in-sandpiper',
-        severity: 'high',
-        soldAt: sale.soldAt,
-        inv: sale.inv,
-        detail: `#${sale.inv} "${pick.desc}" sold in Quail but is still marked unsold in Sandpiper`,
-        quail: sale,
-        item: pick,
-        note: 'Inventory and potential-profit figures are overstated until this is recorded.'
-      });
-      continue;
-    }
-
-    if (Math.abs(pick.soldPrice - sale.price) > CENT_TOLERANCE) {
-      add({
-        type: 'price-mismatch',
-        severity: 'high',
-        soldAt: sale.soldAt,
-        inv: sale.inv,
-        detail: `#${sale.inv} "${pick.desc}": Sandpiper ${usd(pick.soldPrice)}, Quail ${usd(sale.price)}`,
-        delta: pick.soldPrice - sale.price,
-        quail: sale,
-        item: pick
-      });
-    }
-
-    if (Math.abs(pick.commission - sale.consignment) > CENT_TOLERANCE) {
-      add({
-        type: 'commission-mismatch',
-        severity: 'medium',
-        soldAt: sale.soldAt,
-        inv: sale.inv,
-        detail: `#${sale.inv} "${pick.desc}": commission ${usd(pick.commission)} vs Quail ${usd(sale.consignment)}`,
-        delta: pick.commission - sale.consignment,
-        quail: sale,
-        item: pick
-      });
-    }
-
-    // Quail is authoritative on timing; a large gap means slow bookkeeping.
-    const lag = (pick.sold - sale.soldAt) / DAY;
-    if (lag > 3) {
-      add({
-        type: 'late-entry',
-        severity: 'low',
-        soldAt: sale.soldAt,
-        inv: sale.inv,
-        detail: `#${sale.inv} "${pick.desc}" recorded ${Math.round(lag)} days after it sold`,
-        lagDays: lag,
-        quail: sale,
-        item: pick
-      });
-    }
+    checkMatch(pick, sale);
   }
 
   // The other direction: Sandpiper thinks it sold, Quail never saw it.

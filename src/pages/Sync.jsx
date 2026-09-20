@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { dataBounds } from '../lib/analytics.js';
 import { reconcile } from '../lib/reconcile.js';
-import { planResolution, buildVenueContext, CONFIDENCE } from '../lib/resolve.js';
+import { planResolution, planPin, PINNABLE_TYPES, buildVenueContext, CONFIDENCE } from '../lib/resolve.js';
 import { FINDING_LABELS, findingKey, matchOf } from '../lib/reconcile-ui.js';
 import { dayMonth } from '../lib/format.js';
 import { Card, Select } from '../components/ui.jsx';
@@ -19,7 +19,12 @@ export function Sync() {
     const ctx = buildVenueContext(venueInfo);
     const b = dataBounds(items);
     const r = reconcile(items, quailSales, { start: b.min, end: Math.max(Date.now(), b.max) });
-    return r.findings.map((f, i) => ({ key: findingKey(f, i), finding: f, plan: planResolution(f, ctx) }));
+    return r.findings.map((f, i) => ({
+      key: findingKey(f, i), finding: f,
+      // Probable untagged matches resolve by pinning the link into notes (and
+      // aligning any values), so the pairing sticks; the rest correct values.
+      plan: PINNABLE_TYPES.includes(f.type) ? planPin(f, ctx) : planResolution(f, ctx)
+    }));
   }, [items, quailSales, venueInfo]);
 
   const types = useMemo(() => {

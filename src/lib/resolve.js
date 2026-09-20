@@ -9,6 +9,8 @@
  * change can be shown to the user before anything leaves the browser.
  */
 
+import { addSalePin } from './pins.js';
+
 const usd = (c) => `${c < 0 ? '-' : ''}$${(Math.abs(c) / 100).toFixed(2)}`;
 const toSeconds = (ms) => Math.round(ms / 1000);
 const day = (ms) => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -96,6 +98,44 @@ export function planResolution(finding, ctx = {}) {
     type: finding.type,
     confidence: finding.type === 'probable-untagged-match' ? CONFIDENCE.probable : CONFIDENCE.exact,
     summary: changes.map((c) => `${c.label} → ${c.display}`).join(', '),
+    changes
+  };
+}
+
+/* Findings resolved by writing a durable Quail↔Sandpiper link into the item's
+   notes (lib/pins.js), rather than — or as well as — correcting values. */
+export const PINNABLE_TYPES = ['probable-untagged-match'];
+
+/**
+ * A plan that pins the Quail sale to the Sandpiper item (stamping `qsale` into
+ * notes) and, if the same pass can, aligns any values that differ. Once applied
+ * the pairing is permanent, so the finding never resurfaces even though Quail's
+ * copy is untouched.
+ */
+export function planPin(finding, ctx = {}) {
+  const item = finding.item;
+  const sale = finding.quail;
+  if (!item || !sale) return null;
+
+  const base = planResolution(finding, ctx);
+  const changes = base ? base.changes.slice() : [];
+
+  const notesTo = addSalePin(item.notes, sale.id);
+  if (notesTo !== (item.notes || '')) {
+    changes.push({
+      field: 'notes', label: 'Link', from: item.notes || '', to: notesTo,
+      display: `Quail sale #${sale.inv || sale.id}`, displayFrom: item.notes ? 'note' : 'none'
+    });
+  }
+  if (!changes.length) return null;
+
+  return {
+    itemId: item.id,
+    inv: item.inv,
+    desc: item.desc,
+    type: finding.type,
+    confidence: finding.type === 'probable-untagged-match' ? CONFIDENCE.probable : 'manual',
+    summary: [base && base.summary, 'link Quail sale'].filter(Boolean).join(', '),
     changes
   };
 }
