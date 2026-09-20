@@ -11,8 +11,8 @@ import { useState, useMemo } from 'react';
  * Sorting is by `sortValue` (or row[key]) — numbers and strings, nulls last.
  */
 export function SortableTable({
-  columns, rows, initialSort, fixed = false, actsWidth = 0,
-  trailingHeader = null, renderRow, limit, empty = 'Nothing here yet'
+  columns, rows, initialSort, fixed = false, actsWidth = 0, leadWidth = 0,
+  leadingHeader = null, trailingHeader = null, renderRow, limit, empty = 'Nothing here yet'
 }) {
   const [sort, setSort] = useState(initialSort || { key: columns[0].key, dir: -1 });
 
@@ -40,12 +40,14 @@ export function SortableTable({
       <table className={fixed ? 'items-table' : ''}>
         {fixed && (
           <colgroup>
+            {leadWidth > 0 && <col style={{ width: `${leadWidth}%` }} />}
             {columns.map((c) => <col key={c.key} style={{ width: `${c.width}%` }} />)}
             {actsWidth > 0 && <col style={{ width: `${actsWidth}%` }} />}
           </colgroup>
         )}
         <thead>
           <tr>
+            {leadingHeader}
             {columns.map((c) => (
               <th key={c.key} className={`sortable ${c.num ? 'num' : ''}`} onClick={() => sortBy(c.key)}>
                 {c.title}{sort.key === c.key && <span className="arrow"> {sort.dir > 0 ? '▲' : '▼'}</span>}

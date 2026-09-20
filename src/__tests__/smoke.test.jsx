@@ -115,6 +115,18 @@ describe('Roost app', () => {
     expect(await screen.findByRole('option', { name: 'A1' })).toBeTruthy();
   });
 
+  it('selects inventory items to print', async () => {
+    seed('records');
+    render(<App />);
+    // Tick one item; the Print tags button reflects the selection count.
+    const box = await screen.findByLabelText('Select #0100');
+    fireEvent.click(box);
+    expect(await screen.findByRole('button', { name: 'Print tags (1)' })).toBeTruthy();
+    // Clearing resets it.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(await screen.findByRole('button', { name: 'Print tags' })).toBeTruthy();
+  });
+
   it('opens the Add stock sheet from Home', async () => {
     seed('home');
     render(<App />);

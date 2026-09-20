@@ -548,6 +548,13 @@ td.wrap { white-space: normal; max-width: 420px; }
 .confirm-warn { font-size: 11px; color: var(--brass); margin-right: auto; }
 
 td.pick, th.pick { width: 26px; text-align: center; }
+.items-table tr.picked { background: var(--brass-tint, rgba(240,180,41,.08)); }
+.items-table tr.picked:hover { background: var(--brass-tint, rgba(240,180,41,.13)); }
+.table-controls .sel-count { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.linklike {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--brass); font: inherit; text-decoration: underline;
+}
 td.act, th.act { width: 46px; text-align: right; }
 input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0; }
 
@@ -1010,6 +1017,9 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   padding: 2px 8px; border-radius: 5px; cursor: pointer; text-transform: none; letter-spacing: 0;
 }
 .tagx-seg button.on { background: var(--brass); color: #26200a; font-weight: 620; }
+/* Brass is a dark gold in the light theme, so the selected pill reads dark-on-
+   dark — switch its text to white there. */
+:root[data-theme="light"] .tagx-seg button.on { color: #fff; }
 
 /* Size chooser */
 .tagx-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }

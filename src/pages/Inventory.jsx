@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
@@ -24,6 +24,7 @@ export function Inventory() {
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState(null);
   const [showPrint, setShowPrint] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
 
   useEffect(() => { if (inventoryFilter) setFilter(inventoryFilter); }, [inventoryFilter]);
 
@@ -31,6 +32,25 @@ export function Inventory() {
     () => filterItems(items, { start: range.start, end: range.end, filter, search }),
     [items, range, filter, search]
   );
+
+  // Selection for label printing. Kept as ids so it survives filtering; the tag
+  // set is whatever is ticked, or the whole current view when nothing is.
+  const allChecked = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const someChecked = !allChecked && rows.some((r) => selected.has(r.id));
+  const printRows = selected.size ? items.filter((r) => selected.has(r.id)) : rows;
+
+  const toggleOne = (id) => setSelected((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const toggleAll = () => setSelected((prev) => {
+    const n = new Set(prev);
+    if (rows.every((r) => n.has(r.id))) rows.forEach((r) => n.delete(r.id));
+    else rows.forEach((r) => n.add(r.id));
+    return n;
+  });
+  const clearSel = () => setSelected(new Set());
 
   const flash = (kind, text, ms = 2600) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
   const startEdit = (r) => { setEditingId(r.id); setFields(editFields(r)); };
@@ -79,7 +99,8 @@ export function Inventory() {
 
   const renderRow = (r) => (editingId === r.id
     ? <EditorRow key={r.id} r={r} fields={fields} setFields={setFields} onSave={() => save(r)} onCancel={cancelEdit} />
-    : <ItemRow key={r.id} r={r} onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />);
+    : <ItemRow key={r.id} r={r} checked={selected.has(r.id)} onToggle={() => toggleOne(r.id)}
+        onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />);
 
   return (
     <Card className="records-card">
@@ -91,7 +112,10 @@ export function Inventory() {
           <Select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
-          <Button small onClick={() => setShowPrint(true)}>Print tags</Button>
+          {selected.size > 0 && (
+            <span className="sel-count">{selected.size} selected · <button type="button" className="linklike" onClick={clearSel}>Clear</button></span>
+          )}
+          <Button small onClick={() => setShowPrint(true)}>Print tags{selected.size ? ` (${selected.size})` : ''}</Button>
           <Button small onClick={openAddStock}>+ Add stock</Button>
         </div>
       </div>
@@ -102,20 +126,30 @@ export function Inventory() {
 
       <div className="table-scroll">
         <SortableTable
-          columns={ITEM_COLUMNS} rows={rows} fixed actsWidth={ITEM_ACTS_W}
+          columns={ITEM_COLUMNS} rows={rows} fixed actsWidth={ITEM_ACTS_W} leadWidth={4}
           initialSort={{ key: 'acquired', dir: -1 }} limit={400}
+          leadingHeader={<th className="pick"><SelectAll checked={allChecked} indeterminate={someChecked} onChange={toggleAll} /></th>}
           trailingHeader={<th className="row-acts" />} renderRow={renderRow}
           empty="No items match those filters" />
       </div>
 
-      {showPrint && <PrintTags rows={rows} onClose={() => setShowPrint(false)} />}
+      {showPrint && <PrintTags rows={printRows} onClose={() => setShowPrint(false)} />}
     </Card>
   );
 }
 
-function ItemRow({ r, onClick, onDelete }) {
+function SelectAll({ checked, indeterminate, onChange }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) ref.current.indeterminate = indeterminate; }, [indeterminate]);
+  return <input ref={ref} type="checkbox" checked={checked} onChange={onChange} aria-label="Select all shown items" />;
+}
+
+function ItemRow({ r, checked, onToggle, onClick, onDelete }) {
   return (
-    <tr className="editable" title="Click to edit" onClick={onClick}>
+    <tr className={`editable${checked ? ' picked' : ''}`} title="Click to edit" onClick={onClick}>
+      <td className="pick" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Select #${r.inv || '—'}`} />
+      </td>
       {ITEM_COLUMNS.map((c) => {
         const cls = [c.num && 'num', typeof c.cls === 'function' ? c.cls(r) : c.cls].filter(Boolean).join(' ');
         const content = c.render(r);
@@ -130,6 +164,7 @@ function EditorRow({ r, fields, setFields, onSave, onCancel }) {
   const set = (k) => (e) => setFields({ ...fields, [k]: e.target.value });
   return (
     <tr className="editing">
+      <td className="pick" />
       <td><input className="e-inv" value={fields.inv} onChange={set('inv')} aria-label="Inventory number" /></td>
       <td><input className="e-desc" autoFocus value={fields.desc} onChange={set('desc')} aria-label="Description" /></td>
       <td className="muted">{r.category}</td>
