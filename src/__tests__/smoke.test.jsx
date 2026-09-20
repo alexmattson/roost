@@ -73,6 +73,17 @@ describe('Roost app', () => {
     expect(await screen.findByText('Net profit')).toBeTruthy();
   });
 
+  it('renders the Catalog table with sortable headers', async () => {
+    seed('analyze');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Catalog' }));
+    // The categories table is the shared SortableTable — headers are clickable.
+    const header = await screen.findByText('Sell-through');
+    expect(header.closest('th').className).toContain('sortable');
+    fireEvent.click(header); // sort by it — must not throw
+    expect(await screen.findByText('Category')).toBeTruthy();
+  });
+
   it('renders the Sync page anomalies table', async () => {
     seed('records');
     render(<App />);

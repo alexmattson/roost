@@ -11,6 +11,7 @@ import { format as fmtDate } from 'date-fns';
 import { Card, CardHead, Kpi } from '../components/ui.jsx';
 import { Chart } from '../components/Chart.jsx';
 import { Legend, DataTable, Trend, bandUp, bandDown, bandSign, nameCell } from '../components/analyze-ui.jsx';
+import { SortableTable } from '../components/SortableTable.jsx';
 
 const SPEED = [['0–7 d', 0, 7], ['8–30 d', 7, 30], ['31–60 d', 30, 60], ['61–90 d', 60, 90], ['91–180 d', 90, 180], ['180+ d', 180, Infinity]];
 // Resolved at call time, never snapshotted — PALETTE is mutated in place by
@@ -329,16 +330,16 @@ function CatalogTab({ s }) {
         <Chart deps={[s]} draw={(el) => hbar(el, { rows: [...cats].sort((a, b) => b.sellThrough - a.sellThrough).map((c) => ({ label: c.name, value: c.sellThrough, sub: `${c.sold} of ${c.total}` })), format: (v) => pct(v, 0), colorFor: () => PALETTE.brass })} /></Card>
     </div>
     <Card><CardHead title="Categories" />
-      <DataTable rows={s.categories} empty="No categories" columns={[
-        { title: 'Category', cls: 'name', render: (r) => r.name },
-        { title: 'On hand', num: true, render: (r) => int(r.onHand) },
-        { title: 'Sold', num: true, render: (r) => int(r.sold) },
-        { title: 'Sell-through', num: true, render: (r) => pct(r.sellThrough, 0) },
-        { title: 'Stock at cost', num: true, render: (r) => money(r.cost, { compact: true }) },
-        { title: 'Asking value', num: true, render: (r) => money(r.ask, { compact: true }) },
-        { title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
-        { title: 'Profit', num: true, cls: (r) => signClass(r.profit), render: (r) => money(r.profit, { compact: true }) }]}
-        getKey={(r) => r.name} /></Card>
+      <SortableTable rows={s.categories} empty="No categories" getKey={(r) => r.name}
+        initialSort={{ key: 'profit', dir: -1 }} columns={[
+          { key: 'name', title: 'Category', cls: 'name', render: (r) => r.name },
+          { key: 'onHand', title: 'On hand', num: true, render: (r) => int(r.onHand) },
+          { key: 'sold', title: 'Sold', num: true, render: (r) => int(r.sold) },
+          { key: 'sellThrough', title: 'Sell-through', num: true, render: (r) => pct(r.sellThrough, 0) },
+          { key: 'cost', title: 'Stock at cost', num: true, render: (r) => money(r.cost, { compact: true }) },
+          { key: 'ask', title: 'Asking value', num: true, render: (r) => money(r.ask, { compact: true }) },
+          { key: 'net', title: 'Net payout', num: true, render: (r) => money(r.net, { compact: true }) },
+          { key: 'profit', title: 'Profit', num: true, cls: (r) => signClass(r.profit), render: (r) => money(r.profit, { compact: true }) }]} /></Card>
   </>);
 }
 

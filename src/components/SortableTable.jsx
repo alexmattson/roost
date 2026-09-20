@@ -12,7 +12,8 @@ import { useState, useMemo } from 'react';
  */
 export function SortableTable({
   columns, rows, initialSort, fixed = false, actsWidth = 0, leadWidth = 0,
-  leadingHeader = null, trailingHeader = null, renderRow, limit, empty = 'Nothing here yet'
+  leadingHeader = null, trailingHeader = null, renderRow, limit,
+  getKey = (r) => r.id, empty = 'Nothing here yet'
 }) {
   const [sort, setSort] = useState(initialSort || { key: columns[0].key, dir: -1 });
 
@@ -60,7 +61,7 @@ export function SortableTable({
           {shown.map((r) => (renderRow
             ? renderRow(r)
             : (
-              <tr key={r.id}>
+              <tr key={getKey(r)}>
                 {columns.map((c) => {
                   const cls = [c.num && 'num', typeof c.cls === 'function' ? c.cls(r) : c.cls].filter(Boolean).join(' ');
                   return <td key={c.key} className={cls}>{c.render(r)}</td>;
