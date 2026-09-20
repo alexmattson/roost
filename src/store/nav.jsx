@@ -13,7 +13,7 @@ export const MODES = [
   {
     id: 'analyze', label: 'Analyze',
     tabs: [['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'], ['catalog', 'Catalog'], ['venues', 'Venues']],
-    presets: [['today', 'Today'], ['month', 'MTD'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
+    presets: [['today', 'Today'], ['month', 'This month'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
     defaultPreset: 'all'
   },
   {
