@@ -1204,6 +1204,12 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .mc-rate-edit input { width: 56px; text-align: right; margin-right: 3px; }
 .mc-add-booth { margin-top: 4px; align-self: flex-start; }
 .mc-note { color: var(--faint); font-size: 11.5px; padding: 4px 2px; }
+.linklike {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--brass); font: inherit; font-size: 12px; text-decoration: underline;
+}
+.linklike:hover { filter: brightness(1.12); }
+.linklike[disabled] { opacity: .5; cursor: default; text-decoration: none; }
 .linklike.danger { color: var(--red); }
 
 /* Home — per-channel strip under take-home */
