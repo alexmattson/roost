@@ -12,7 +12,7 @@ export const MODES = [
   { id: 'home', label: 'Home', tabs: [['home', 'Home']], presets: [], fullRange: true, defaultPreset: 'all' },
   {
     id: 'analyze', label: 'Analyze',
-    tabs: [['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'], ['catalog', 'Catalog'], ['venues', 'Venues']],
+    tabs: [['overview', 'Overview'], ['sales', 'Sales'], ['inventory', 'Inventory'], ['catalog', 'Catalog'], ['venues', 'Channels']],
     presets: [['today', 'Today'], ['month', 'This month'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['ytd', 'YTD'], ['12m', '1Y'], ['all', 'All time'], ['custom', 'Custom']],
     defaultPreset: 'all'
   },
@@ -61,6 +61,7 @@ export function NavProvider({ children }) {
   const [venue, setVenue] = useState({ kind: 'all', id: null });
   const [inventoryFilter, setInventoryFilter] = useState('all');
   const [addStockOpen, setAddStockOpen] = useState(false);
+  const [manageChannelsOpen, setManageChannelsOpen] = useState(false);
 
   const active = modeById(mode);
   const tab = tabByMode[mode] || restore('sp_tab_' + mode, active.tabs[0][0]);
@@ -103,11 +104,13 @@ export function NavProvider({ children }) {
   }, []);
 
   const value = {
-    mode, tab, range, venue, active, inventoryFilter, addStockOpen,
+    mode, tab, range, venue, active, inventoryFilter, addStockOpen, manageChannelsOpen,
     selectMode, selectTab, setPreset, setCustomRange, setVenue, setInventoryFilter,
     goToInventory, goToSync,
     openAddStock: () => setAddStockOpen(true),
-    closeAddStock: () => setAddStockOpen(false)
+    closeAddStock: () => setAddStockOpen(false),
+    openManageChannels: () => setManageChannelsOpen(true),
+    closeManageChannels: () => setManageChannelsOpen(false)
   };
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

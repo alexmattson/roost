@@ -8,7 +8,7 @@ import { makeVenueLabels } from '../lib/venues.js';
 import { PALETTE, SERIES_COLORS, lineChart, barChart, donut, hbar, scatter } from '../lib/charts.js';
 import { money, int, pct, days, signClass, dayMonth } from '../lib/format.js';
 import { format as fmtDate } from 'date-fns';
-import { Card, CardHead, Kpi } from '../components/ui.jsx';
+import { Card, CardHead, Kpi, Button } from '../components/ui.jsx';
 import { Chart } from '../components/Chart.jsx';
 import { Legend, DataTable, Trend, bandUp, bandDown, bandSign, nameCell } from '../components/analyze-ui.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
@@ -66,7 +66,10 @@ function Overview({ s, q, rentInfo, range, ledger, scopedRent, venue }) {
   const grossProfit = s.sales.profit;
   const netProfit = grossProfit - rentInfo.cents;
   const takeHome = s.sales.net - rentInfo.cents;
-  const rentCover = rentInfo.cents > 0 ? grossProfit / rentInfo.cents : null;
+  // Rent is a booth cost, so measure it against booth-channel profit only —
+  // direct-channel (Facebook) profit shouldn't paper over the booth's rent.
+  const boothProfit = (s.sales.booth && s.sales.booth.profit != null) ? s.sales.booth.profit : grossProfit;
+  const rentCover = rentInfo.cents > 0 ? boothProfit / rentInfo.cents : null;
   const netMargin = s.sales.gross > 0 ? netProfit / s.sales.gross : null;
   const staleShare = s.inventory.units ? s.inventory.stale / s.inventory.units : 0;
   const sub = (text, cur, pr) => <>{text} <Trend current={cur} prior={pr} hasData={prev.hasData} /></>;
@@ -84,7 +87,7 @@ function Overview({ s, q, rentInfo, range, ledger, scopedRent, venue }) {
         <Kpi label="Asking value" value={money(s.inventory.ask, { compact: true })} exact={money(s.inventory.ask)} sub="what that stock is priced at" />
         <Kpi label="Potential profit" status={s.inventory.units ? bandSign(s.inventory.potentialProfit) : null} value={money(s.inventory.potentialProfit, { compact: true })} exact={money(s.inventory.potentialProfit)} sub="if it all sells at asking" />
         <Kpi label="Spent on stock" value={money(s.buying.spend, { compact: true })} exact={money(s.buying.spend)} sub={sub(`${s.buying.units} items`, s.buying.spend, prev.spend)} />
-        <Kpi label="Rent covered" status={bandUp(rentCover, 1, 0.6)} value={pct(rentCover, 0)} sub="gross profit against booth rent" />
+        <Kpi label="Rent covered" status={bandUp(rentCover, 1, 0.6)} value={pct(rentCover, 0)} sub="booth profit against booth rent" />
         <Kpi label="Sell-through" status={s.counts.sold + s.counts.onHand ? bandUp(s.velocity.sellThrough, 0.4, 0.2) : null} value={pct(s.velocity.sellThrough)} sub={`${int(s.counts.sold)} of ${int(s.counts.sold + s.counts.onHand)} available`} />
         <Kpi label="Aged over 180 days" status={s.inventory.units ? bandDown(staleShare, 0.001, 0.2) : null} value={int(s.inventory.stale)} sub={s.inventory.stale ? `${money(s.inventory.staleCost, { compact: true })} tied up` : 'nothing sitting long'} />
         <Kpi label="Since last sale" status={q ? bandDown(q.daysSinceLastSale, 7, 21) : null} value={q && q.daysSinceLastSale != null ? days(q.daysSinceLastSale) : '—'} sub={q && q.lastSaleAt ? dayMonth(q.lastSaleAt) : 'from the register'} />
@@ -345,11 +348,54 @@ function CatalogTab({ s }) {
 
 /* ------------------------------------------------------------------ Venues */
 
+const CHAN_TONE = { pos: '', direct: 'probable', unassigned: 'manual' };
+const CHAN_TYPE_LABEL = { pos: 'Booth', direct: 'Direct', unassigned: 'Unassigned' };
+
 function VenuesTab({ s, vl }) {
   const { stores, booths } = s.venues;
-  const { renameVenue } = useData();
+  const { renameVenue, venueInfo } = useData();
+  const { openManageChannels, setVenue } = useNav();
+  const chans = s.sales.channels || [];
+  const totals = chans.reduce((a, c) => ({ units: a.units + c.units, gross: a.gross + c.gross, net: a.net + c.net, profit: a.profit + c.profit }), { units: 0, gross: 0, net: 0, profit: 0 });
+  const scopeTo = (c) => {
+    if (c.type === 'unassigned') return;
+    setVenue(venueInfo.booths && venueInfo.booths[c.id] ? { kind: 'booth', id: c.id } : { kind: 'store', id: c.id });
+  };
   const series = s.venues.boothSeries.map((b, i) => ({ name: vl.label(b.id, 'booth'), color: SERIES_COLORS[i % SERIES_COLORS.length], values: b.values }));
   return (<>
+    <Card className="records-card-plain">
+      <div className="card-head">
+        <h2>Sales by channel</h2>
+        <span className="hint source">Booth (POS) vs direct channels like Facebook</span>
+        <Button small onClick={openManageChannels}>Manage channels</Button>
+      </div>
+      {chans.length === 0 ? <div className="note">No sales in this range.</div> : (
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Channel</th><th>Type</th><th className="num">Units</th><th className="num">Gross</th><th className="num">Net payout</th><th className="num">Profit</th></tr></thead>
+            <tbody>
+              {chans.map((c) => (
+                <tr key={c.id} className="editable" onClick={() => scopeTo(c)} title={c.type === 'unassigned' ? '' : 'View this channel'}>
+                  <td className="name">{c.label}</td>
+                  <td><span className={`pill ${CHAN_TONE[c.type] || ''}`}>{CHAN_TYPE_LABEL[c.type] || c.type}</span></td>
+                  <td className="num">{int(c.units)}</td>
+                  <td className="num">{money(c.gross, { compact: true })}</td>
+                  <td className="num">{money(c.net, { compact: true })}</td>
+                  <td className={`num ${signClass(c.profit)}`}>{money(c.profit, { compact: true })}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot><tr>
+              <td>All channels</td><td />
+              <td className="num">{int(totals.units)}</td>
+              <td className="num">{money(totals.gross, { compact: true })}</td>
+              <td className="num">{money(totals.net, { compact: true })}</td>
+              <td className={`num ${signClass(totals.profit)}`}>{money(totals.profit, { compact: true })}</td>
+            </tr></tfoot>
+          </table>
+        </div>
+      )}
+    </Card>
     <div className="grid-2">
       <Card><CardHead title="Net payout by booth" />
         <Chart deps={[s]} draw={(el) => hbar(el, { rows: booths.map((b) => ({ label: vl.label(b.id, 'booth'), value: b.net, sub: `${b.units} sold · ${money(b.profit)} gross profit` })), format: (v) => money(v, { compact: true }), colorFor: (r, i) => (r.value < 0 ? PALETTE.red : SERIES_COLORS[i % SERIES_COLORS.length]) })} /></Card>

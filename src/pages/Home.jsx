@@ -27,7 +27,7 @@ function homeGreeting(now) {
 
 export function Home() {
   const { ledger, items, quailSales, ledgerSummary, venueInfo, applyEdits, raw } = useData();
-  const { selectMode, selectTab, goToInventory, goToSync, openAddStock } = useNav();
+  const { selectMode, selectTab, goToInventory, goToSync, openAddStock, setVenue } = useNav();
   const [banner, setBanner] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -44,6 +44,15 @@ export function Home() {
   const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
   const thisMonth = takeHome(monthStart, now.getTime());
   const lastMonth = takeHome(lastStart, monthStart - 1);
+  // This month's split across channels — only surfaced when more than one is active.
+  const monthChannels = useMemo(
+    () => analyze(ledger, { start: monthStart, end: now.getTime() }).sales.channels || [],
+    [ledger, monthStart] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const openChannel = (c) => {
+    if (c.type !== 'unassigned') setVenue(venueInfo.booths && venueInfo.booths[c.id] ? { kind: 'booth', id: c.id } : { kind: 'store', id: c.id });
+    selectMode('analyze'); selectTab('venues');
+  };
   const monthName = fmtDate(now, 'MMMM');
   const lastName = fmtDate(lastStart, 'MMMM');
 
@@ -110,6 +119,16 @@ export function Home() {
         <div className="home-take-num">{money(thisMonth)}</div>
         <div className="home-take-sub">taken home in {monthName}, so far</div>
         <div className="home-lastmonth">{lastName}&nbsp;&nbsp;<b>{money(lastMonth)}</b></div>
+        {monthChannels.length > 1 && (
+          <div className="home-channels">
+            {monthChannels.map((c) => (
+              <button className="home-chan" key={c.id} onClick={() => openChannel(c)} title={`View ${c.label}`}>
+                <span className="home-chan-label">{c.label}</span>
+                <span className="home-chan-val">{money(c.gross, { compact: true })}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="home-actions">
           <Button variant="primary" onClick={openAddStock}>+ Add stock</Button>
           {stats.inventory.stale > 0 &&

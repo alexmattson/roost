@@ -3,6 +3,7 @@ import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
 import { ITEM_COLUMNS, ITEM_ACTS_W, filterItems, collectChanges, editFields } from '../lib/items.js';
+import { makeVenueLabels } from '../lib/venues.js';
 import { Card, Button, SearchInput, Select } from '../components/ui.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 import { PrintTags } from './PrintTags.jsx';
@@ -13,8 +14,18 @@ const FILTERS = [
 ];
 
 export function Inventory() {
-  const { items, applyEdits, deleteItems } = useData();
+  const { items, applyEdits, deleteItems, venueInfo, venueNames } = useData();
   const { range, inventoryFilter, setInventoryFilter, openAddStock } = useNav();
+
+  // Channels an item can be attributed to (Sandpiper booths + their store).
+  const vl = useMemo(() => makeVenueLabels(venueInfo, venueNames), [venueInfo, venueNames]);
+  const boothOptions = useMemo(() => {
+    const bs = (venueInfo && venueInfo.booths) || {};
+    return Object.keys(bs).map((id) => ({
+      id, storeId: bs[id].storeId || '', label: vl.label(id, 'booth'),
+      store: bs[id].storeId ? vl.label(bs[id].storeId, 'store') : ''
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [venueInfo, vl]);
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(inventoryFilter || 'all');
@@ -96,8 +107,27 @@ export function Inventory() {
     finally { setBusy(false); }
   };
 
+  const bulkAssign = async (value) => {
+    if (!value || !selected.size) return;
+    const opt = boothOptions.find((o) => o.id === value);
+    const clearing = value === '__unassign__';
+    const boothId = clearing ? null : value;
+    const storeId = clearing ? null : (opt ? opt.storeId : null);
+    const ids = [...selected];
+    setBusy(true);
+    try {
+      const res = await applyEdits(ids.map((id) => ({ itemId: id, changes: [{ field: 'soldBooth', to: boothId }, { field: 'soldStore', to: storeId }] })));
+      const bad = res.results.find((x) => !x.ok);
+      setSelected(new Set());
+      flash(bad ? 'error' : 'ok',
+        bad ? `Assigned some, then stopped: ${bad.error}` : `Assigned ${ids.length} item${ids.length === 1 ? '' : 's'} to ${clearing ? 'Unassigned' : (opt ? opt.label : value)}.`,
+        bad ? 0 : 2800);
+    } catch (e) { flash('error', e.message, 0); }
+    finally { setBusy(false); }
+  };
+
   const renderRow = (r) => (editingId === r.id
-    ? <EditorRow key={r.id} r={r} fields={fields} setFields={setFields} onSave={() => save(r)} onCancel={cancelEdit} />
+    ? <EditorRow key={r.id} r={r} fields={fields} setFields={setFields} boothOptions={boothOptions} onSave={() => save(r)} onCancel={cancelEdit} />
     : <ItemRow key={r.id} r={r} checked={selected.has(r.id)} onToggle={() => toggleOne(r.id)}
         onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />);
 
@@ -111,6 +141,14 @@ export function Inventory() {
           <Select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
+          {selected.size > 0 && boothOptions.length > 0 && (
+            <Select value="" aria-label="Assign selected to a channel"
+              onChange={(e) => { bulkAssign(e.target.value); e.target.value = ''; }}>
+              <option value="">Assign channel…</option>
+              {boothOptions.map((o) => <option key={o.id} value={o.id}>{o.label}{o.store ? ` · ${o.store}` : ''}</option>)}
+              <option value="__unassign__">Unassigned</option>
+            </Select>
+          )}
           <Button small onClick={() => setShowPrint(true)}>Print tags{selected.size ? ` (${selected.size})` : ''}</Button>
           <Button small onClick={openAddStock}>+ Add stock</Button>
         </div>
@@ -156,14 +194,24 @@ function ItemRow({ r, checked, onToggle, onClick, onDelete }) {
   );
 }
 
-function EditorRow({ r, fields, setFields, onSave, onCancel }) {
+function EditorRow({ r, fields, setFields, boothOptions = [], onSave, onCancel }) {
   const set = (k) => (e) => setFields({ ...fields, [k]: e.target.value });
+  const setBooth = (e) => {
+    const id = e.target.value;
+    const opt = boothOptions.find((o) => o.id === id);
+    setFields({ ...fields, booth: id, store: opt ? opt.storeId : '' });
+  };
   return (
     <tr className="editing">
       <td className="pick" />
       <td><input className="e-inv" value={fields.inv} onChange={set('inv')} aria-label="Inventory number" /></td>
       <td><input className="e-desc" autoFocus value={fields.desc} onChange={set('desc')} aria-label="Description" /></td>
-      <td className="muted">{r.category}</td>
+      <td>{boothOptions.length
+        ? <select className="e-booth" value={fields.booth || ''} onChange={setBooth} aria-label="Channel">
+            <option value="">Unassigned</option>
+            {boothOptions.map((o) => <option key={o.id} value={o.id}>{o.label}{o.store ? ` · ${o.store}` : ''}</option>)}
+          </select>
+        : <span className="muted">{r.category}</span>}</td>
       <td><input type="date" className="e-acquired" value={fields.acquired} onChange={set('acquired')} aria-label="Acquired date" /></td>
       <td><input className="e-cost num" value={fields.cost} onChange={set('cost')} inputMode="decimal" aria-label="Cost" /></td>
       <td><input className="e-ask num" value={fields.ask} onChange={set('ask')} inputMode="decimal" aria-label="Asking price" /></td>

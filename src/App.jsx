@@ -10,6 +10,7 @@ import { PosSales } from './pages/PosSales.jsx';
 import { Inventory } from './pages/Inventory.jsx';
 import { Analyze } from './pages/Analyze.jsx';
 import { AddStock } from './pages/AddStock.jsx';
+import { ManageChannels } from './pages/ManageChannels.jsx';
 import { useTooltips } from './hooks/useTooltips.js';
 
 export default function App() {
@@ -98,8 +99,15 @@ function Dashboard() {
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>
       <AddStockHost />
+      <ManageChannelsHost />
     </>
   );
+}
+
+function ManageChannelsHost() {
+  const { manageChannelsOpen, closeManageChannels } = useNav();
+  if (!manageChannelsOpen) return null;
+  return <ManageChannels onClose={closeManageChannels} />;
 }
 
 /** Add stock is a full-screen sheet openable from anywhere (Home, Inventory),

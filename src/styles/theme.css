@@ -1150,3 +1150,76 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   color: var(--brass); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
 }
 .home-more:hover { text-decoration: underline; }
+
+/* ------------------------------------------------------- Manage channels
+
+   A management sheet over the app for Sandpiper stores and booths. Direct
+   channels (no Quail link) are fully editable; linked ones are read-only. */
+
+.mc-body {
+  flex: 1; overflow-y: auto; padding: 18px;
+  max-width: 720px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.mc-add { padding: 2px 0; }
+.mc-form {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--panel-2);
+}
+.mc-form input {
+  flex: 1; min-width: 160px; background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px;
+}
+.mc-form .mc-state { flex: 0 0 60px; min-width: 60px; text-transform: uppercase; }
+
+.mc-store { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); overflow: hidden; }
+.mc-store.linked { opacity: .92; }
+.mc-store-head {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  border-bottom: 1px solid var(--border-soft); background: var(--panel-2);
+}
+.mc-store-head h3 { margin: 0; font-size: 13.5px; font-weight: 620; }
+.mc-store-head input {
+  flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 13px;
+}
+.mc-loc { color: var(--faint); font-weight: 400; font-size: 11.5px; }
+.mc-store-acts { margin-left: auto; display: flex; gap: 12px; }
+.mc-booths { padding: 6px 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.mc-booth {
+  display: flex; align-items: center; gap: 10px; padding: 7px 2px;
+  border-bottom: 1px solid var(--border-soft); font-size: 12.5px;
+}
+.mc-booth:last-child { border-bottom: 0; }
+.mc-booth-name { font-weight: 600; min-width: 72px; }
+.mc-booth-rate { color: var(--muted); }
+.mc-booth .mc-store-acts { margin-left: auto; }
+.mc-booth.editing { gap: 8px; }
+.mc-booth .mc-num { flex: 0 0 110px; }
+.mc-booth input {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px;
+}
+.mc-rate-edit { color: var(--muted); }
+.mc-rate-edit input { width: 56px; text-align: right; margin-right: 3px; }
+.mc-add-booth { margin-top: 4px; align-self: flex-start; }
+.mc-note { color: var(--faint); font-size: 11.5px; padding: 4px 2px; }
+.linklike.danger { color: var(--red); }
+
+/* Home — per-channel strip under take-home */
+.home-channels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.home-chan {
+  display: inline-flex; flex-direction: column; gap: 1px; align-items: flex-start;
+  padding: 7px 12px; border-radius: 10px; border: 1px solid #c68e1466;
+  background: rgba(255,255,255,.14); color: #2a2003; cursor: pointer; font: inherit;
+}
+.home-chan:hover { background: rgba(255,255,255,.24); }
+.home-chan-label { font-size: 11px; opacity: .8; }
+.home-chan-val { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+
+/* Inventory editor: channel select matches the other edit inputs */
+.items-table tr.editing select.e-booth {
+  width: 100%; height: 26px; box-sizing: border-box;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 0 6px; font: inherit; font-size: 11.5px;
+}

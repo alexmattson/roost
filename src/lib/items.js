@@ -83,6 +83,14 @@ export function collectChanges(r, fields) {
     const sp = centsFromText(fields.soldPrice);
     if (sp != null && sp !== r.soldPrice) changes.push({ field: 'soldPrice', to: sp });
   }
+
+  // Channel attribution: the sold booth/store the sale belongs to.
+  if ('booth' in fields) {
+    const booth = fields.booth || null;
+    if (booth !== (r.booth || null)) changes.push({ field: 'soldBooth', to: booth });
+    const store = fields.store || null;
+    if (store !== (r.store || null)) changes.push({ field: 'soldStore', to: store });
+  }
   return changes;
 }
 
@@ -93,5 +101,7 @@ export const editFields = (r) => ({
   cost: centsToText(r.cost),
   ask: centsToText(r.ask),
   sold: dateInputValue(r.sold),
-  soldPrice: centsToText(r.soldPrice)
+  soldPrice: centsToText(r.soldPrice),
+  booth: r.booth || '',
+  store: r.store || ''
 });
