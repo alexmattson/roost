@@ -1,55 +1,57 @@
 /**
- * The label stocks Sandpiper can render, mapped to what its barcode API wants:
- * a `template` id and a `pageSize` in millimetres. Sandpiper does the layout and
- * barcode drawing server-side (see core.generateBarcodes); we only pick a stock.
+ * The label stocks Sandpiper's barcode UI offers, taken verbatim from its own
+ * bundle. Sandpiper renders the file server-side (see core.generateBarcodes);
+ * we only choose a stock and it maps to the request the API wants.
  *
- * Confirmed against a live request: the 2" × 1" label posts
- * `template: "30up"`, `pageSize: { width: 50.8, height: 25.4 }`. The sheet
- * templates follow Sandpiper's "<count>up" naming (20/30/60/80 per US-Letter
- * sheet); the A4 and other label ids are our best mapping and easy to correct
- * here in one place if a stock comes back rejected.
+ * The generate-ids payload, as Sandpiper builds it:
+ *   template : always one of the SHEET keys below (even for Label / Code List —
+ *              it defaults to "30up").
+ *   pageSize : sent ONLY in Label mode, as the chosen label's { width, height }
+ *              in millimetres; omitted otherwise.
+ *   printAll : true only for the Code List ("OTHER") printer type.
  */
-
-const IN = 25.4; // inches → mm
-const mm = (w, h) => ({ width: Math.round(w * 100) / 100, height: Math.round(h * 100) / 100 });
 
 export const SHEET_TEMPLATES = {
   letter: [
-    { id: 'us-4x1',      name: '4" × 1"',       template: '20up', per: 20, pageSize: mm(4 * IN, 1 * IN) },
-    { id: 'us-2.625x1',  name: '2-5/8" × 1"',   template: '30up', per: 30, pageSize: mm(2.625 * IN, 1 * IN) },
-    { id: 'us-1.75x.67', name: '1-3/4" × 2/3"', template: '60up', per: 60, pageSize: mm(1.75 * IN, 0.6667 * IN) },
-    { id: 'us-1.75x.5',  name: '1-3/4" × 1/2"', template: '80up', per: 80, pageSize: mm(1.75 * IN, 0.5 * IN) }
+    { key: '20up', name: '4" × 1"',       count: 20 },
+    { key: '30up', name: '2-5/8" × 1"',   count: 30 },
+    { key: '60up', name: '1-3/4" × 2/3"', count: 60 },
+    { key: '80up', name: '1-3/4" × 1/2"', count: 80, warning: 'small' }
   ],
   a4: [
-    { id: 'a4-35x35', name: '35 × 35mm', template: '35up',  per: 35,  pageSize: mm(35, 35) },
-    { id: 'a4-38x21', name: '38 × 21mm', template: '65up',  per: 65,  pageSize: mm(38.1, 21.2) },
-    { id: 'a4-36x17', name: '36 × 17mm', template: '75up',  per: 75,  pageSize: mm(36, 17) },
-    { id: 'a4-46x21', name: '46 × 21mm', template: '48up',  per: 48,  pageSize: mm(46, 21) },
-    { id: 'a4-26x16', name: '26 × 16mm', template: '119up', per: 119, pageSize: mm(26, 16) }
+    { key: 'a4_35x35', name: '35 × 35mm', count: 35 },
+    { key: 'a4_38x21', name: '38 × 21mm', count: 65 },
+    { key: 'a4_36x17', name: '36 × 17mm', count: 80 },
+    { key: 'a4_46x21', name: '46 × 21mm', count: 48 },
+    { key: 'a4_26x16', name: '26 × 16mm', count: 90, warning: 'small' }
   ]
 };
 
 export const LABEL_TEMPLATES = [
-  { id: 'lp-2.25x1.25', name: '2-1/4" × 1-1/4"', template: 'label', pageSize: mm(2.25 * IN, 1.25 * IN) },
-  { id: 'lp-2.4x1.1',   name: '2.4" × 1.1"',     template: 'label', pageSize: mm(2.4 * IN, 1.1 * IN), note: 'Brother' },
-  { id: 'lp-2x1',       name: '2" × 1"',         template: '30up',  pageSize: mm(2 * IN, 1 * IN) }, // confirmed
-  { id: 'lp-1x1',       name: '1" × 1"',         template: 'label', pageSize: mm(1 * IN, 1 * IN) },
-  { id: 'lp-1x.5',      name: '1" × 1/2"',       template: 'label', pageSize: mm(1 * IN, 0.5 * IN) },
-  { id: 'lp-40x30',     name: '40 × 30mm',       template: 'label', pageSize: mm(40, 30) },
-  { id: 'lp-30x20',     name: '30 × 20mm',       template: 'label', pageSize: mm(30, 20) },
-  { id: 'lp-20x30',     name: '20 × 30mm',       template: 'label', pageSize: mm(20, 30) },
-  { id: 'lp-20x10',     name: '20 × 10mm',       template: 'label', pageSize: mm(20, 10) }
+  { key: '2.25x1.25', name: '2-1/4" × 1-1/4"', size: { width: 57.15, height: 31.75 } },
+  { key: '2.4x1.1',   name: '2.4" × 1.1"',     size: { width: 62, height: 29 }, note: 'Brother' },
+  { key: '2x1',       name: '2" × 1"',         size: { width: 50.8, height: 25.4 } },
+  { key: '1x1',       name: '1" × 1"',         size: { width: 25.4, height: 25.4 } },
+  { key: '1x1/2',     name: '1" × 1/2"',       size: { width: 25.4, height: 12.7 } },
+  { key: '40x30',     name: '40 × 30mm',       size: { width: 40, height: 30 } },
+  { key: '30x20',     name: '30 × 20mm',       size: { width: 30, height: 20 } },
+  { key: '20x30',     name: '20 × 30mm',       size: { width: 20, height: 30 } },
+  { key: '20x10',     name: '20 × 10mm',       size: { width: 20, height: 10 } }
 ];
 
-export function findSheet(family, id) {
+// Sandpiper's default sheet, sent as `template` when the mode has no sheet of
+// its own (Label, Code List).
+export const DEFAULT_SHEET_KEY = '30up';
+
+export function findSheet(family, key) {
   const list = SHEET_TEMPLATES[family] || SHEET_TEMPLATES.letter;
-  return list.find((t) => t.id === id) || list[0];
+  return list.find((t) => t.key === key) || list[0];
 }
-export function findLabel(id) {
-  return LABEL_TEMPLATES.find((t) => t.id === id) || LABEL_TEMPLATES[0];
+export function findLabel(key) {
+  return LABEL_TEMPLATES.find((t) => t.key === key) || LABEL_TEMPLATES[0];
 }
 
-/** Booth/vendor initials for the tag — the "AGM" line on a Sandpiper tag. */
+/** Booth/vendor code for the tag — the "AGM" line on a Sandpiper tag. */
 export function defaultVendor(user) {
   const s = String(user || '').trim();
   if (!s) return '';

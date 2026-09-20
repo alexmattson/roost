@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { int } from '../lib/format.js';
 import {
-  SHEET_TEMPLATES, LABEL_TEMPLATES, findSheet, findLabel, defaultVendor
+  SHEET_TEMPLATES, LABEL_TEMPLATES, DEFAULT_SHEET_KEY,
+  findSheet, findLabel, defaultVendor
 } from '../lib/labels.js';
 
 const VENDOR_KEY = 'roost_tag_vendor';
@@ -11,7 +12,10 @@ const CURRENCIES = ['USD', 'CAD', 'GBP', 'EUR', 'AUD', 'NZD'];
 /**
  * Price-tag printing. Sandpiper renders the file: we pick a stock and options,
  * POST the item ids, and open the PDF it returns — so the tags come out exactly
- * like Sandpiper's own, with no client-side barcode drawing to keep in sync.
+ * like Sandpiper's own. The payload shape mirrors Sandpiper's barcode UI:
+ *   template : always a sheet key (defaults to 30up for Label / Code List).
+ *   pageSize : the label size, sent only in Label mode.
+ *   printAll : true only for Code List.
  */
 export function PrintTags({ rows, onClose }) {
   const { meta, printBarcodes } = useData();
@@ -21,17 +25,16 @@ export function PrintTags({ rows, onClose }) {
     [rows]
   );
 
-  const [printer, setPrinter] = useState('sheet');   // sheet | label
+  const [printer, setPrinter] = useState('sheet');   // sheet | label | codelist
   const [family, setFamily] = useState('letter');    // letter | a4
-  const [sheetId, setSheetId] = useState('us-2.625x1');
-  const [labelId, setLabelId] = useState('lp-2x1');
+  const [sheetKey, setSheetKey] = useState('30up');
+  const [labelKey, setLabelKey] = useState('2x1');
   const [vendor, setVendor] = useState(() => {
     try { const v = localStorage.getItem(VENDOR_KEY); if (v != null) return v; } catch { /* ignore */ }
     return defaultVendor(meta && meta.user);
   });
   const [currency, setCurrency] = useState('USD');
   const [skip, setSkip] = useState(0);
-  const [printAll, setPrintAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -42,25 +45,28 @@ export function PrintTags({ rows, onClose }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, busy]);
 
-  const template = printer === 'label' ? findLabel(labelId) : findSheet(family, sheetId);
-  const canPrint = !busy && (printAll || ids.length > 0);
+  const canPrint = !busy && ids.length > 0;
 
   const doPrint = async () => {
     if (!canPrint) return;
     setError(null);
     setBusy(true);
-    // Reserve the tab under the click, so the async fetch doesn't trip the
+    // Reserve the tab under the click so the async fetch doesn't trip the
     // popup blocker.
     const win = window.open('', '_blank');
     try {
+      // Sandpiper always sends a sheet key as `template`; Label/Code List carry
+      // the default. pageSize rides along only for Label.
+      const template = printer === 'sheet' ? findSheet(family, sheetKey).key : DEFAULT_SHEET_KEY;
+      const pageSize = printer === 'label' ? findLabel(labelKey).size : undefined;
       const { blob } = await printBarcodes({
-        ids: printAll ? [] : ids,
-        template: template.template,
-        pageSize: template.pageSize,
+        template,
+        skip: printer === 'sheet' ? Number(skip) || 0 : 0,
+        ids,
         boothNumber: vendor.trim(),
         currency,
-        skip: printer === 'sheet' ? Number(skip) || 0 : 0,
-        printAll
+        printAll: printer === 'codelist',
+        pageSize
       });
       const url = URL.createObjectURL(blob);
       if (win && !win.closed) win.location = url;
@@ -78,20 +84,20 @@ export function PrintTags({ rows, onClose }) {
     }
   };
 
-  const subtitle = printAll
-    ? 'Every item in the account.'
-    : `${int(ids.length)} item${ids.length === 1 ? '' : 's'} from the current view.`;
+  const action = printer === 'codelist' ? 'Download' : 'Print';
 
   return (
     <section id="print-tags" className="sheet">
       <div className="sheet-head">
         <div>
           <h2>Print tags</h2>
-          <p className="sheet-sub">{subtitle} Sandpiper renders the print file.</p>
+          <p className="sheet-sub">
+            {int(ids.length)} item{ids.length === 1 ? '' : 's'} from the current view · Sandpiper renders the file.
+          </p>
         </div>
         <div className="sheet-actions">
           <button className="btn primary" disabled={!canPrint} onClick={doPrint}>
-            {busy ? 'Preparing…' : 'Print'}
+            {busy ? 'Preparing…' : action}
           </button>
           <button className="btn ghost" onClick={onClose} disabled={busy}>Close</button>
         </div>
@@ -102,9 +108,21 @@ export function PrintTags({ rows, onClose }) {
 
         <PrinterTypePicker value={printer} onChange={setPrinter} />
 
-        {printer === 'sheet'
-          ? <SheetPicker family={family} setFamily={setFamily} sheetId={sheetId} setSheetId={setSheetId} />
-          : <LabelPicker labelId={labelId} setLabelId={setLabelId} />}
+        {printer === 'sheet' && (
+          <SheetPicker family={family} setFamily={setFamily} sheetKey={sheetKey} setSheetKey={setSheetKey} />
+        )}
+        {printer === 'label' && (
+          <LabelPicker labelKey={labelKey} setLabelKey={setLabelKey} />
+        )}
+        {printer === 'codelist' && (
+          <div className="tagx-group">
+            <div className="fix-bar tagx-warn">
+              <span className="count"><b>⚠ Needs a custom printer.</b> This produces a file of
+                Quail-compatible barcode data. Use your label printer's own software to render
+                the barcodes and print them.</span>
+            </div>
+          </div>
+        )}
 
         <div className="tagx-group">
           <h3>Details</h3>
@@ -131,10 +149,6 @@ export function PrintTags({ rows, onClose }) {
           {printer === 'sheet' && (
             <p className="tagx-hint">Skip fills a partly-used sheet — it leaves that many labels blank before the first tag.</p>
           )}
-          <label className="tagx-check big">
-            <input type="checkbox" checked={printAll} onChange={(e) => setPrintAll(e.target.checked)} />
-            Print every item in the account (ignore the current view)
-          </label>
         </div>
       </div>
     </section>
@@ -146,12 +160,13 @@ export function PrintTags({ rows, onClose }) {
 function PrinterTypePicker({ value, onChange }) {
   const opts = [
     { id: 'sheet', name: 'Sheet', hint: 'Address-label sheets on a desktop printer', art: <ArtSheet /> },
-    { id: 'label', name: 'Label', hint: 'One tag per label on a dedicated printer', art: <ArtLabel /> }
+    { id: 'label', name: 'Label', hint: 'One tag per label on a dedicated printer', art: <ArtLabel /> },
+    { id: 'codelist', name: 'Code list', hint: 'A data file for your printer software', art: <ArtCodeList /> }
   ];
   return (
     <div className="tagx-group">
       <h3>Printer type</h3>
-      <div className="tagx-cards two">
+      <div className="tagx-cards">
         {opts.map((o) => (
           <button key={o.id} className={`tagx-card ${value === o.id ? 'on' : ''}`} onClick={() => onChange(o.id)}>
             <span className="tagx-card-art">{o.art}</span>
@@ -164,9 +179,9 @@ function PrinterTypePicker({ value, onChange }) {
   );
 }
 
-function SheetPicker({ family, setFamily, sheetId, setSheetId }) {
+function SheetPicker({ family, setFamily, sheetKey, setSheetKey }) {
   const list = SHEET_TEMPLATES[family];
-  useEffect(() => { if (!list.some((t) => t.id === sheetId)) setSheetId(list[0].id); }, [family]); // eslint-disable-line
+  useEffect(() => { if (!list.some((t) => t.key === sheetKey)) setSheetKey(list[0].key); }, [family]); // eslint-disable-line
   return (
     <div className="tagx-group">
       <h3>Label template
@@ -177,9 +192,9 @@ function SheetPicker({ family, setFamily, sheetId, setSheetId }) {
       </h3>
       <div className="tagx-sizes">
         {list.map((t) => (
-          <button key={t.id} className={`tagx-size ${sheetId === t.id ? 'on' : ''}`} onClick={() => setSheetId(t.id)}>
+          <button key={t.key} className={`tagx-size ${sheetKey === t.key ? 'on' : ''}`} onClick={() => setSheetKey(t.key)}>
             <span className="tagx-size-name">{t.name}</span>
-            <span className="tagx-size-sub">{t.per} / sheet</span>
+            <span className="tagx-size-sub">{t.count} / sheet{t.warning ? ' · small' : ''}</span>
           </button>
         ))}
       </div>
@@ -187,13 +202,13 @@ function SheetPicker({ family, setFamily, sheetId, setSheetId }) {
   );
 }
 
-function LabelPicker({ labelId, setLabelId }) {
+function LabelPicker({ labelKey, setLabelKey }) {
   return (
     <div className="tagx-group">
       <h3>Paper size</h3>
       <div className="tagx-sizes">
         {LABEL_TEMPLATES.map((t) => (
-          <button key={t.id} className={`tagx-size ${labelId === t.id ? 'on' : ''}`} onClick={() => setLabelId(t.id)}>
+          <button key={t.key} className={`tagx-size ${labelKey === t.key ? 'on' : ''}`} onClick={() => setLabelKey(t.key)}>
             <span className="tagx-size-name">{t.name}</span>
             <span className="tagx-size-sub">{t.note || 'label printer'}</span>
           </button>
@@ -214,4 +229,10 @@ const ArtSheet = () => (
 const ArtLabel = () => (
   <svg viewBox="0 0 36 44" className="tagx-art"><rect x="3" y="2" width="30" height="40" rx="2" />
     {[6, 13, 20, 27, 34].map((y) => <rect key={y} x="8" y={y} width="20" height="4" rx="1" className="cut" />)}</svg>
+);
+const ArtCodeList = () => (
+  <svg viewBox="0 0 36 44" className="tagx-art"><rect x="3" y="2" width="30" height="40" rx="2" />
+    {[6, 11, 16, 21, 26, 31, 36].map((y, i) => (
+      <rect key={y} x="7" y={y} width={22 - (i % 3) * 6} height="2.6" rx="1" className="cut" />
+    ))}</svg>
 );

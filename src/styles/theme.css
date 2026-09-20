@@ -1035,6 +1035,9 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .tagx-hint { margin: -2px 0 0; font-size: 11px; color: var(--faint); }
 .tagx-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; }
 .tagx-check.big { margin-top: 4px; }
+.tagx-warn { align-items: flex-start; background: var(--brass-tint, rgba(240,180,41,.1)); border-color: var(--brass-dim); }
+.tagx-warn .count { color: var(--muted); line-height: 1.4; margin-right: 0; }
+.tagx-warn .count b { color: var(--brass); }
 
 /* --------------------------------------------------------------------- Home
 
