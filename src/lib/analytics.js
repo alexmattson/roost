@@ -335,8 +335,12 @@ export function analyze(items, range, venue = null) {
   const cogs = sum(sales, (i) => i.cost);
   const profit = net - cogs;
 
-  // Commission rate observed in this account's history (used to project future take-home).
-  const priced = items.filter((i) => i.isSold && i.soldPrice > 0);
+  // Commission rate observed in this account's history (used to project future
+  // take-home). Scoped to POS/booth sales so 0%-commission direct-channel sales
+  // (Facebook, etc.) don't drag the projection down.
+  const pricedAll = items.filter((i) => i.isSold && i.soldPrice > 0);
+  const pricedPos = pricedAll.filter((i) => i.channelType === 'pos');
+  const priced = pricedPos.length ? pricedPos : pricedAll;
   const grossAll = sum(priced, (i) => i.soldPrice);
   const commissionRate = grossAll > 0 ? Math.min(0.9, sum(priced, (i) => i.commission) / grossAll) : 0.15;
 
@@ -437,6 +441,27 @@ export function analyze(items, range, venue = null) {
     end: start
   };
 
+  // Channel split of the sales in scope, and a booth-only aggregate so
+  // rent-coverage and other POS metrics stay honest when direct sales are mixed in.
+  const boothSales = sales.filter((i) => i.channelType !== 'direct');
+  const boothGross = sum(boothSales, (i) => i.soldPrice);
+  const boothNet = boothGross - sum(boothSales, (i) => i.commission) - sum(boothSales, (i) => i.fees);
+  const boothProfit = boothNet - sum(boothSales, (i) => i.cost);
+  const chanMap = new Map();
+  for (const i of sales) {
+    const key = i.channel || UNASSIGNED;
+    if (!chanMap.has(key)) {
+      chanMap.set(key, {
+        id: key, type: i.channelType || 'unassigned', label: i.channelLabel || 'Unassigned',
+        units: 0, gross: 0, net: 0, cogs: 0, profit: 0
+      });
+    }
+    const r = chanMap.get(key);
+    r.units += 1; r.gross += i.soldPrice || 0; r.net += i.net || 0;
+    r.cogs += i.cost || 0; r.profit += (i.profit != null ? i.profit : 0);
+  }
+  const channelBreakdown = [...chanMap.values()].sort((a, b) => b.gross - a.gross);
+
   return {
     previous,
     range: { start, end, gran },
@@ -462,7 +487,9 @@ export function analyze(items, range, venue = null) {
       fullPriceRate: discounts.length
         ? discounts.filter((i) => i.discount <= 0.0001).length / discounts.length
         : null,
-      bestMonth: buckets.reduce((a, b) => (!a || b.profit > a.profit ? b : a), null)
+      bestMonth: buckets.reduce((a, b) => (!a || b.profit > a.profit ? b : a), null),
+      booth: { units: boothSales.length, gross: boothGross, net: boothNet, profit: boothProfit },
+      channels: channelBreakdown
     },
     buying: {
       spend,

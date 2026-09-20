@@ -5,6 +5,7 @@ import { normalizeQuailSales } from '../lib/quail.js';
 import { buildLedger } from '../lib/ledger.js';
 import { buildVenueContext } from '../lib/resolve.js';
 import { reconcile } from '../lib/reconcile.js';
+import { buildChannels } from '../lib/channel.js';
 
 /**
  * The single source of truth for account data.
@@ -31,6 +32,8 @@ function rawReducer(state, action) {
       };
     case 'setItems':
       return { ...state, items: action.items };
+    case 'setVenues':
+      return { ...state, venueInfo: action.venues };
     case 'reset':
       return initialRaw;
     default:
@@ -47,7 +50,10 @@ export function DataProvider({ children }) {
   const refreshStatus = useCallback(() => setStatus(backend.webStatus()), []);
 
   // --- derived, memoised ---------------------------------------------------
-  const items = useMemo(() => normalize(raw.items), [raw.items]);
+  // Channel = venue + whether it's Quail-linked; stamped onto every item so
+  // analytics, reconcile and the Channels hub all read the same attribution.
+  const channels = useMemo(() => buildChannels(raw.venueInfo, venueNames), [raw.venueInfo, venueNames]);
+  const items = useMemo(() => normalize(raw.items).map((i) => channels.tag(i)), [raw.items, channels]);
   const quailSales = useMemo(
     () => (raw.quail ? normalizeQuailSales(raw.quail.sales) : []),
     [raw.quail]
@@ -56,7 +62,7 @@ export function DataProvider({ children }) {
     () => buildLedger(items, quailSales, buildVenueContext(raw.venueInfo)),
     [items, quailSales, raw.venueInfo]
   );
-  const ledger = ledgerResult.items;
+  const ledger = useMemo(() => ledgerResult.items.map((i) => channels.tag(i)), [ledgerResult, channels]);
   const ledgerSummary = ledgerResult.summary;
   const venueList = useMemo(() => listVenues(items), [items]);
 
@@ -120,6 +126,13 @@ export function DataProvider({ children }) {
     return backend.generateBarcodeFile(opts);
   }, []);
 
+  const manageVenue = useCallback(async (op, payload) => {
+    const res = await backend.manageVenue(op, payload);
+    if (!res || !res.ok) throw new Error((res && res.error) || 'The venue update failed.');
+    dispatch({ type: 'setVenues', venues: res.venues });
+    return res;
+  }, []);
+
   const connectSandpiper = useCallback(async (creds) => {
     const r = await backend.connectSandpiper(creds);
     refreshStatus();
@@ -152,7 +165,8 @@ export function DataProvider({ children }) {
     venueNames, meta: raw.meta, badge, hasData: items.length > 0,
     status, busy,
     // actions
-    refresh, loadCache, applyEdits, createItems, deleteItems, printBarcodes,
+    channels,
+    refresh, loadCache, applyEdits, createItems, deleteItems, printBarcodes, manageVenue,
     connectSandpiper, connectQuail, signOut, refreshStatus, renameVenue
   };
 

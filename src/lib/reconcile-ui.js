@@ -4,6 +4,7 @@ export const FINDING_LABELS = {
   'quail-sale-missing-in-sandpiper': 'Sold in Quail, unknown to Sandpiper',
   'sold-in-quail-not-in-sandpiper': 'Sold in Quail, still unsold in Sandpiper',
   'sandpiper-sale-missing-in-quail': 'Sold in Sandpiper, no Quail record',
+  'direct-channel-sale': 'Direct-channel sale (no register expected)',
   'probable-untagged-match': 'Untagged POS sale, probable match',
   'quail-sale-untagged': 'POS sale with no inventory tag',
   'price-mismatch': 'Sale price disagrees',

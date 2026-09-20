@@ -136,6 +136,31 @@ export async function connectQuail({ email, password }) {
   return { email: q.email };
 }
 
+async function refetchVenues() {
+  const venues = await core.fetchVenues({ request, accountId: session.accountId, token: session.sandpiperToken });
+  const c = readCache() || {};
+  c.venues = venues;
+  writeCache(c);
+  return venues;
+}
+
+/** Create/edit/delete Sandpiper stores and booths, then return fresh venues. */
+export async function manageVenue(op, payload = {}) {
+  if (!load() || !session.sandpiperToken) throw new Error('Sign in first.');
+  if (!session.accountId) throw new Error('No Sandpiper account is available on this sign-in.');
+  const args = { request, accountId: session.accountId, token: session.sandpiperToken };
+  switch (op) {
+    case 'createStore': await core.createStore({ ...args, ...payload }); break;
+    case 'editStore': await core.editStore({ ...args, store: payload.store }); break;
+    case 'deleteStore': await core.deleteStore({ ...args, storeId: payload.storeId }); break;
+    case 'createBooth': await core.createBooth({ ...args, ...payload }); break;
+    case 'editBooth': await core.editBooth({ ...args, booth: payload.booth }); break;
+    case 'deleteBooth': await core.deleteBooth({ ...args, boothId: payload.boothId }); break;
+    default: throw new Error(`Unknown venue operation: ${op}`);
+  }
+  return { ok: true, venues: await refetchVenues() };
+}
+
 /** Ask Sandpiper to render the price tags and hand back the PDF blob. */
 export async function generateBarcodeFile(opts = {}) {
   if (!load() || !session.sandpiperToken) throw new Error('Sign in first.');

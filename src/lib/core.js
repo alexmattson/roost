@@ -73,6 +73,8 @@ export async function fetchVenues({ request, accountId, token }) {
   const auth = `Bearer ${token}`;
   const stores = {};
   const booths = {};
+  const rawStores = {};   // untouched API objects, kept so an edit can post them back
+  const rawBooths = {};
   const errors = [];
 
   const [storeRes, boothRes] = await Promise.allSettled([
@@ -82,7 +84,12 @@ export async function fetchVenues({ request, accountId, token }) {
 
   if (storeRes.status === 'fulfilled') {
     for (const v of asArray(storeRes.value)) {
-      if (v && v.id) stores[v.id] = { name: v.name || null, city: v.city || null, state: v.state || null };
+      if (!v || !v.id) continue;
+      stores[v.id] = {
+        name: v.name || null, city: v.city || null, state: v.state || null,
+        externalId: v.externalId != null ? v.externalId : null
+      };
+      rawStores[v.id] = v;
     }
   } else errors.push(`stores: ${storeRes.reason && storeRes.reason.message || storeRes.reason}`);
 
@@ -96,10 +103,46 @@ export async function fetchVenues({ request, accountId, token }) {
         externalId: v.externalId != null ? v.externalId : null,
         externalService: v.externalService || null
       };
+      rawBooths[v.id] = v;
     }
   } else errors.push(`booths: ${boothRes.reason && boothRes.reason.message || boothRes.reason}`);
 
-  return { stores, booths, errors, fetchedAt: Date.now() };
+  return { stores, booths, rawStores, rawBooths, errors, fetchedAt: Date.now() };
+}
+
+/* ------------------------------------------------------------- venue writes
+
+   Sandpiper's own store/booth management endpoints. consignmentRate is stored
+   in ten-thousandths (1500 = 15%). Quail-linked venues carry an externalId and
+   are read-only on Sandpiper's side, so the UI must not offer to edit those. */
+
+const RATE_SCALE = 10000;
+export const rateToApi = (decimal) => Math.round((Number(decimal) || 0) * RATE_SCALE);
+
+export async function createStore({ request, accountId, token, name, city = '', state = '' }) {
+  return request(`${SANDPIPER}/api/stores/${accountId}`, `Bearer ${token}`,
+    { method: 'POST', body: { name, city, state } });
+}
+export async function editStore({ request, accountId, token, store }) {
+  return request(`${SANDPIPER}/api/stores/${accountId}/edit`, `Bearer ${token}`,
+    { method: 'POST', body: store });
+}
+export async function deleteStore({ request, accountId, token, storeId }) {
+  return request(`${SANDPIPER}/api/stores/${accountId}/${encodeURIComponent(storeId)}/delete`,
+    `Bearer ${token}`, { method: 'POST' });
+}
+
+export async function createBooth({ request, accountId, token, storeId, number, consignmentRate = 0 }) {
+  return request(`${SANDPIPER}/api/booths/${accountId}/${encodeURIComponent(storeId)}`, `Bearer ${token}`,
+    { method: 'POST', body: { number, consignmentRate: rateToApi(consignmentRate) } });
+}
+export async function editBooth({ request, accountId, token, booth }) {
+  return request(`${SANDPIPER}/api/booths/${accountId}/edit`, `Bearer ${token}`,
+    { method: 'POST', body: booth });
+}
+export async function deleteBooth({ request, accountId, token, boothId }) {
+  return request(`${SANDPIPER}/api/booths/${accountId}/${encodeURIComponent(boothId)}/delete`,
+    `Bearer ${token}`, { method: 'POST' });
 }
 
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

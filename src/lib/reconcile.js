@@ -188,6 +188,8 @@ export function reconcile(items, quailSales, range) {
   for (const sale of untagged) {
     const candidate = orphanItems
       .filter((i) => !pairedItems.has(i.id))
+      // An untagged POS sale can't belong to a direct (non-Quail) channel.
+      .filter((i) => i.channelType !== 'direct')
       .filter((i) => Math.abs(i.soldPrice - sale.price) <= CENT_TOLERANCE)
       .filter((i) => Math.abs(i.sold - sale.soldAt) <= 2 * DAY)
       .sort((a, b) => Math.abs(a.sold - sale.soldAt) - Math.abs(b.sold - sale.soldAt))[0];
@@ -220,6 +222,20 @@ export function reconcile(items, quailSales, range) {
 
   for (const item of orphanItems) {
     if (pairedItems.has(item.id)) continue;
+    if (item.channelType === 'direct') {
+      // A direct-channel sale (Facebook, etc.) is never expected in Quail — this
+      // is a quiet, informational note, not an anomaly to fix.
+      add({
+        type: 'direct-channel-sale',
+        severity: 'low',
+        soldAt: item.sold,
+        inv: item.inv,
+        detail: `#${item.inv} "${item.desc}" sold on ${item.channelLabel || 'a direct channel'} — no Quail record expected`,
+        item,
+        note: 'Recorded in Sandpiper on a non-POS channel; correctly absent from the register.'
+      });
+      continue;
+    }
     add({
       type: 'sandpiper-sale-missing-in-quail',
       severity: 'medium',
