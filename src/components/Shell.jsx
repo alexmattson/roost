@@ -7,6 +7,7 @@ import { relativeTime } from '../lib/format.js';
 
 export function TopBar({ onRefresh, refreshing }) {
   const { meta, badge, signOut } = useData();
+  const { openManageChannels } = useNav();
   const { theme, toggle } = useTheme();
   const subline = meta
     ? `${meta.user || 'Signed in'} · ${int(meta.count)} items · updated ${relativeTime(meta.fetchedAt)}`
@@ -22,6 +23,7 @@ export function TopBar({ onRefresh, refreshing }) {
         </div>
       </div>
       <div className="top-actions">
+        <button className="icon-btn" title="Manage channels" onClick={openManageChannels} aria-label="Manage channels"><ChannelsIcon /></button>
         <button className="icon-btn" title="Switch theme" onClick={toggle} aria-label="Switch theme">
           {theme === 'light'
             ? <MoonIcon />
@@ -58,7 +60,7 @@ export function ModesNav() {
 
 export function RangeBar() {
   const { mode, tab, active, range, setPreset, setCustomRange, venue, setVenue } = useNav();
-  const { venueList } = useData();
+  const { channelList } = useData();
 
   if (mode === 'home') return null;
   const isSync = tab === 'review';
@@ -71,7 +73,7 @@ export function RangeBar() {
     );
   }
 
-  const showVenue = (venueList.stores.length > 1 || venueList.booths.length > 1);
+  const showScope = (channelList.booths.length + channelList.stores.length) >= 2;
   const toInput = (t) => new Date(t - new Date(t).getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const fromInput = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
 
@@ -82,16 +84,24 @@ export function RangeBar() {
           <button key={k} className={`chip ${range.preset === k ? 'active' : ''}`} onClick={() => setPreset(k)}>{label}</button>
         ))}
       </div>
-      {showVenue && (
-        <select className="venue-select" aria-label="Store or booth"
+      {showScope && (
+        <select className="venue-select" aria-label="Channel scope"
           value={venue.kind === 'all' ? 'all' : `${venue.kind}:${venue.id}`}
           onChange={(e) => {
             const v = e.target.value;
             setVenue(v === 'all' ? { kind: 'all', id: null } : { kind: v.slice(0, v.indexOf(':')), id: v.slice(v.indexOf(':') + 1) });
           }}>
-          <option value="all">All venues</option>
-          {venueList.stores.map((s) => <option key={s.id} value={`store:${s.id}`}>{s.label}</option>)}
-          {venueList.booths.map((b) => <option key={b.id} value={`booth:${b.id}`}>{b.label}</option>)}
+          <option value="all">All channels</option>
+          {channelList.booths.length > 0 && (
+            <optgroup label="Booths">
+              {channelList.booths.map((b) => <option key={b.id} value={`booth:${b.id}`}>{b.label}{b.type === 'direct' ? ' · direct' : ''}</option>)}
+            </optgroup>
+          )}
+          {channelList.stores.length > 0 && (
+            <optgroup label="Stores">
+              {channelList.stores.map((s) => <option key={s.id} value={`store:${s.id}`}>{s.label}{s.type === 'direct' ? ' · direct' : ''}</option>)}
+            </optgroup>
+          )}
         </select>
       )}
       {range.preset === 'custom' && (
@@ -148,4 +158,5 @@ export function LoadingState() {
 const SunIcon = () => <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const MoonIcon = () => <svg viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
 const SignOutIcon = () => <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const ChannelsIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M3 8h18l-1.2 3.2a2 2 0 0 1-3.8-.7 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-3.8.7L3 8zM5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const RefreshIcon = () => <svg className="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;

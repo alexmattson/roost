@@ -66,6 +66,23 @@ export function DataProvider({ children }) {
   const ledgerSummary = ledgerResult.summary;
   const venueList = useMemo(() => listVenues(items), [items]);
 
+  // Every channel that exists (from venueInfo), whether or not it has sales yet —
+  // so a newly created channel is immediately selectable app-wide.
+  const channelList = useMemo(() => {
+    const bs = (raw.venueInfo && raw.venueInfo.booths) || {};
+    const st = (raw.venueInfo && raw.venueInfo.stores) || {};
+    const byLabel = (a, b) => a.label.localeCompare(b.label);
+    const booths = Object.keys(bs).map((id) => ({
+      id, label: channels.label(id, 'booth'), storeId: bs[id].storeId || null,
+      type: bs[id].externalId != null ? 'pos' : 'direct'
+    })).sort(byLabel);
+    const stores = Object.keys(st).map((id) => ({
+      id, label: channels.label(id, 'store'),
+      type: st[id].externalId != null ? 'pos' : 'direct'
+    })).sort(byLabel);
+    return { booths, stores };
+  }, [raw.venueInfo, channels]);
+
   // The anomaly badge counts high-severity findings over the whole span.
   const badge = useMemo(() => {
     if (!quailSales.length) return { count: 0, urgent: false, sev: { high: 0, medium: 0, low: 0 } };
@@ -165,7 +182,7 @@ export function DataProvider({ children }) {
     venueNames, meta: raw.meta, badge, hasData: items.length > 0,
     status, busy,
     // actions
-    channels,
+    channels, channelList,
     refresh, loadCache, applyEdits, createItems, deleteItems, printBarcodes, manageVenue,
     connectSandpiper, connectQuail, signOut, refreshStatus, renameVenue
   };

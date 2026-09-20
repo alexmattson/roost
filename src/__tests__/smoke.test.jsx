@@ -109,7 +109,7 @@ describe('Roost app', () => {
     expect((await screen.findAllByText('FB')).length).toBeGreaterThan(0);
     expect((await screen.findAllByText('Direct')).length).toBeGreaterThan(0);
     // Manage screen opens.
-    fireEvent.click(screen.getByRole('button', { name: 'Manage channels' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Manage channels' })[0]);
     expect(await screen.findByText(/Create an unlinked store/i)).toBeTruthy();
     expect((await screen.findAllByText('Facebook Marketplace')).length).toBeGreaterThan(0);
   });
@@ -153,7 +153,7 @@ describe('Roost app', () => {
     expect(await screen.findByText('2.4" × 1.1"')).toBeTruthy();
     // The Booth field is populated from the same venue data as the Venues tab.
     expect(await screen.findByText('Booth')).toBeTruthy();
-    expect(await screen.findByRole('option', { name: 'A1' })).toBeTruthy();
+    expect((await screen.findAllByRole('option', { name: 'A1' })).length).toBeGreaterThan(0);
   });
 
   it('selects inventory items to print', async () => {
