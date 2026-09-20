@@ -21,7 +21,9 @@ const session = {
 const items = [
   { id: 'a1', inventoryNumber: '0100', description: 'Vintage oak chair', acquired: daysAgo(200), originalCost: 4000, totalCost: 4000, askingPrice: 12000, sold: daysAgo(5), soldPrice: 11000, consignmentPaid: 1650, cardFees: 200, soldStore: 's1', soldBooth: 'b1', barcodeCreated: true },
   { id: 'a2', inventoryNumber: '0101', description: 'Brass lamp', acquired: daysAgo(400), originalCost: 2000, totalCost: 2000, askingPrice: 8000, barcodeCreated: false },
-  { id: 'a3', inventoryNumber: '0102', description: 'Wicker basket', acquired: daysAgo(10), originalCost: 0, totalCost: 0, askingPrice: 0, barcodeCreated: false }
+  { id: 'a3', inventoryNumber: '0102', description: 'Wicker basket', acquired: daysAgo(10), originalCost: 0, totalCost: 0, askingPrice: 0, barcodeCreated: false },
+  // Sold on a direct (non-Quail) channel — Facebook Marketplace.
+  { id: 'a4', inventoryNumber: '0200', description: 'Retro Teak Sideboard', acquired: daysAgo(60), originalCost: 5000, totalCost: 5000, askingPrice: 20000, sold: daysAgo(3), soldPrice: 18000, consignmentPaid: 0, cardFees: 0, soldStore: 'fb', soldBooth: 'fbB', barcodeCreated: true }
 ];
 
 const qtime = (d) => new Date(daysAgo(d) * 1000).toISOString().slice(0, 19).replace('T', ' ');
@@ -36,8 +38,22 @@ const quail = {
 };
 
 const venues = {
-  stores: { s1: { name: 'Main St', city: 'Portland', state: 'OR' } },
-  booths: { b1: { name: 'A1', storeId: 's1', consignmentRate: 0.15, externalId: 'qb1' } },
+  stores: {
+    s1: { name: 'Main St', city: 'Portland', state: 'OR', externalId: 'qs1' },
+    fb: { name: 'Facebook Marketplace', city: null, state: null, externalId: null }
+  },
+  booths: {
+    b1: { name: 'A1', storeId: 's1', consignmentRate: 0.15, externalId: 'qb1' },
+    fbB: { name: 'FB', storeId: 'fb', consignmentRate: 0, externalId: null }
+  },
+  rawStores: {
+    s1: { id: 's1', name: 'Main St', city: 'Portland', state: 'OR', externalId: 'qs1' },
+    fb: { id: 'fb', name: 'Facebook Marketplace', externalId: null }
+  },
+  rawBooths: {
+    b1: { id: 'b1', name: 'A1', storeId: 's1', consignmentRate: 1500, externalId: 'qb1' },
+    fbB: { id: 'fbB', name: 'FB', storeId: 'fb', consignmentRate: 0, externalId: null }
+  },
   errors: []
 };
 
@@ -82,6 +98,20 @@ describe('Roost app', () => {
     expect(header.closest('th').className).toContain('sortable');
     fireEvent.click(header); // sort by it — must not throw
     expect(await screen.findByText('Category')).toBeTruthy();
+  });
+
+  it('shows channels and opens the manage-channels screen', async () => {
+    seed('analyze');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Channels' }));
+    expect(await screen.findByText('Sales by channel')).toBeTruthy();
+    // The direct channel (Facebook booth) appears with a Direct type badge.
+    expect((await screen.findAllByText('FB')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Direct')).length).toBeGreaterThan(0);
+    // Manage screen opens.
+    fireEvent.click(screen.getByRole('button', { name: 'Manage channels' }));
+    expect(await screen.findByText(/Create an unlinked store/i)).toBeTruthy();
+    expect((await screen.findAllByText('Facebook Marketplace')).length).toBeGreaterThan(0);
   });
 
   it('renders the Sync page anomalies table', async () => {
