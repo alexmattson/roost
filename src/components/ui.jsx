@@ -57,6 +57,15 @@ export function Kpi({ label, value, sub, status, hero, exact, valueClass = '' })
   );
 }
 
+/* Uniform table-toolbar controls, so search boxes and dropdowns line up at the
+   same size across every table. */
+export function SearchInput(props) {
+  return <input type="search" className="tc-control" {...props} />;
+}
+export function Select({ children, className = '', ...props }) {
+  return <select className={`tc-control ${className}`.trim()} {...props}>{children}</select>;
+}
+
 export function Banner({ kind = 'info', children, onClose }) {
   if (!children) return null;
   return (

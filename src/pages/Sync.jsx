@@ -5,7 +5,7 @@ import { reconcile } from '../lib/reconcile.js';
 import { planResolution, buildVenueContext, CONFIDENCE } from '../lib/resolve.js';
 import { FINDING_LABELS, findingKey, matchOf } from '../lib/reconcile-ui.js';
 import { dayMonth } from '../lib/format.js';
-import { Card } from '../components/ui.jsx';
+import { Card, Select } from '../components/ui.jsx';
 
 export function Sync() {
   const { items, quailSales, venueInfo, applyEdits } = useData();
@@ -69,20 +69,20 @@ export function Sync() {
   };
 
   return (
-    <Card>
+    <Card className="records-card">
       <div className="card-head">
         <h2>Anomalies</h2>
         <div className="table-controls">
-          <select value={filters.severity} onChange={(e) => setFilters({ ...filters, severity: e.target.value })} aria-label="Filter by severity">
+          <Select value={filters.severity} onChange={(e) => setFilters({ ...filters, severity: e.target.value })} aria-label="Filter by severity">
             <option value="all">All severities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-          </select>
-          <select value={filters.match} onChange={(e) => setFilters({ ...filters, match: e.target.value })} aria-label="Filter by match confidence">
+          </Select>
+          <Select value={filters.match} onChange={(e) => setFilters({ ...filters, match: e.target.value })} aria-label="Filter by match confidence">
             <option value="all">All matches</option><option value="exact">Exact only</option><option value="probable">Probable only</option><option value="manual">Manual only</option>
-          </select>
-          <select value={types.includes(filters.type) ? filters.type : 'all'} onChange={(e) => setFilters({ ...filters, type: e.target.value })} aria-label="Filter by finding type">
+          </Select>
+          <Select value={types.includes(filters.type) ? filters.type : 'all'} onChange={(e) => setFilters({ ...filters, type: e.target.value })} aria-label="Filter by finding type">
             <option value="all">All kinds</option>
             {types.map((t) => <option key={t} value={t}>{FINDING_LABELS[t] || t}</option>)}
-          </select>
+          </Select>
         </div>
       </div>
 

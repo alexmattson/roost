@@ -3,7 +3,7 @@ import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
 import { ITEM_COLUMNS, ITEM_ACTS_W, filterItems, collectChanges, editFields } from '../lib/items.js';
-import { Card, Button } from '../components/ui.jsx';
+import { Card, Button, SearchInput, Select } from '../components/ui.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 import { PrintTags } from './PrintTags.jsx';
 
@@ -87,10 +87,10 @@ export function Inventory() {
         <h2>Inventory</h2>
         <span className="hint source">Sandpiper records, as Sandpiper holds them</span>
         <div className="table-controls">
-          <input type="search" placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
+          <SearchInput placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
+          </Select>
           <Button small onClick={() => setShowPrint(true)}>Print tags</Button>
           <Button small onClick={openAddStock}>+ Add stock</Button>
         </div>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { money, dateTime } from '../lib/format.js';
-import { Card } from '../components/ui.jsx';
+import { Card, SearchInput, Select } from '../components/ui.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 
 /** Sales scoped to the selected booth (by its Quail external id), if any. */
@@ -49,11 +49,11 @@ export function PosSales() {
         <h2>Point-of-sale ledger</h2>
         <span className="hint source">Quail register, as the register rang it</span>
         <div className="table-controls">
-          <input type="search" placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <select value={method} onChange={(e) => setMethod(e.target.value)}>
+          <SearchInput placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Select value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="all">All payments</option>
             {methods.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          </Select>
         </div>
       </div>
 

@@ -494,13 +494,15 @@ td.wrap { white-space: normal; max-width: 420px; }
 #t-items td, #t-items th { padding: 5px 4px; }
 .table-scroll::-webkit-scrollbar { width: 9px; }
 .table-scroll::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 8px; border: 2px solid var(--panel); }
-.table-controls { display: flex; gap: 6px; }
-.table-controls input, .table-controls select {
+.table-controls { display: flex; align-items: center; gap: 6px; }
+/* One control style — search boxes and dropdowns share size and chrome so the
+   toolbar lines up the same across every table. */
+.table-controls .tc-control {
+  box-sizing: border-box; width: 170px; height: 28px;
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
   border-radius: 8px; padding: 4px 8px; font-size: 11.5px; font-family: inherit;
 }
-.table-controls input { width: 150px; }
-.table-controls input:focus, .table-controls select:focus { outline: none; border-color: var(--brass-dim); }
+.table-controls .tc-control:focus { outline: none; border-color: var(--brass-dim); }
 .empty-row { color: var(--faint); padding: 18px; text-align: center; font-size: 12px; }
 
 /* ------------------------------------------------------------ fix flows */
@@ -841,6 +843,18 @@ td.muted { color: var(--faint); font-size: 11.5px; }
 [data-panel="pos"] .table-scroll {
   flex: 1; min-height: 140px; max-height: none;
 }
+
+/* Web app: a records page renders a .records-card straight into #main (there is
+   no .tab-panel[data-panel] wrapper here), so the same fill layout is keyed off
+   the card. It claims the height #main gives it, and only .table-scroll scrolls
+   — which keeps the toolbar (search/filter) and the delete/resolve confirmation
+   pinned on screen, and lets the sticky <th> actually stick to a real scroller. */
+#main:has(> .records-card) { display: flex; flex-direction: column; min-height: 0; }
+.records-card {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0; margin-bottom: 0;
+}
+.records-card .table-scroll { flex: 1; min-height: 140px; max-height: none; }
 
 /* The header has to paint over the rows passing under it, and the confirmation
    over both. */
