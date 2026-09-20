@@ -57,7 +57,8 @@ export function signOutWeb() {
  * permissive CORS anyway. `init.auth === false` is login, which carries no token.
  */
 async function request(url, authorization, init = {}) {
-  const headers = { Accept: 'application/json' };
+  const headers = {};
+  if (!init.raw) headers.Accept = 'application/json';
   if (authorization && init.auth !== false) headers.authorization = authorization;
   if (init.body) headers['content-type'] = 'application/json';
   let res;
@@ -80,6 +81,9 @@ async function request(url, authorization, init = {}) {
     }
     throw err;
   }
+  // Barcode endpoints return a bare id and then a PDF, not JSON — hand back the
+  // raw Response so the caller reads it as text or a blob.
+  if (init.raw) return res;
   if (res.status === 204) return null;
   const text = await res.text();
   if (!text.trim()) return null;
@@ -130,6 +134,17 @@ export async function connectQuail({ email, password }) {
   session.quailAuth = core.quailAuthHeader(q.email, q.sessionId);
   persist();
   return { email: q.email };
+}
+
+/** Ask Sandpiper to render the price tags and hand back the PDF blob. */
+export async function generateBarcodeFile(opts = {}) {
+  if (!load() || !session.sandpiperToken) throw new Error('Sign in first.');
+  if (!session.accountId) throw new Error('No Sandpiper account is available on this sign-in.');
+  const token = session.sandpiperToken;
+  const accountId = session.accountId;
+  const id = await core.generateBarcodes({ request, accountId, token, ...opts });
+  const blob = await core.retrieveBarcodes({ request, token, id });
+  return { ok: true, id, blob };
 }
 
 function readCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; } }

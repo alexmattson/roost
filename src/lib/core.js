@@ -255,3 +255,37 @@ export async function loginQuail({ request, email, password }) {
   if (!sessionId) throw new Error('Quail accepted the sign-in but returned no session.');
   return { email: (res && res.email) || email, sessionId };
 }
+
+/* --------------------------------------------------------------- barcodes
+
+   Sandpiper renders the print file itself. We POST the item ids and the chosen
+   template to /api/barcodes/generate-ids, get back an opaque file id, then
+   fetch the formatted PDF from /api/barcodes/retrieve. Doing it server-side
+   means the tags come out byte-for-byte like Sandpiper's own — no client-side
+   barcode drawing to keep in sync. */
+
+/** POST the job; returns the file id (the endpoint replies with a bare id). */
+export async function generateBarcodes({
+  request, accountId, token, ids,
+  template, pageSize, boothNumber = '', currency = 'USD', skip = 0, printAll = false
+}) {
+  const body = { template, skip, ids: ids || [], boothNumber, currency, printAll, accountId, pageSize };
+  const res = await request(`${SANDPIPER}/api/barcodes/generate-ids`, `Bearer ${token}`, { method: 'POST', body, raw: true });
+  const text = (await res.text()).trim();
+  let id = text;
+  try {
+    const j = JSON.parse(text);
+    id = typeof j === 'string' ? j : (j.id || j.fileId || j.barcodeId || j.data || '');
+  } catch (e) { /* a bare, unquoted id — use the text as-is */ }
+  id = String(id).replace(/^"+|"+$/g, '').trim();
+  if (!id) throw new Error('Sandpiper accepted the job but returned no file id.');
+  return id;
+}
+
+export const barcodeRetrieveUrl = (id) => `${SANDPIPER}/api/barcodes/retrieve?id=${encodeURIComponent(id)}`;
+
+/** GET the rendered file for a job id, as a Blob ready to open or print. */
+export async function retrieveBarcodes({ request, token, id }) {
+  const res = await request(barcodeRetrieveUrl(id), `Bearer ${token}`, { raw: true });
+  return await res.blob();
+}

@@ -967,34 +967,34 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 
 /* ------------------------------------------------------------------ Print tags
 
-   A workspace: a control panel on the left, a true-size preview on the right.
-   Tags always render light (white, black ink) — a Code 128 barcode reads only
-   against white — so the preview is exactly what prints. */
+   A centred config sheet. Sandpiper renders the actual file server-side, so
+   there is no client-side tag drawing or preview — you pick a stock and a few
+   options, and the returned PDF opens in a new tab to print. */
 
-.tagx-body { flex: 1; display: flex; min-height: 0; }
-.tagx-panel {
-  width: 320px; flex: none; overflow-y: auto;
-  padding: 16px 16px 24px; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; gap: 18px;
+.tagx-config {
+  flex: 1; overflow-y: auto; padding: 20px 18px 28px;
+  max-width: 640px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 20px;
 }
-.tagx-group { display: flex; flex-direction: column; gap: 9px; }
+.tagx-group { display: flex; flex-direction: column; gap: 10px; }
 .tagx-group h3 {
   margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); font-weight: 620; display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 
 /* Printer-type cards */
-.tagx-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+.tagx-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.tagx-cards.two { grid-template-columns: 1fr 1fr; }
 .tagx-card {
-  display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center;
-  padding: 9px 6px; border-radius: 10px; border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border);
   background: var(--panel-2); color: var(--text); cursor: pointer; font: inherit;
 }
 .tagx-card:hover { border-color: var(--brass-dim); }
 .tagx-card.on { border-color: var(--brass); background: var(--brass-tint, rgba(240,180,41,.1)); }
-.tagx-card-name { font-size: 12px; font-weight: 620; }
-.tagx-card-hint { font-size: 9.5px; color: var(--faint); line-height: 1.25; }
-.tagx-art { width: 30px; height: 36px; }
+.tagx-card-name { font-size: 13px; font-weight: 620; }
+.tagx-card-hint { font-size: 10px; color: var(--faint); line-height: 1.3; }
+.tagx-art { width: 32px; height: 38px; }
 .tagx-art rect { fill: none; stroke: var(--muted); stroke-width: 1.4; }
 .tagx-art rect.cut { fill: var(--faint); stroke: none; opacity: .8; }
 .tagx-card.on .tagx-art rect { stroke: var(--brass); }
@@ -1012,106 +1012,29 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .tagx-seg button.on { background: var(--brass); color: #26200a; font-weight: 620; }
 
 /* Size chooser */
-.tagx-sizes { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.tagx-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .tagx-size {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 9px 6px; border-radius: 10px; border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 11px 8px; border-radius: 10px; border: 1px solid var(--border);
   background: var(--panel-2); color: var(--text); cursor: pointer; font: inherit;
 }
 .tagx-size:hover { border-color: var(--brass-dim); }
 .tagx-size.on { border-color: var(--brass); background: var(--brass-tint, rgba(240,180,41,.1)); }
-.tagx-size-name { font-size: 12px; font-weight: 620; }
-.tagx-size-sub { font-size: 9.5px; color: var(--faint); }
-.tagx-glyph {
-  display: grid; gap: 1px; width: 34px; height: 30px; padding: 2px;
-  border: 1px solid var(--border); border-radius: 3px; background: var(--panel);
-}
-.tagx-glyph.single { display: grid; place-items: center; }
-.tagx-glyph.single .tagx-glyph-cell { width: 22px; height: 12px; }
-.tagx-glyph-cell { background: var(--faint); border-radius: 1px; opacity: .7; }
-.tagx-size.on .tagx-glyph-cell { background: var(--brass); opacity: .95; }
+.tagx-size-name { font-size: 13px; font-weight: 620; }
+.tagx-size-sub { font-size: 10px; color: var(--faint); }
 
-/* Content toggles */
-.tagx-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-.tagx-check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: pointer; }
-.tagx-field { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+/* Details */
+.tagx-fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.tagx-field { display: flex; flex-direction: column; gap: 4px; }
 .tagx-field span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-.tagx-field input {
+.tagx-field input, .tagx-field select {
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
-  border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 12px; letter-spacing: 1px;
+  border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px; min-width: 120px;
 }
-.tagx-warn { background: var(--warn-bg, rgba(240,180,41,.1)); border-color: var(--brass-dim); align-items: flex-start; }
-.tagx-warn .count { color: var(--muted); line-height: 1.4; }
-.tagx-warn .count b { color: var(--brass); }
-
-/* Preview column */
-.tagx-preview { flex: 1; overflow: auto; background: var(--bg); padding: 18px; }
-.tagx-scale-wrap { width: 100%; }
-.tagx-empty { display: grid; place-items: center; height: 100%; color: var(--faint); font-size: 13px; }
-.tagx-pages { zoom: var(--scale, 1); }
-.tagx-pages.sheet { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.tagx-pages.label { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: flex-start; }
-
-.tag-page {
-  background: #fff; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,.4);
-}
-.tag-page-grid { display: grid; }
-.label-page {
-  background: #fff; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0,0,0,.4);
-  display: flex;
-}
-
-/* The tag itself — barcode + price up top, description, then vendor + number.
-   Children size in em off a font-size proportional to the tag, so one layout
-   fits every stock. */
-.tagx {
-  box-sizing: border-box; background: #fff; color: #000; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: space-between;
-  padding: .12em .18em; gap: .05em; line-height: 1.1;
-}
-.tagx.compact { justify-content: center; gap: .1em; }
-.tagx-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .25em; }
-.tagx-bc { flex: 1; min-width: 0; display: block; }
-.tagx-bc svg { display: block; width: 100%; height: 1.9em; }
-.tagx-price { font-weight: 700; font-size: 1.55em; line-height: 1; white-space: nowrap; }
-.tagx-desc {
-  font-size: .92em; line-height: 1.12; text-align: left; overflow: hidden;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-}
-.tagx-foot {
-  display: flex; justify-content: space-between; gap: .3em;
-  font-size: .85em; font-variant-numeric: tabular-nums; letter-spacing: .02em;
-}
-
-/* Code-list preview */
-.tagx-codelist { max-width: 560px; margin: 0 auto; font-size: 12px; }
-.tagx-codelist-head, .tagx-codelist-row {
-  display: grid; grid-template-columns: 90px 1fr 80px; gap: 10px; padding: 5px 8px; align-items: center;
-}
-.tagx-codelist-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
-.tagx-codelist-row { border-bottom: 1px solid var(--border-soft); }
-.tagx-codelist .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
-.tagx-codelist .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-.tagx-codelist .num { text-align: right; font-variant-numeric: tabular-nums; }
-.tagx-codelist-more { padding: 8px; color: var(--faint); font-size: 11px; }
-
-@media print {
-  html, body { width: auto; height: auto; overflow: visible; background: #fff; }
-  body > *:not(#print-tags) { display: none !important; }
-  #print-tags {
-    position: static; inset: auto; display: block !important;
-    height: auto; padding: 0; background: #fff;
-  }
-  #print-tags .no-print, .sheet-head, .tagx-panel { display: none !important; }
-  .tagx-body { display: block; }
-  .tagx-preview { overflow: visible; padding: 0; background: #fff; }
-  .tagx-scale-wrap { width: auto; }
-  .tagx-pages { zoom: 1 !important; }
-  .tagx-pages.sheet, .tagx-pages.label { display: block; gap: 0; }
-  .tag-page, .label-page { box-shadow: none; break-after: page; page-break-after: always; }
-  .tag-page:last-child, .label-page:last-child { break-after: auto; page-break-after: auto; }
-  .tagx { break-inside: avoid; page-break-inside: avoid; }
-}
+.tagx-field input[type="number"] { min-width: 90px; }
+.tagx-hint { margin: -2px 0 0; font-size: 11px; color: var(--faint); }
+.tagx-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+.tagx-check.big { margin-top: 4px; }
 
 /* --------------------------------------------------------------------- Home
 

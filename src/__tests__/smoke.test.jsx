@@ -96,24 +96,22 @@ describe('Roost app', () => {
     expect(await screen.findByText('Brass lamp')).toBeTruthy();
   });
 
-  it('opens Print tags and switches printer types', async () => {
+  it('opens Print tags and switches stock', async () => {
     seed('records');
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Print tags' }));
-    // Workspace is up: printer-type picker + a real tag from the current view.
+    // Config sheet is up: printer-type picker + a Print action.
     expect(await screen.findByText('Printer type')).toBeTruthy();
-    expect(await screen.findByRole('button', { name: /Print$/ })).toBeTruthy();
-    // Sheet family + size options render.
+    expect(await screen.findByRole('button', { name: /^Print$/ })).toBeTruthy();
+    // Sheet family + size options render, and switching to A4 changes them.
     expect(await screen.findByText('2-5/8" × 1"')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^A4/ }));
     expect(await screen.findByText('38 × 21mm')).toBeTruthy();
     // Label printer stock.
     fireEvent.click(screen.getByText('Label'));
     expect(await screen.findByText('2.4" × 1.1"')).toBeTruthy();
-    // Code list swaps Print for Download and shows the custom-printer warning.
-    fireEvent.click(screen.getByText('Code list'));
-    expect(await screen.findByRole('button', { name: 'Download file' })).toBeTruthy();
-    expect(await screen.findByText(/Needs a custom printer/i)).toBeTruthy();
+    // Vendor code carries a default derived from the account.
+    expect(await screen.findByPlaceholderText('AGM')).toBeTruthy();
   });
 
   it('opens the Add stock sheet from Home', async () => {

@@ -116,6 +116,10 @@ export function DataProvider({ children }) {
     return res;
   }, []);
 
+  const printBarcodes = useCallback(async (opts) => {
+    return backend.generateBarcodeFile(opts);
+  }, []);
+
   const connectSandpiper = useCallback(async (creds) => {
     const r = await backend.connectSandpiper(creds);
     refreshStatus();
@@ -148,7 +152,7 @@ export function DataProvider({ children }) {
     venueNames, meta: raw.meta, badge, hasData: items.length > 0,
     status, busy,
     // actions
-    refresh, loadCache, applyEdits, createItems, deleteItems,
+    refresh, loadCache, applyEdits, createItems, deleteItems, printBarcodes,
     connectSandpiper, connectQuail, signOut, refreshStatus, renameVenue
   };
 

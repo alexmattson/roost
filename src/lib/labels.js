@@ -1,81 +1,52 @@
 /**
- * Label / tag layouts, mirroring the variants Sandpiper prints.
+ * The label stocks Sandpiper can render, mapped to what its barcode API wants:
+ * a `template` id and a `pageSize` in millimetres. Sandpiper does the layout and
+ * barcode drawing server-side (see core.generateBarcodes); we only pick a stock.
  *
- * Three printer types:
- *   - sheet    : barcodes tiled onto a die-cut sheet of address labels
- *                (US Letter or A4), fed through a normal desktop printer.
- *   - label    : one tag per page for a dedicated roll/label printer.
- *   - codelist : a downloadable file of barcode data for a printer's own
- *                software to render (no page layout involved).
- *
- * Sheet and label templates carry true physical geometry so the preview is the
- * print. Everything is expressed in the template's own `unit` (in or mm); the
- * page is drawn at real size and only scaled for the on-screen preview.
+ * Confirmed against a live request: the 2" × 1" label posts
+ * `template: "30up"`, `pageSize: { width: 50.8, height: 25.4 }`. The sheet
+ * templates follow Sandpiper's "<count>up" naming (20/30/60/80 per US-Letter
+ * sheet); the A4 and other label ids are our best mapping and easy to correct
+ * here in one place if a stock comes back rejected.
  */
 
-// px per physical unit at CSS 96dpi — used only to scale the preview.
-export const PX_PER = { in: 96, mm: 96 / 25.4 };
-
-/* Sheets: symmetric side margins, so only the top margin and gaps are stored;
-   the left margin is derived to centre the grid on the page. */
-function sheet(id, name, unit, page, cols, rows, cell, gap, marginTop) {
-  const [pw, ph] = page;
-  const [cw, ch] = cell;
-  const [gx, gy] = gap;
-  const marginLeft = (pw - cols * cw - (cols - 1) * gx) / 2;
-  return { id, name, unit, page: { w: pw, h: ph }, cols, rows,
-    cell: { w: cw, h: ch }, gap: { x: gx, y: gy },
-    margin: { top: marginTop, left: marginLeft }, per: cols * rows };
-}
+const IN = 25.4; // inches → mm
+const mm = (w, h) => ({ width: Math.round(w * 100) / 100, height: Math.round(h * 100) / 100 });
 
 export const SHEET_TEMPLATES = {
   letter: [
-    sheet('us-4x1',      '4" × 1"',        'in', [8.5, 11], 2, 10, [4, 1],          [0.1875, 0], 0.5),
-    sheet('us-2.625x1',  '2-5/8" × 1"',    'in', [8.5, 11], 3, 10, [2.625, 1],      [0.125, 0],  0.5),
-    sheet('us-1.75x.67', '1-3/4" × 2/3"',  'in', [8.5, 11], 4, 15, [1.75, 0.6667],  [0.3, 0],    0.5),
-    sheet('us-1.75x.5',  '1-3/4" × 1/2"',  'in', [8.5, 11], 4, 20, [1.75, 0.5],     [0.3, 0],    0.5)
+    { id: 'us-4x1',      name: '4" × 1"',       template: '20up', per: 20, pageSize: mm(4 * IN, 1 * IN) },
+    { id: 'us-2.625x1',  name: '2-5/8" × 1"',   template: '30up', per: 30, pageSize: mm(2.625 * IN, 1 * IN) },
+    { id: 'us-1.75x.67', name: '1-3/4" × 2/3"', template: '60up', per: 60, pageSize: mm(1.75 * IN, 0.6667 * IN) },
+    { id: 'us-1.75x.5',  name: '1-3/4" × 1/2"', template: '80up', per: 80, pageSize: mm(1.75 * IN, 0.5 * IN) }
   ],
   a4: [
-    sheet('a4-35x35', '35 × 35mm', 'mm', [210, 297], 5,  7, [35, 35],     [2.5, 2.5], 18.5),
-    sheet('a4-38x21', '38 × 21mm', 'mm', [210, 297], 5, 13, [38.1, 21.2], [2.5, 0],   10.7),
-    sheet('a4-36x17', '36 × 17mm', 'mm', [210, 297], 5, 15, [36, 17],     [2.5, 0],   21),
-    sheet('a4-46x21', '46 × 21mm', 'mm', [210, 297], 4, 12, [46, 21],     [2.5, 0],   22.5),
-    sheet('a4-26x16', '26 × 16mm', 'mm', [210, 297], 7, 17, [26, 16],     [1.5, 0],   12.5)
+    { id: 'a4-35x35', name: '35 × 35mm', template: '35up',  per: 35,  pageSize: mm(35, 35) },
+    { id: 'a4-38x21', name: '38 × 21mm', template: '65up',  per: 65,  pageSize: mm(38.1, 21.2) },
+    { id: 'a4-36x17', name: '36 × 17mm', template: '75up',  per: 75,  pageSize: mm(36, 17) },
+    { id: 'a4-46x21', name: '46 × 21mm', template: '48up',  per: 48,  pageSize: mm(46, 21) },
+    { id: 'a4-26x16', name: '26 × 16mm', template: '119up', per: 119, pageSize: mm(26, 16) }
   ]
 };
 
-/* Dedicated-printer stock: one tag per page. */
 export const LABEL_TEMPLATES = [
-  { id: 'lp-2.25x1.25', name: '2-1/4" × 1-1/4"',       unit: 'in', w: 2.25, h: 1.25 },
-  { id: 'lp-2.4x1.1',   name: '2.4" × 1.1"',           unit: 'in', w: 2.4,  h: 1.1, note: 'Brother' },
-  { id: 'lp-2x1',       name: '2" × 1"',               unit: 'in', w: 2,    h: 1 },
-  { id: 'lp-1x1',       name: '1" × 1"',               unit: 'in', w: 1,    h: 1 },
-  { id: 'lp-1x.5',      name: '1" × 1/2"',             unit: 'in', w: 1,    h: 0.5 },
-  { id: 'lp-40x30',     name: '40 × 30mm',             unit: 'mm', w: 40,   h: 30 },
-  { id: 'lp-30x20',     name: '30 × 20mm',             unit: 'mm', w: 30,   h: 20 },
-  { id: 'lp-20x30',     name: '20 × 30mm',             unit: 'mm', w: 20,   h: 30 },
-  { id: 'lp-20x10',     name: '20 × 10mm',             unit: 'mm', w: 20,   h: 10 }
+  { id: 'lp-2.25x1.25', name: '2-1/4" × 1-1/4"', template: 'label', pageSize: mm(2.25 * IN, 1.25 * IN) },
+  { id: 'lp-2.4x1.1',   name: '2.4" × 1.1"',     template: 'label', pageSize: mm(2.4 * IN, 1.1 * IN), note: 'Brother' },
+  { id: 'lp-2x1',       name: '2" × 1"',         template: '30up',  pageSize: mm(2 * IN, 1 * IN) }, // confirmed
+  { id: 'lp-1x1',       name: '1" × 1"',         template: 'label', pageSize: mm(1 * IN, 1 * IN) },
+  { id: 'lp-1x.5',      name: '1" × 1/2"',       template: 'label', pageSize: mm(1 * IN, 0.5 * IN) },
+  { id: 'lp-40x30',     name: '40 × 30mm',       template: 'label', pageSize: mm(40, 30) },
+  { id: 'lp-30x20',     name: '30 × 20mm',       template: 'label', pageSize: mm(30, 20) },
+  { id: 'lp-20x30',     name: '20 × 30mm',       template: 'label', pageSize: mm(20, 30) },
+  { id: 'lp-20x10',     name: '20 × 10mm',       template: 'label', pageSize: mm(20, 10) }
 ];
 
 export function findSheet(family, id) {
-  const list = SHEET_TEMPLATES[family] || [];
+  const list = SHEET_TEMPLATES[family] || SHEET_TEMPLATES.letter;
   return list.find((t) => t.id === id) || list[0];
 }
 export function findLabel(id) {
   return LABEL_TEMPLATES.find((t) => t.id === id) || LABEL_TEMPLATES[0];
-}
-
-/** Break a flat list into fixed-size pages (for sheet pagination). */
-export function paginate(list, per) {
-  const pages = [];
-  for (let i = 0; i < list.length; i += per) pages.push(list.slice(i, i + per));
-  return pages;
-}
-
-/** The @page size keyword or explicit dimensions for a template. */
-export function pageSize(t, kind) {
-  if (kind === 'sheet') return t.page.w === 210 ? 'A4' : 'letter';
-  return `${t.w}${t.unit} ${t.h}${t.unit}`;
 }
 
 /** Booth/vendor initials for the tag — the "AGM" line on a Sandpiper tag. */
@@ -83,8 +54,6 @@ export function defaultVendor(user) {
   const s = String(user || '').trim();
   if (!s) return '';
   const words = s.split(/[\s._-]+/).filter(Boolean);
-  const code = words.length > 1
-    ? words.map((w) => w[0]).join('')
-    : s.slice(0, 3);
-  return code.toUpperCase().slice(0, 4);
+  const code = words.length > 1 ? words.map((w) => w[0]).join('') : s.slice(0, 3);
+  return code.toUpperCase().slice(0, 6);
 }
