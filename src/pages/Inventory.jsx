@@ -50,7 +50,6 @@ export function Inventory() {
     else rows.forEach((r) => n.add(r.id));
     return n;
   });
-  const clearSel = () => setSelected(new Set());
 
   const flash = (kind, text, ms = 2600) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
   const startEdit = (r) => { setEditingId(r.id); setFields(editFields(r)); };
@@ -112,9 +111,6 @@ export function Inventory() {
           <Select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
-          {selected.size > 0 && (
-            <span className="sel-count">{selected.size} selected · <button type="button" className="linklike" onClick={clearSel}>Clear</button></span>
-          )}
           <Button small onClick={() => setShowPrint(true)}>Print tags{selected.size ? ` (${selected.size})` : ''}</Button>
           <Button small onClick={openAddStock}>+ Add stock</Button>
         </div>

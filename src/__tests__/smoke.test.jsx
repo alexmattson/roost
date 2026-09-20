@@ -122,8 +122,8 @@ describe('Roost app', () => {
     const box = await screen.findByLabelText('Select #0100');
     fireEvent.click(box);
     expect(await screen.findByRole('button', { name: 'Print tags (1)' })).toBeTruthy();
-    // Clearing resets it.
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    // Unticking resets the count.
+    fireEvent.click(box);
     expect(await screen.findByRole('button', { name: 'Print tags' })).toBeTruthy();
   });
 
