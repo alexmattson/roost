@@ -491,7 +491,7 @@ th.pick input[type="checkbox"] { vertical-align: middle; }
 .finding-note { color: var(--faint); font-size: 10.5px; margin-top: 2px; }
 td.wrap { white-space: normal; max-width: 420px; }
 .table-scroll { max-height: 380px; overflow: auto; }
-#t-items td, #t-items th { padding: 5px 4px; }
+.items-table td, .items-table th { padding: 5px 4px; }
 .table-scroll::-webkit-scrollbar { width: 9px; }
 .table-scroll::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 8px; border: 2px solid var(--panel); }
 .table-controls { display: flex; align-items: center; gap: 6px; }
@@ -765,18 +765,18 @@ body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
 /* Widths come from the colgroup, never from the content, so swapping a row's
    text for input fields cannot move a single column. */
 .items-table { table-layout: fixed; }
-#t-items td { overflow: hidden; text-overflow: ellipsis; }
+.items-table td { overflow: hidden; text-overflow: ellipsis; }
 
 /* One height for both states, set on the row so neither can push it around.
    Sized for the editor rather than the text: a 26px field is comfortable to
    type in, a text cell needs ~24px, and 30px holds either. Matching the text
    row's own height is what made editing feel cramped. */
-#t-items tbody tr { height: 30px; }
-#t-items tbody td { vertical-align: middle; }
+.items-table tbody tr { height: 30px; }
+.items-table tbody td { vertical-align: middle; }
 
 th.row-acts, td.row-acts { white-space: nowrap; text-align: right; padding-right: 8px; }
 
-#t-items tr.editable { cursor: pointer; }
+.items-table tr.editable { cursor: pointer; }
 
 /* Kept quiet until the row is under the pointer: eleven columns of numbers
    should not be competing with two buttons on every line. */
@@ -792,14 +792,14 @@ tr:hover .row-act, tr.editing .row-act, .row-act:focus { opacity: 1; }
 
 /* Save and Cancel get the merged cell to themselves, so they are sized to be
    pressed rather than squeezed into the width "Delete" needs. */
-#t-items tr.editing .row-acts { padding-right: 8px; white-space: nowrap; }
-#t-items tr.editing .row-act { font-size: 11.5px; padding: 4px 10px; margin-left: 6px; }
+.items-table tr.editing .row-acts { padding-right: 8px; white-space: nowrap; }
+.items-table tr.editing .row-act { font-size: 11.5px; padding: 4px 10px; margin-left: 6px; }
 
 tr.editing { background: var(--panel-2); }
 /* No vertical padding at all: the 22px field is then shorter than the 26px row,
    so the row height governs both states and the field simply centres in it. */
-#t-items tr.editing td { padding: 0 4px; overflow: visible; vertical-align: middle; }
-#t-items tr.editing input {
+.items-table tr.editing td { padding: 0 4px; overflow: visible; vertical-align: middle; }
+.items-table tr.editing input {
   width: 100%; height: 26px; box-sizing: border-box;
   background: var(--panel); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
@@ -811,8 +811,8 @@ tr.editing input.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* A native date field carries a lot of furniture for an 86px column. Shrink the
    type and drop the picker glyph so mm/dd/yyyy still fits; the field is fully
    typeable, and the picker is still on the keyboard. */
-#t-items tr.editing input[type="date"] { font-size: 11px; padding: 0 4px; }
-#t-items tr.editing input[type="date"]::-webkit-calendar-picker-indicator {
+.items-table tr.editing input[type="date"] { font-size: 11px; padding: 0 4px; }
+.items-table tr.editing input[type="date"]::-webkit-calendar-picker-indicator {
   display: none;
 }
 td.muted { color: var(--faint); font-size: 11.5px; }
@@ -858,7 +858,7 @@ td.muted { color: var(--faint); font-size: 11.5px; }
 
 /* The header has to paint over the rows passing under it, and the confirmation
    over both. */
-#t-items th, #t-pos th { z-index: 3; }
+.items-table th, #t-pos th { z-index: 3; }
 .fix-bar#item-bar { position: relative; z-index: 4; }
 
 /* ------------------------------------------------------- web sign-in gate
