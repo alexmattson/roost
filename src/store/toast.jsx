@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom';
 
 const ToastContext = createContext(null);
 const KIND = { ok: 'ok', error: 'error', info: 'info' };
-const ICON = { ok: '✓', error: '!', info: 'i' };
+const LABEL = { ok: 'Success', error: 'Error', info: 'Notice' };
 const DEFAULT_MS = 3200;
 
 let seq = 0;
@@ -54,8 +54,10 @@ function ToastViewport({ toasts, onDismiss }) {
     <div className="toast-viewport" role="region" aria-live="polite" aria-label="Notifications">
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast-${t.kind}`} role="status">
-          <span className="toast-ico" aria-hidden="true">{ICON[t.kind]}</span>
-          <span className="toast-text">{t.text}</span>
+          <div className="toast-body">
+            <div className="toast-label">{LABEL[t.kind]}</div>
+            <div className="toast-text">{t.text}</div>
+          </div>
           <button className="toast-x" onClick={() => onDismiss(t.id)} aria-label="Dismiss notification">×</button>
         </div>
       ))}

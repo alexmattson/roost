@@ -1271,38 +1271,40 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 
 /* ---------------------------------------------------------------- toasts
 
-   One overlay notification system. Portalled to <body>, fixed above every
-   sheet (z 3000), so messages float over the layout instead of shifting it. */
+   One overlay notification system, styled to match the analytics cards — the
+   same panel gradient, radius and a thin top accent stripe (like a KPI tile) —
+   so notifications read as part of the same design language. Portalled to
+   <body>, fixed above every sheet (z 3000), floating over the layout. */
 
 .toast-viewport {
   position: fixed; top: 14px; right: 14px; z-index: 3000;
-  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  display: flex; flex-direction: column; gap: 9px; align-items: flex-end;
   width: min(360px, calc(100vw - 24px)); pointer-events: none;
 }
 .toast {
-  pointer-events: auto; width: 100%; box-sizing: border-box;
-  display: flex; align-items: flex-start; gap: 9px;
-  padding: 10px 11px 10px 12px; border-radius: 10px;
-  background: var(--panel); color: var(--text);
-  border: 1px solid var(--border); border-left: 3px solid var(--border);
-  box-shadow: 0 10px 30px rgba(0,0,0,.34);
-  font-size: 12.5px; line-height: 1.35;
+  pointer-events: auto; width: 100%; box-sizing: border-box; position: relative; overflow: hidden;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px 11px; border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border); box-shadow: var(--shadow);
   animation: toast-in .18s ease-out;
 }
-@keyframes toast-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
-.toast-ok    { border-left-color: var(--green); }
-.toast-error { border-left-color: var(--red); }
-.toast-info  { border-left-color: var(--blue); }
-.toast-ico {
-  flex: none; width: 17px; height: 17px; margin-top: .5px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #10140c;
+.toast::after {
+  content: ''; position: absolute; inset: 0 auto auto 0; width: 100%; height: 2px;
+  background: var(--toast-accent, transparent); opacity: .85;
 }
-.toast-ok .toast-ico    { background: var(--green); }
-.toast-error .toast-ico { background: var(--red); color: #fff; }
-.toast-info .toast-ico  { background: var(--blue); color: #fff; }
-.toast-text { flex: 1; min-width: 0; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+.toast-ok    { --toast-accent: var(--green); }
+.toast-error { --toast-accent: var(--red); }
+.toast-info  { --toast-accent: var(--blue); }
+.toast-body { flex: 1; min-width: 0; }
+.toast-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 660;
+  color: var(--toast-accent, var(--muted));
+}
+.toast-text { margin-top: 3px; font-size: 12.5px; line-height: 1.38; color: var(--text); }
 .toast-x {
-  flex: none; background: none; border: 0; padding: 0 2px; margin: -2px -2px 0 0;
+  flex: none; background: none; border: 0; padding: 0 2px; margin: -1px -3px 0 0;
   color: var(--faint); font-size: 16px; line-height: 1; cursor: pointer;
 }
 .toast-x:hover { color: var(--text); }
