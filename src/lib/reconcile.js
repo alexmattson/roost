@@ -79,7 +79,8 @@ export function reconcile(items, quailSales, range) {
   }
 
   const matched = [];
-  const untagged = [];
+  const untagged = [];        // Quail sales with no inventory number
+  const unresolvedQuail = []; // Quail sales whose number matches no Sandpiper item (e.g. renumbered)
 
   // A matched pair judged for value/timing disagreements, whichever way it was
   // joined (by pin or by number).
@@ -151,14 +152,9 @@ export function reconcile(items, quailSales, range) {
     }
     const candidates = spByInv.get(norm(sale.inv)) || [];
     if (!candidates.length) {
-      add({
-        type: 'quail-sale-missing-in-sandpiper',
-        severity: 'high',
-        soldAt: sale.soldAt,
-        inv: sale.inv,
-        detail: `Quail sold #${sale.inv} "${sale.desc}" but Sandpiper has no such item`,
-        quail: sale
-      });
+      // Number matches nothing in Sandpiper (often a renumbered item). Hold it
+      // for the price/time pairing below rather than giving up immediately.
+      unresolvedQuail.push(sale);
       continue;
     }
     // Prefer an item Sandpiper also marks sold, nearest in time to the POS sale.
@@ -179,16 +175,19 @@ export function reconcile(items, quailSales, range) {
     return !anyQuail.some((s) => Math.abs(s.soldAt - item.sold) < 30 * DAY);
   });
 
-  /* An untagged POS sale and an unmatched Sandpiper sale at the same price and
-   * around the same time are almost certainly the same event — the tag simply
-   * wasn't scanned. Pairing them turns two puzzling findings into one actionable
-   * one, and stops the same sale being counted as both a gap and a surplus. */
+  /* A Quail sale with no Sandpiper match — because it was untagged, or because
+   * the item was renumbered so the numbers no longer line up — and an unmatched
+   * Sandpiper sale at the same price and time are almost certainly the same
+   * event. Pairing them turns two puzzling findings into one linkable one, and
+   * stops the sale being counted as both a gap and a surplus. Resolving it pins
+   * the two together permanently (see resolve.planPin), so the link survives
+   * even though the numbers differ. */
   const pairedItems = new Set();
   const pairedSales = new Set();
-  for (const sale of untagged) {
+  for (const sale of [...untagged, ...unresolvedQuail]) {
     const candidate = orphanItems
       .filter((i) => !pairedItems.has(i.id))
-      // An untagged POS sale can't belong to a direct (non-Quail) channel.
+      // A POS sale can't belong to a direct (non-Quail) channel.
       .filter((i) => i.channelType !== 'direct')
       .filter((i) => Math.abs(i.soldPrice - sale.price) <= CENT_TOLERANCE)
       .filter((i) => Math.abs(i.sold - sale.soldAt) <= 2 * DAY)
@@ -201,10 +200,14 @@ export function reconcile(items, quailSales, range) {
       severity: 'medium',
       soldAt: sale.soldAt,
       inv: candidate.inv,
-      detail: `Untagged Quail sale "${sale.desc}" (${usd(sale.price)}) most likely is Sandpiper #${candidate.inv} "${candidate.desc}"`,
+      detail: sale.inv
+        ? `Quail #${sale.inv} "${sale.desc}" (${usd(sale.price)}) is most likely Sandpiper #${candidate.inv} "${candidate.desc}" — looks renumbered`
+        : `Untagged Quail sale "${sale.desc}" (${usd(sale.price)}) most likely is Sandpiper #${candidate.inv} "${candidate.desc}"`,
       quail: sale,
       item: candidate,
-      note: 'Same price, within two days. The POS sale carried no inventory tag.'
+      note: sale.inv
+        ? 'Same price and time, but the inventory numbers differ. Resolve to link them permanently.'
+        : 'Same price, within two days. The POS sale carried no inventory tag.'
     });
   }
 
@@ -217,6 +220,18 @@ export function reconcile(items, quailSales, range) {
       detail: `Sold "${sale.desc}" for ${usd(sale.price)} with no inventory number`,
       quail: sale,
       note: 'Rang up at the POS without an inventory tag, so it cannot be traced to a Sandpiper item.'
+    });
+  }
+
+  for (const sale of unresolvedQuail) {
+    if (pairedSales.has(sale.id)) continue;
+    add({
+      type: 'quail-sale-missing-in-sandpiper',
+      severity: 'high',
+      soldAt: sale.soldAt,
+      inv: sale.inv,
+      detail: `Quail sold #${sale.inv} "${sale.desc}" but Sandpiper has no such item`,
+      quail: sale
     });
   }
 

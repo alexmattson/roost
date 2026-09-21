@@ -65,6 +65,27 @@ describe('reconcile honours pins', () => {
     expect(findings.some((f) => f.type === 'quail-sale-missing-in-sandpiper')).toBe(false);
   });
 
+  it('pairs renumbered items with their still-old-numbered Quail sales', () => {
+    // The user's case: 0114 split into 0114a / 0114b in Sandpiper; Quail still
+    // rang both as #0114. Reconcile should offer two linkable probable matches,
+    // not unresolvable "missing" findings on both sides.
+    const items = [
+      { id: 'r', inv: '0114a', desc: 'Vintage Turkish Rug', isSold: true, sold: day(20), soldPrice: 6500, commission: 975, fees: 0, cost: 199, net: 5525, profit: 5326 },
+      { id: 'p', inv: '0114b', desc: 'Vintage Turkish Rug Pillow', isSold: true, sold: day(13), soldPrice: 7500, commission: 1125, fees: 0, cost: 2500, net: 6375, profit: 3875 }
+    ];
+    const sales = [
+      { id: 501, inv: '0114', desc: 'Vintage Turkish Rug', price: 6500, consignment: 975, cardFee: 0, soldAt: day(20), boothId: 'b' },
+      { id: 502, inv: '0114', desc: 'Vintage Turkish Rug Pillow', price: 7500, consignment: 1125, cardFee: 0, soldAt: day(13), boothId: 'b' }
+    ];
+    const { findings } = reconcile(items, sales, range);
+    expect(findings.filter((f) => f.type === 'probable-untagged-match')).toHaveLength(2);
+    expect(findings.some((f) => f.type === 'quail-sale-missing-in-sandpiper')).toBe(false);
+    expect(findings.some((f) => f.type === 'sandpiper-sale-missing-in-quail')).toBe(false);
+    // Each probable match pairs to the right item by price.
+    const rug = findings.find((f) => f.quail.id === 501);
+    expect(rug.item.inv).toBe('0114a');
+  });
+
   it('a pinned sale still flags a real price disagreement', () => {
     const items = [{
       id: 'a3', inv: '0050', desc: 'Lamp', sold: day(1), soldPrice: 9000, commission: 0, fees: 0,
