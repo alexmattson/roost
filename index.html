@@ -14,8 +14,7 @@
     (() => {
       try {
         const stored = localStorage.getItem('sp_theme');
-        const system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        document.documentElement.dataset.theme = stored || system;
+        document.documentElement.dataset.theme = stored || 'light';
       } catch (e) { document.documentElement.dataset.theme = 'dark'; }
     })();
   </script>

@@ -1306,3 +1306,125 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   color: var(--faint); font-size: 16px; line-height: 1; cursor: pointer;
 }
 .toast-x:hover { color: var(--text); }
+
+/* ==================================================================
+   CREXTIO REDESIGN (experimental branch) — warm, pill-forward, cards
+   floating on a cream→amber wash. Appended as an override layer so it
+   wins the cascade without disturbing the base rules.
+   ================================================================== */
+
+:root {
+  --radius: 20px;
+  --ink: #1d1d1b;
+  --accent-fill: #f6c73d;
+  --accent-ink: #2a2205;
+}
+
+:root[data-theme="light"] {
+  --bg:          #edeae2;
+  --panel:       #ffffff;
+  --panel-2:     #f7f3ea;
+  --border:      #eee8db;
+  --border-soft: rgba(0,0,0,.045);
+  --text:        #201f1c;
+  --muted:       #6f6c64;
+  --faint:       #a6a196;
+  --brass:       #b6810a;
+  --brass-dim:   #e7d089;
+  --shadow:      0 12px 34px rgba(70,56,20,.12);
+  --pill-bg:     rgba(0,0,0,.05);
+  --row-hover:   rgba(0,0,0,.026);
+  --glow-a:      rgba(246,199,61,.30);
+  --glow-b:      rgba(246,199,61,.12);
+  --tabs-bg:     transparent;
+  --btn-hover:   #f0ece2;
+}
+:root:not([data-theme="light"]) { --shadow: 0 12px 34px rgba(0,0,0,.42); }
+
+/* Warm diagonal wash across the whole surface. */
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 560px at 106% 6%, rgba(246,199,61,.36), transparent 58%),
+    radial-gradient(820px 520px at -6% -12%, rgba(255,255,255,.75), transparent 55%),
+    linear-gradient(142deg, #efece4 0%, #f4efe3 42%, #f7edcd 100%);
+}
+
+/* --- floating cards --- */
+.card {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 15px 17px 16px;
+}
+.card-head h2 { font-size: 14px; font-weight: 640; letter-spacing: -.01em; }
+
+/* --- pill buttons --- */
+.btn { border-radius: 999px; }
+.btn.primary {
+  background: var(--accent-fill); color: var(--accent-ink);
+  border-color: transparent;
+}
+.btn.primary:hover { filter: brightness(1.04); }
+.icon-btn { border-radius: 999px; }
+
+/* --- range chips: amber when active --- */
+.chip { border-radius: 999px; padding: 5px 12px; }
+.chip.active {
+  background: var(--accent-fill); border-color: transparent;
+  color: var(--accent-ink); font-weight: 640;
+}
+
+/* --- top chrome: drop hard borders, let it float on the wash --- */
+.topbar { border-bottom: none; background: transparent; }
+.rangebar { border-bottom: none; }
+
+/* --- modes: a centered white pill nav with a black active pill --- */
+.modes {
+  align-self: center; display: inline-flex; gap: 3px;
+  margin: 8px auto 2px; padding: 5px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 999px; box-shadow: var(--shadow);
+}
+.modes button {
+  border: none; border-bottom: none; margin: 0;
+  border-radius: 999px; padding: 8px 18px; font-size: 13px; color: var(--muted);
+}
+.modes button:hover { color: var(--text); }
+.modes button.active { background: var(--ink); color: #fff; border-bottom: none; }
+.modes button.active .mode-badge,
+.modes button.active .mode-badge.urgent { background: rgba(255,255,255,.22); color: #fff; }
+
+/* --- tabs: a lighter centered pill row --- */
+.tabs {
+  align-self: center; display: inline-flex; gap: 3px;
+  margin: 6px auto 4px; padding: 4px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 999px; box-shadow: none;
+}
+.tabs button {
+  border: none; border-bottom: none; margin: 0;
+  border-radius: 999px; padding: 6px 14px; color: var(--muted); font-size: 12px;
+}
+.tabs button:hover { color: var(--text); }
+.tabs button.active { background: var(--ink); color: #fff; border-bottom: none; }
+
+/* --- bigger, bolder stat numbers --- */
+.kpi { border-radius: var(--radius); }
+.kpi-value { font-size: 25px; font-weight: 720; letter-spacing: -.03em; }
+.kpi-label { font-size: 10px; letter-spacing: .06em; }
+
+/* --- selected inventory row: full amber highlight (like the mock) --- */
+.items-table tr.picked, .items-table tr.picked:hover { background: rgba(246,199,61,.85); }
+.items-table tr.picked td { color: var(--accent-ink); }
+
+/* --- inputs / selects / table controls: pill-ish, soft --- */
+.tc-control, .venue-select, .custom-range input { border-radius: 999px; }
+.table-controls .tc-control { border-radius: 999px; }
+
+/* --- sheets (overlays) pick up the warm ground too --- */
+:root[data-theme="light"] .sheet { background: var(--bg); }
+
+/* Keep the pill nav compact even in the expanded web layout (the base
+   body.expanded rule pads these to 28px for the full-width rows). */
+body.expanded .modes { padding: 5px; }
+body.expanded .tabs { padding: 4px; }
