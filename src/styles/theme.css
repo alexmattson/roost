@@ -1529,3 +1529,56 @@ body.expanded .tabs { padding: 4px; }
   padding: 3px; border-radius: 999px;
 }
 .rec-actions .btn { box-shadow: var(--shadow); }
+
+/* --- records table v3: ONE white card; loose pills on top; actions in the
+   top-right corner (the cutout) — matching the People mock structure --- */
+
+.records-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px 16px 8px; position: relative;
+}
+.records-card .table-scroll { background: none; border: none; box-shadow: none; padding: 0; }
+.records-card thead th { background: var(--panel); border-bottom: 1px dashed var(--border); }
+
+/* Toolbar: loose pills, with the right side reserved for the action group. */
+.rec-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  padding-right: 216px;
+}
+.rec-filters {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  background: none; border: none; box-shadow: none; padding: 0;
+}
+
+/* Filter + search are individual white pills sitting on the white card. */
+.rec-pill {
+  background: var(--panel); border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(70,56,20,.06); border-radius: 999px;
+  padding: 9px 32px 9px 15px; font-size: 12.5px; color: var(--text);
+}
+.rec-search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px;
+  background: var(--panel); border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(70,56,20,.06); border-radius: 999px; padding: 9px 16px;
+}
+
+/* Action group lives in the top-right cutout — offset above the card edge so
+   the cream shows around it. */
+.rec-actions {
+  position: absolute; top: -13px; right: 14px;
+  display: flex; align-items: center; gap: 8px; padding: 0;
+}
+.rec-actions .btn { box-shadow: var(--shadow); }
+
+/* --- records table v4: action group is a recessed (cream) cutout on the white
+   card, in-flow beside the filters — reliable and clearly carved --- */
+.rec-head { padding-right: 0; gap: 10px; }
+.rec-actions {
+  position: static; flex: none;
+  display: flex; align-items: center; gap: 7px;
+  background: var(--bg); border: 1px solid var(--border-soft);
+  border-radius: 999px; padding: 5px 6px;
+  box-shadow: inset 0 1px 3px rgba(70,56,20,.08);
+}
+.rec-actions .btn { box-shadow: 0 2px 8px rgba(70,56,20,.08); }
