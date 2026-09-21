@@ -97,8 +97,8 @@ function Dashboard() {
     <>
       <TopBar onRefresh={doRefresh} refreshing={refreshing} />
       <ModesNav />
-      <RangeBar />
       <Tabs />
+      <RangeBar />
       <main id="main" key={theme}>
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>
