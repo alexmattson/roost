@@ -151,7 +151,11 @@ body.expanded .table-scroll { max-height: none; }
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mark { width: 30px; height: 30px; flex: none; }
-.brand-text h1 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+.brand-text h1 {
+  margin: 0; font-size: 23px; line-height: 1;
+  font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-weight: 600; font-optical-sizing: auto; letter-spacing: -.005em;
+}
 .brand-text p {
   margin: 1px 0 0; font-size: 11px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px;
@@ -898,7 +902,11 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 }
 .login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
 .login-brand .mark { width: 34px; height: 34px; }
-.login-brand h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.login-brand h1 {
+  margin: 0; font-size: 30px; line-height: 1;
+  font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-weight: 600; font-optical-sizing: auto; letter-spacing: -.005em;
+}
 .login-lead { margin: 0 0 18px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
 /* One box per system, connected on its own. */
