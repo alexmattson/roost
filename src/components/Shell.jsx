@@ -20,12 +20,10 @@ export function TopBar({ onRefresh, refreshing }) {
         </div>
       </div>
       <div className="top-actions">
-        <button className={`btn primary fetch-btn ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>
+        {updated && <span className="fetch-when" title={`Data last fetched ${updated}`}>Updated {updated}</span>}
+        <button className={`btn primary ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>
           <RefreshIcon />
-          <span className="fetch-label">
-            <span className="fetch-title">{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
-            {updated && !refreshing && <span className="fetch-sub">updated {updated}</span>}
-          </span>
+          <span>{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
         </button>
         <AccountMenu meta={meta} theme={theme} toggleTheme={toggle}
           onManage={openManageChannels} onSignOut={signOut} />

@@ -1240,11 +1240,9 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 
 /* ------------------------------------------------- top bar: fetch + menu */
 
-/* Last-updated time folded into the fetch button. */
-.fetch-btn { align-items: center; }
-.fetch-label { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.12; }
-.fetch-title { font-size: 12.5px; font-weight: 650; }
-.fetch-sub { font-size: 10px; font-weight: 500; opacity: .78; }
+/* Slim last-fetched label beside the fetch button (keeps the button one line). */
+.fetch-when { font-size: 11px; color: var(--muted); white-space: nowrap; margin-right: 2px; }
+@media (max-width: 640px) { .fetch-when { display: none; } }
 
 /* Account & settings dropdown. */
 .acct-menu { position: relative; }
