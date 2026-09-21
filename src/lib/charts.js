@@ -156,8 +156,9 @@ function yAxis(f, ticks, fmt) {
   const { svg, pad, iw } = f;
   for (const t of ticks.ticks) {
     const y = f.yScale(t);
-    el('line', { x1: pad.l, x2: pad.l + iw, y1: y, y2: y, stroke: PALETTE.grid, 'stroke-width': 1 }, svg);
-    el('text', { x: pad.l - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-label' }, svg).textContent = fmt(t);
+    // Faint dotted guides rather than solid gridlines — cleaner, per the design.
+    el('line', { x1: pad.l, x2: pad.l + iw, y1: y, y2: y, stroke: PALETTE.grid, 'stroke-width': 1, 'stroke-dasharray': '1 7', 'stroke-linecap': 'round' }, svg);
+    el('text', { x: pad.l - 10, y: y + 4, 'text-anchor': 'end', class: 'axis-label' }, svg).textContent = fmt(t);
   }
 }
 
@@ -174,6 +175,25 @@ function xLabels(f, labels) {
 
 export function empty(container, message = 'No data in this range') {
   container.innerHTML = `<div class="chart-empty">${message}</div>`;
+}
+
+/* A smooth (Catmull-Rom → cubic Bézier) path through the points, for the soft
+   curved lines the design system uses instead of straight segments. */
+function smooth(pts) {
+  if (pts.length < 3) return pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
 }
 
 /* ------------------------------------------------------------- line chart */
@@ -203,7 +223,7 @@ export function lineChart(container, opts) {
   series.forEach((s, si) => {
     const color = s.color || SERIES_COLORS[si % SERIES_COLORS.length];
     const pts = s.values.map((v, i) => [f.xCenter(i), f.yScale(v)]);
-    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+    const d = smooth(pts);
 
     if (area && series.length <= 2) {
       const gid = `grad-${Math.random().toString(36).slice(2, 8)}`;
@@ -217,13 +237,15 @@ export function lineChart(container, opts) {
         fill: `url(#${gid})`
       }, f.svg);
     }
-    el('path', { d, fill: 'none', stroke: color, 'stroke-width': 2.25, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, f.svg);
+    const linePath = { d, fill: 'none', stroke: color, 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' };
+    if (s.dashed) linePath['stroke-dasharray'] = '2 6';
+    el('path', linePath, f.svg);
   });
 
-  // hover crosshair
-  const hover = el('line', { y1: pad.t, y2: pad.t + f.ih, stroke: PALETTE.hairline, 'stroke-width': 1, opacity: 0 }, f.svg);
+  // hover crosshair (faint dotted droptline) + highlighted points
+  const hover = el('line', { y1: pad.t, y2: pad.t + f.ih, stroke: PALETTE.hairline, 'stroke-width': 1, 'stroke-dasharray': '2 4', opacity: 0 }, f.svg);
   const dots = series.map((s, si) =>
-    el('circle', { r: 4, fill: s.color || SERIES_COLORS[si % SERIES_COLORS.length], stroke: PALETTE.surface, 'stroke-width': 2, opacity: 0 }, f.svg)
+    el('circle', { r: 4.5, fill: s.color || SERIES_COLORS[si % SERIES_COLORS.length], stroke: PALETTE.surface, 'stroke-width': 2.5, opacity: 0 }, f.svg)
   );
   const hit = el('rect', { x: 0, y: 0, width: f.w, height: f.h, fill: 'transparent' }, f.svg);
   hit.addEventListener('mousemove', (e) => {
@@ -297,7 +319,7 @@ export function barChart(container, opts) {
       }
       el('rect', {
         x, y, width: barW, height: Math.max(v === 0 ? 0 : 1.5, h),
-        rx: Math.min(3, barW / 2), fill: color, opacity: v < 0 ? 0.75 : 0.95, class: 'bar'
+        rx: Math.min(6, barW / 2), fill: color, opacity: v < 0 ? 0.75 : 0.95, class: 'bar'
       }, f.svg);
     });
 
@@ -338,18 +360,22 @@ export function donut(container, opts) {
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 6;
-  const inner = r * 0.63;
+  const inner = r * 0.68;
+  // A small gap between segments reads cleaner and echoes the design's ring look.
+  const gap = segments.filter((s) => s.value > 0).length > 1 ? 0.035 : 0;
 
   let angle = -Math.PI / 2;
   segments.forEach((s, i) => {
     const frac = Math.max(0, s.value) / total;
     const a2 = angle + frac * Math.PI * 2;
-    const large = frac > 0.5 ? 1 : 0;
+    const start = angle + gap / 2;
+    const end = Math.max(start, a2 - gap / 2);
+    const large = end - start > Math.PI ? 1 : 0;
     const p = (rad, ang) => [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)];
-    const [x1, y1] = p(r, angle);
-    const [x2, y2] = p(r, a2 - 0.0001);
-    const [x3, y3] = p(inner, a2 - 0.0001);
-    const [x4, y4] = p(inner, angle);
+    const [x1, y1] = p(r, start);
+    const [x2, y2] = p(r, end);
+    const [x3, y3] = p(inner, end);
+    const [x4, y4] = p(inner, start);
     const color = s.color || SERIES_COLORS[i % SERIES_COLORS.length];
     const path = el('path', {
       d: `M${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${inner} ${inner} 0 ${large} 0 ${x4} ${y4} Z`,

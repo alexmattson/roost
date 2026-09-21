@@ -1428,3 +1428,26 @@ html.pre-auth #login-gate[hidden] { display: grid; }
    body.expanded rule pads these to 28px for the full-width rows). */
 body.expanded .modes { padding: 5px; }
 body.expanded .tabs { padding: 4px; }
+
+/* --- charts: integrate with the design system --- */
+/* Tooltip becomes a near-black rounded pill with light text (like the mock). */
+.chart-tip {
+  background: var(--ink); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; color: #fff; padding: 8px 11px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.3);
+}
+.tip-title { color: #fff; font-size: 11px; opacity: .95; }
+.tip-row { color: rgba(255,255,255,.7); }
+.tip-row b { color: #fff; }
+.tip-row .dot { box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
+
+/* Progress / hbar tracks become full pills. */
+.hbar-track { height: 16px; border-radius: 999px; background: var(--track); }
+.hbar-fill { border-radius: 999px; }
+
+/* Donut centre number bigger and bolder. */
+.donut-value { font-size: 21px; font-weight: 720; letter-spacing: -.02em; }
+.donut-label { font-size: 10.5px; }
+
+/* Axis labels: light and unobtrusive. */
+.axis-label { fill: var(--faint); font-size: 10px; letter-spacing: .02em; }
