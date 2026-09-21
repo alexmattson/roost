@@ -133,24 +133,28 @@ export function Inventory() {
 
   return (
     <Card className="records-card">
-      <div className="card-head">
-        <h2>Inventory</h2>
-        <span className="hint source">Sandpiper records, as Sandpiper holds them</span>
-        <div className="table-controls">
-          <SearchInput placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <Select value={filter} onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
+      <div className="rec-head">
+        <div className="rec-filters">
+          <Select className="rec-pill" value={filter} aria-label="Filter items"
+            onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
             {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
           {selected.size > 0 && boothOptions.length > 0 && (
-            <Select value="" aria-label="Assign selected to a channel"
+            <Select className="rec-pill" value="" aria-label="Assign selected to a channel"
               onChange={(e) => { bulkAssign(e.target.value); e.target.value = ''; }}>
               <option value="">Assign channel…</option>
               {boothOptions.map((o) => <option key={o.id} value={o.id}>{o.label}{o.store ? ` · ${o.store}` : ''}</option>)}
               <option value="__unassign__">Unassigned</option>
             </Select>
           )}
+          <label className="rec-search">
+            <svg className="rec-search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3.2-3.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <SearchInput className="rec-search-input" placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </label>
+        </div>
+        <div className="rec-actions">
           <Button small onClick={() => setShowPrint(true)}>Print tags{selected.size ? ` (${selected.size})` : ''}</Button>
-          <Button small onClick={openAddStock}>+ Add stock</Button>
+          <Button small variant="primary" onClick={openAddStock}>+ Add stock</Button>
         </div>
       </div>
 

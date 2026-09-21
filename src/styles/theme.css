@@ -1451,3 +1451,48 @@ body.expanded .tabs { padding: 4px; }
 
 /* Axis labels: light and unobtrusive. */
 .axis-label { fill: var(--faint); font-size: 10px; letter-spacing: .02em; }
+
+/* --- records tables: pill toolbar + white table card (Crextio People look) --- */
+
+/* The card chrome moves to the table itself; the toolbar floats on the wash. */
+.records-card { background: transparent; border: none; box-shadow: none; padding: 0; }
+.records-card .table-scroll {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 2px 14px 8px;
+}
+.records-card thead th { background: var(--panel); border-bottom: 1px dashed var(--border); }
+
+/* Toolbar: filters + search on the left, action pills on the right. */
+.rec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rec-filters { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.rec-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+.rec-pill {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 9px 32px 9px 16px; font: inherit; font-size: 12.5px;
+  box-shadow: var(--shadow); flex: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236f6c64' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 13px center;
+}
+.rec-pill:focus { outline: none; border-color: var(--brass-dim); }
+
+.rec-search {
+  flex: 1 1 300px; max-width: 560px; display: flex; align-items: center; gap: 9px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+  padding: 8px 16px; box-shadow: var(--shadow);
+}
+.rec-search:focus-within { border-color: var(--brass-dim); }
+.rec-search-ico { width: 16px; height: 16px; color: var(--faint); flex: none; }
+.rec-search-input {
+  flex: 1; min-width: 0; height: auto; padding: 0; margin: 0;
+  background: none; border: none; outline: none; font: inherit; font-size: 13px; color: var(--text);
+}
+.rec-search-input::placeholder { color: var(--faint); }
+.rec-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+/* Selected row: a full bright-amber highlight, rounded like the mock. */
+.items-table tbody { position: relative; }
+.items-table tr.picked td:first-of-type { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.items-table tr.picked td:last-of-type { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
