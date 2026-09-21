@@ -113,7 +113,9 @@ export function AddStock({ onClose }) {
             ? `Numbers continue your ${nextDraftNumber()} series. Enter moves down, and adds a row at the bottom.`
             : 'Fetch your data first so Roost can pick inventory numbers for you.'}</p>
         </div>
-        <button className="icon-btn" title="Close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="sheet-actions">
+          <button className="btn ghost" onClick={onClose}>Close</button>
+        </div>
       </div>
 
       <div className="sheet-defaults">
