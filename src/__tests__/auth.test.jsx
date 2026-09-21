@@ -46,7 +46,9 @@ describe('auth gate', () => {
     localStorage.setItem('roost_web_cache', JSON.stringify({ items: [], quail: null, venues: { stores: {}, booths: {} }, meta: { fetchedAt: Date.now(), count: 0 } }));
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    // Sign out lives in the account menu now — open it first.
+    fireEvent.click(await screen.findByRole('button', { name: /Account and settings/i }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByRole('button', { name: 'Enter Roost' })).toBeTruthy();
   });
 

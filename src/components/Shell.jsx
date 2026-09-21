@@ -1,17 +1,15 @@
+import { useState, useEffect, useRef } from 'react';
 import { Brand } from './Brand.jsx';
 import { useData } from '../store/data.jsx';
 import { useNav, MODES, modeById } from '../store/nav.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
-import { int } from '../lib/format.js';
 import { relativeTime } from '../lib/format.js';
 
 export function TopBar({ onRefresh, refreshing }) {
-  const { meta, badge, signOut } = useData();
+  const { meta, signOut } = useData();
   const { openManageChannels } = useNav();
   const { theme, toggle } = useTheme();
-  const subline = meta
-    ? `${meta.user || 'Signed in'} · ${int(meta.count)} items · updated ${relativeTime(meta.fetchedAt)}`
-    : 'Not synced yet';
+  const updated = meta ? relativeTime(meta.fetchedAt) : null;
 
   return (
     <header className="topbar">
@@ -19,23 +17,56 @@ export function TopBar({ onRefresh, refreshing }) {
         <Brand />
         <div className="brand-text">
           <h1>Roost</h1>
-          <p id="subline">{subline}</p>
         </div>
       </div>
       <div className="top-actions">
-        <button className="icon-btn" title="Manage channels" onClick={openManageChannels} aria-label="Manage channels"><ChannelsIcon /></button>
-        <button className="icon-btn" title="Switch theme" onClick={toggle} aria-label="Switch theme">
-          {theme === 'light'
-            ? <MoonIcon />
-            : <SunIcon />}
-        </button>
-        <button className="icon-btn" title="Sign out" onClick={signOut} aria-label="Sign out"><SignOutIcon /></button>
-        <button className={`btn primary ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>
+        <button className={`btn primary fetch-btn ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>
           <RefreshIcon />
-          <span>{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
+          <span className="fetch-label">
+            <span className="fetch-title">{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
+            {updated && !refreshing && <span className="fetch-sub">updated {updated}</span>}
+          </span>
         </button>
+        <AccountMenu meta={meta} theme={theme} toggleTheme={toggle}
+          onManage={openManageChannels} onSignOut={signOut} />
       </div>
     </header>
+  );
+}
+
+function AccountMenu({ meta, theme, toggleTheme, onManage, onSignOut }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  return (
+    <div className="acct-menu" ref={ref}>
+      <button className="icon-btn" aria-haspopup="menu" aria-expanded={open} title="Account & settings"
+        aria-label="Account and settings menu" onClick={() => setOpen((o) => !o)}><MenuIcon /></button>
+      {open && (
+        <div className="acct-pop" role="menu">
+          {meta && meta.user && <div className="acct-who" title={meta.user}>{meta.user}</div>}
+          <button role="menuitem" className="acct-item" onClick={toggleTheme}>
+            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            <span>{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
+          </button>
+          <button role="menuitem" className="acct-item" onClick={() => { setOpen(false); onManage(); }}>
+            <ChannelsIcon /><span>Manage channels</span>
+          </button>
+          <div className="acct-sep" />
+          <button role="menuitem" className="acct-item danger" onClick={() => { setOpen(false); onSignOut(); }}>
+            <SignOutIcon /><span>Sign out</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -159,4 +190,5 @@ const SunIcon = () => <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" f
 const MoonIcon = () => <svg viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
 const SignOutIcon = () => <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ChannelsIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M3 8h18l-1.2 3.2a2 2 0 0 1-3.8-.7 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-3.8.7L3 8zM5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const MenuIcon = () => <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.7" fill="currentColor" /><circle cx="12" cy="12" r="1.7" fill="currentColor" /><circle cx="12" cy="19" r="1.7" fill="currentColor" /></svg>;
 const RefreshIcon = () => <svg className="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
