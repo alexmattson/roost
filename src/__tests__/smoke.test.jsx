@@ -118,7 +118,8 @@ describe('Roost app', () => {
     seed('records');
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /Sync/i }));
-    expect(await screen.findByText('Anomalies')).toBeTruthy();
+    // The reconcile toolbar renders its severity filter.
+    expect(await screen.findByRole('option', { name: 'All severities' })).toBeTruthy();
   });
 
   it('renders the Inventory table', async () => {
@@ -131,7 +132,7 @@ describe('Roost app', () => {
     seed('records');
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'POS sales' }));
-    expect(await screen.findByText('Point-of-sale ledger')).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'All payments' })).toBeTruthy();
     const netPayout = await screen.findByText('Net payout');
     fireEvent.click(netPayout);                 // sort by it — must not throw
     expect(await screen.findByText('Brass lamp')).toBeTruthy();
