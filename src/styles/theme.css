@@ -1496,3 +1496,36 @@ body.expanded .tabs { padding: 4px; }
 .items-table tbody { position: relative; }
 .items-table tr.picked td:first-of-type { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
 .items-table tr.picked td:last-of-type { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+/* --- records toolbar v2: the filters/search live on a white bar (the header
+   surface), and the action buttons sit in a cutout beside it --- */
+
+.rec-head { display: flex; align-items: stretch; gap: 12px; margin-bottom: 12px; }
+
+/* The header surface — a white pill bar holding the filters + search. */
+.rec-filters {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 999px; box-shadow: var(--shadow); padding: 6px 8px 6px 10px;
+}
+
+/* Filters become soft inset pills on the white bar. */
+.rec-pill {
+  background: var(--panel-2); border: 1px solid transparent; box-shadow: none;
+  padding: 8px 30px 8px 14px;
+}
+.rec-pill:hover { border-color: var(--border); }
+
+/* Search fills the rest of the bar, no chrome of its own. */
+.rec-search {
+  flex: 1; min-width: 0; background: none; border: none; box-shadow: none;
+  padding: 4px 8px 4px 6px;
+}
+.rec-search:focus-within { border: none; }
+
+/* Actions: their own group, offset from the bar so the gap reads as a cutout. */
+.rec-actions {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  padding: 3px; border-radius: 999px;
+}
+.rec-actions .btn { box-shadow: var(--shadow); }
