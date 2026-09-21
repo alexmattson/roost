@@ -66,12 +66,3 @@ export function Select({ children, className = '', ...props }) {
   return <select className={`tc-control ${className}`.trim()} {...props}>{children}</select>;
 }
 
-export function Banner({ kind = 'info', children, onClose }) {
-  if (!children) return null;
-  return (
-    <div className={`banner ${kind}`}>
-      <span>{children}</span>
-      {onClose && <button className="banner-x" onClick={onClose} aria-label="Dismiss">×</button>}
-    </div>
-  );
-}

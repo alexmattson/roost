@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
+import { useToast } from '../store/toast.jsx';
 import { useNav } from '../store/nav.jsx';
 import { int } from '../lib/format.js';
 import { makeVenueLabels } from '../lib/venues.js';
@@ -22,6 +23,7 @@ const CURRENCIES = ['USD', 'CAD', 'GBP', 'EUR', 'AUD', 'NZD'];
 export function PrintTags({ rows, onClose }) {
   const { printBarcodes, venueInfo, venueNames } = useData();
   const { venue } = useNav();
+  const toast = useToast();
 
   const ids = useMemo(
     () => rows.filter((r) => r.source !== 'quail' && r.id).map((r) => r.id),
@@ -49,7 +51,6 @@ export function PrintTags({ rows, onClose }) {
   const [currency, setCurrency] = useState('USD');
   const [skip, setSkip] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -61,7 +62,6 @@ export function PrintTags({ rows, onClose }) {
 
   const doPrint = async () => {
     if (!canPrint) return;
-    setError(null);
     setBusy(true);
     // Reserve the tab under the click so the async fetch doesn't trip the
     // popup blocker.
@@ -90,7 +90,7 @@ export function PrintTags({ rows, onClose }) {
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
       if (win && !win.closed) win.close();
-      setError(e.message || String(e));
+      toast('error', e.message || String(e), 0);
     } finally {
       setBusy(false);
     }
@@ -116,7 +116,6 @@ export function PrintTags({ rows, onClose }) {
       </div>
 
       <div className="tagx-config">
-        {error && <div className="banner error"><span>{error}</span></div>}
 
         <PrinterTypePicker value={printer} onChange={setPrinter} />
 

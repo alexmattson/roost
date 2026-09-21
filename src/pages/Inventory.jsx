@@ -4,6 +4,7 @@ import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
 import { ITEM_COLUMNS, ITEM_ACTS_W, filterItems, collectChanges, editFields } from '../lib/items.js';
 import { makeVenueLabels } from '../lib/venues.js';
+import { useToast } from '../store/toast.jsx';
 import { Card, Button, SearchInput, Select } from '../components/ui.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 import { PrintTags } from './PrintTags.jsx';
@@ -33,7 +34,6 @@ export function Inventory() {
   const [fields, setFields] = useState(null);
   const [deletePending, setDeletePending] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [banner, setBanner] = useState(null);
   const [showPrint, setShowPrint] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
 
@@ -62,7 +62,7 @@ export function Inventory() {
     return n;
   });
 
-  const flash = (kind, text, ms = 2600) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
+  const flash = useToast();
   const startEdit = (r) => { setEditingId(r.id); setFields(editFields(r)); };
   const cancelEdit = () => { setEditingId(null); setFields(null); };
 
@@ -154,7 +154,6 @@ export function Inventory() {
         </div>
       </div>
 
-      {banner && <div className={`banner ${banner.kind}`}><span>{banner.text}</span></div>}
       <DeleteBar pending={deletePending} busy={busy} items={items}
         onCancel={() => setDeletePending(null)} onGo={() => doDelete(deletePending)} />
 

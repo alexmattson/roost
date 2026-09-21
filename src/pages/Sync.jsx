@@ -6,9 +6,11 @@ import { planResolution, planPin, PINNABLE_TYPES, buildVenueContext, CONFIDENCE 
 import { FINDING_LABELS, findingKey, matchOf } from '../lib/reconcile-ui.js';
 import { dayMonth } from '../lib/format.js';
 import { Card, Select } from '../components/ui.jsx';
+import { useToast } from '../store/toast.jsx';
 
 export function Sync() {
   const { items, quailSales, venueInfo, applyEdits } = useData();
+  const toast = useToast();
   const [filters, setFilters] = useState({ severity: 'all', match: 'all', type: 'all' });
   const [selected, setSelected] = useState(() => new Set());
   const [pending, setPending] = useState(null); // { entries } awaiting confirm
@@ -62,12 +64,17 @@ export function Sync() {
   const apply = async (list) => {
     setApplying(true);
     try {
-      await applyEdits(list.map((e) => ({
+      const res = await applyEdits(list.map((e) => ({
         itemId: e.plan.itemId,
         changes: e.plan.changes.map((c) => ({ field: c.field, to: c.to }))
       })));
       setSelected(new Set());
       setPending(null);
+      const bad = res.results && res.results.find((r) => !r.ok);
+      if (bad) toast('error', `Resolved some, then stopped: ${bad.error}`, 0);
+      else toast('ok', `Resolved ${list.length} finding${list.length === 1 ? '' : 's'} in Sandpiper.`);
+    } catch (e) {
+      toast('error', e.message || String(e), 0);
     } finally {
       setApplying(false);
     }

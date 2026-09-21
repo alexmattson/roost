@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useData } from '../store/data.jsx';
+import { useToast } from '../store/toast.jsx';
 import { analyze, dataBounds } from '../lib/analytics.js';
 import {
   nextInventoryNumber, blankRow, isRowEmpty, validateRow, draftNumberCounts,
@@ -24,7 +25,6 @@ export function AddStock({ onClose }) {
   const [lotCents, setLotCents] = useState(null);
   const [rows, setRows] = useState(() => loadDraft() || [blankRow(nextInventoryNumber(items))]);
   const [busy, setBusy] = useState(false);
-  const [banner, setBanner] = useState(null);
   const draftTimer = useRef(0);
 
   const taken = useMemo(() => takenNumbers(items), [items]);
@@ -68,7 +68,7 @@ export function AddStock({ onClose }) {
   const badCount = rows.filter((r) => !isRowEmpty(r) &&
     !validateRow(r, { taken, draftCounts: counts, commissionRate }).ok).length;
 
-  const flash = (kind, text, ms = 3000) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
+  const flash = useToast();
 
   const split = () => {
     const live = rows.filter((r) => !isRowEmpty(r));
@@ -129,7 +129,6 @@ export function AddStock({ onClose }) {
         <p className="sheet-note">Spreads one price over everything below, weighted by asking price.</p>
       </div>
 
-      {banner && <div className={`banner ${banner.kind}`} style={{ margin: '0 18px' }}><span>{banner.text}</span></div>}
 
       <div className="stock-grid">
         {rows.length === 0

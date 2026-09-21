@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { Button } from '../components/ui.jsx';
+import { useToast } from '../store/toast.jsx';
 
 /**
  * Manage the Sandpiper stores and booths that back every channel.
@@ -13,7 +14,7 @@ import { Button } from '../components/ui.jsx';
 export function ManageChannels({ onClose }) {
   const { venueInfo, manageVenue } = useData();
   const [busy, setBusy] = useState(false);
-  const [banner, setBanner] = useState(null);
+  const flash = useToast();
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -21,7 +22,6 @@ export function ManageChannels({ onClose }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, busy]);
 
-  const flash = (kind, text, ms = 2600) => { setBanner({ kind, text }); if (ms) setTimeout(() => setBanner(null), ms); };
   const run = async (op, payload, okMsg) => {
     setBusy(true);
     try { await manageVenue(op, payload); if (okMsg) flash('ok', okMsg); }
@@ -59,7 +59,6 @@ export function ManageChannels({ onClose }) {
       </div>
 
       <div className="mc-body">
-        {banner && <div className={`banner ${banner.kind}`}><span>{banner.text}</span></div>}
 
         <NewStore onCreate={(v) => run('createStore', v, `Added ${v.name}.`)} busy={busy} />
 

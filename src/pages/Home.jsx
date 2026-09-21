@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
+import { useToast } from '../store/toast.jsx';
 import { analyze, dataBounds } from '../lib/analytics.js';
 import { rentForRange } from '../lib/ledger.js';
 import { reconcile } from '../lib/reconcile.js';
@@ -28,7 +29,7 @@ function homeGreeting(now) {
 export function Home() {
   const { ledger, items, quailSales, ledgerSummary, venueInfo, applyEdits, raw } = useData();
   const { selectMode, selectTab, goToInventory, goToSync, openAddStock, setVenue } = useNav();
-  const [banner, setBanner] = useState(null);
+  const toast = useToast();
   const [syncing, setSyncing] = useState(false);
 
   const quailRent = (raw.quail && raw.quail.rent) || [];
@@ -102,11 +103,12 @@ export function Home() {
         changes: e.plan.changes.map((c) => ({ field: c.field, to: c.to }))
       })));
       const failed = res.results.filter((r) => !r.ok);
-      setBanner({ kind: failed.length ? 'error' : 'ok',
-        text: failed.length ? `Synced ${int(res.applied)} of ${int(newSales.length)} — ${failed[0].error}`
-                             : `Recorded ${int(res.applied)} sale${res.applied === 1 ? '' : 's'} in Sandpiper.` });
+      toast(failed.length ? 'error' : 'ok',
+        failed.length ? `Synced ${int(res.applied)} of ${int(newSales.length)} — ${failed[0].error}`
+                      : `Recorded ${int(res.applied)} sale${res.applied === 1 ? '' : 's'} in Sandpiper.`,
+        failed.length ? 0 : undefined);
     } catch (e) {
-      setBanner({ kind: 'error', text: e.message || String(e) });
+      toast('error', e.message || String(e), 0);
     } finally { setSyncing(false); }
   };
 
@@ -151,7 +153,6 @@ export function Home() {
         </div>
       )}
 
-      {banner && <div className={`banner ${banner.kind}`}><span>{banner.text}</span></div>}
 
       <div className="home-cols">
         <Card className="home-card">

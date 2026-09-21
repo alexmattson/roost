@@ -1268,3 +1268,41 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .acct-item.danger { color: var(--red); }
 .acct-item.danger svg { color: var(--red); }
 .acct-sep { height: 1px; background: var(--border-soft); margin: 4px 2px; }
+
+/* ---------------------------------------------------------------- toasts
+
+   One overlay notification system. Portalled to <body>, fixed above every
+   sheet (z 3000), so messages float over the layout instead of shifting it. */
+
+.toast-viewport {
+  position: fixed; top: 14px; right: 14px; z-index: 3000;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  width: min(360px, calc(100vw - 24px)); pointer-events: none;
+}
+.toast {
+  pointer-events: auto; width: 100%; box-sizing: border-box;
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 10px 11px 10px 12px; border-radius: 10px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-left: 3px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,.34);
+  font-size: 12.5px; line-height: 1.35;
+  animation: toast-in .18s ease-out;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+.toast-ok    { border-left-color: var(--green); }
+.toast-error { border-left-color: var(--red); }
+.toast-info  { border-left-color: var(--blue); }
+.toast-ico {
+  flex: none; width: 17px; height: 17px; margin-top: .5px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #10140c;
+}
+.toast-ok .toast-ico    { background: var(--green); }
+.toast-error .toast-ico { background: var(--red); color: #fff; }
+.toast-info .toast-ico  { background: var(--blue); color: #fff; }
+.toast-text { flex: 1; min-width: 0; }
+.toast-x {
+  flex: none; background: none; border: 0; padding: 0 2px; margin: -2px -2px 0 0;
+  color: var(--faint); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.toast-x:hover { color: var(--text); }

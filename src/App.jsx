@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DataProvider, useData } from './store/data.jsx';
 import { NavProvider, useNav } from './store/nav.jsx';
 import { ThemeProvider, useTheme } from './hooks/useTheme.jsx';
+import { ToastProvider, useToast } from './store/toast.jsx';
 import { LoginGate } from './pages/LoginGate.jsx';
 import { TopBar, ModesNav, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
 import { Home } from './pages/Home.jsx';
@@ -16,9 +17,11 @@ import { useTooltips } from './hooks/useTooltips.js';
 export default function App() {
   return (
     <ThemeProvider>
-      <DataProvider>
-        <Root />
-      </DataProvider>
+      <ToastProvider>
+        <DataProvider>
+          <Root />
+        </DataProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
@@ -53,7 +56,7 @@ function Dashboard() {
   useTooltips();
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [banner, setBanner] = useState(null);
+  const toast = useToast();
   const booted = useRef(false);
 
   // On first mount: load the cache, and if there's nothing cached, fetch.
@@ -65,7 +68,7 @@ function Dashboard() {
       if (!had) {
         setFirstFetching(true);
         try { await refresh(); }
-        catch (e) { setBanner({ kind: 'error', text: e.message || String(e) }); }
+        catch (e) { toast('error', e.message || String(e), 0); }
         finally { setFirstFetching(false); }
       }
     })();
@@ -77,11 +80,13 @@ function Dashboard() {
     try {
       const res = await refresh();
       const v = res.venues || { errors: [] };
-      setBanner(v.errors && v.errors.length
-        ? { kind: 'info', text: `Synced ${res.meta.count} items, ${v.errors.length} venue lookup(s) failed.` }
-        : { kind: 'ok', text: `Synced ${res.meta.count} items${res.quail ? ` · ${res.quail.sales.length} POS sales` : ''}.` });
+      if (v.errors && v.errors.length) {
+        toast('info', `Synced ${res.meta.count} items, ${v.errors.length} venue lookup(s) failed.`);
+      } else {
+        toast('ok', `Synced ${res.meta.count} items${res.quail ? ` · ${res.quail.sales.length} POS sales` : ''}.`);
+      }
     } catch (e) {
-      setBanner({ kind: 'error', text: e.message || String(e) });
+      toast('error', e.message || String(e), 0);
     } finally {
       setRefreshing(false);
       setFirstFetching(false);
@@ -91,7 +96,6 @@ function Dashboard() {
   return (
     <>
       <TopBar onRefresh={doRefresh} refreshing={refreshing} />
-      {banner && <div className={`banner ${banner.kind}`}><span>{banner.text}</span><button className="banner-x" onClick={() => setBanner(null)} aria-label="Dismiss">×</button></div>}
       <ModesNav />
       <RangeBar />
       <Tabs />
