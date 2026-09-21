@@ -22,13 +22,31 @@ export function Analyze({ tab }) {
   const { ledger, quailSales, raw, venueInfo, venueNames } = useData();
   const { range, venue } = useNav();
 
+  // The Quail booth external-ids the current scope covers. `null` = every booth
+  // (whole operation). An empty set = a direct channel (Facebook, etc.) or a
+  // venue with no Quail link, which by definition has no register rent or sales.
+  const scopeExternalIds = useMemo(() => {
+    const booths = (venueInfo && venueInfo.booths) || {};
+    if (venue.kind === 'all' || !venue.id) return null;
+    if (venue.kind === 'booth') {
+      const info = booths[venue.id];
+      return new Set(info && info.externalId != null ? [info.externalId] : []);
+    }
+    if (venue.kind === 'store') {
+      const set = new Set();
+      for (const id of Object.keys(booths)) {
+        const b = booths[id];
+        if (b.storeId === venue.id && b.externalId != null) set.add(b.externalId);
+      }
+      return set;
+    }
+    return null;
+  }, [venue, venueInfo]);
+
   const scopedRent = useMemo(() => {
     const rows = (raw.quail && raw.quail.rent) || [];
-    if (venue.kind !== 'booth' || !venue.id) return rows;
-    const info = venueInfo.booths && venueInfo.booths[venue.id];
-    const ext = info && info.externalId != null ? info.externalId : null;
-    return ext == null ? rows : rows.filter((r) => r.boothId === ext);
-  }, [raw.quail, venue, venueInfo]);
+    return scopeExternalIds === null ? rows : rows.filter((r) => scopeExternalIds.has(r.boothId));
+  }, [raw.quail, scopeExternalIds]);
 
   const s = useMemo(
     () => analyze(ledger, { start: range.start, end: range.end }, venue.kind === 'all' ? null : venue),
@@ -36,12 +54,10 @@ export function Analyze({ tab }) {
   );
   const rentInfo = useMemo(() => rentForRange(scopedRent, range.start, range.end), [scopedRent, range]);
 
-  const scopedQuail = useMemo(() => {
-    if (venue.kind !== 'booth' || !venue.id) return quailSales;
-    const info = venueInfo.booths && venueInfo.booths[venue.id];
-    const ext = info && info.externalId != null ? info.externalId : null;
-    return ext == null ? quailSales : quailSales.filter((x) => x.boothId === ext);
-  }, [quailSales, venue, venueInfo]);
+  const scopedQuail = useMemo(
+    () => (scopeExternalIds === null ? quailSales : quailSales.filter((x) => scopeExternalIds.has(x.boothId))),
+    [quailSales, scopeExternalIds]
+  );
 
   const q = useMemo(
     () => (scopedQuail.length ? analyzeQuail(scopedQuail, { start: range.start, end: range.end, rentCents: rentInfo.cents }) : null),

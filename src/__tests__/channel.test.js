@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildChannels, channelRollup, CHANNEL } from '../lib/channel.js';
+import { reconcile } from '../lib/reconcile.js';
 
 const venueInfo = {
   stores: { s1: { name: 'Main St' }, fb: { name: 'Facebook Marketplace', externalId: null } },
@@ -42,5 +43,18 @@ describe('channel model', () => {
     expect(pos.gross).toBe(3000);
     expect(direct.type).toBe(CHANNEL.DIRECT);
     expect(direct.profit).toBe(4000);
+  });
+
+  it('reconcile treats a direct sale as a quiet note, not a Quail anomaly, and keeps it out of POS totals', () => {
+    const day = (d) => Date.now() - d * 86400000;
+    const items = [ch.tag({
+      id: 'd1', inv: '0200', desc: 'Sideboard', isSold: true, sold: day(2),
+      soldPrice: 18000, commission: 0, fees: 0, cost: 5000, net: 18000, profit: 13000,
+      booth: 'fbB', store: 'fb'
+    })];
+    const { findings, totals } = reconcile(items, [], { start: day(30), end: Date.now() + 86400000 });
+    expect(findings.some((f) => f.type === 'direct-channel-sale')).toBe(true);
+    expect(findings.some((f) => f.type === 'sandpiper-sale-missing-in-quail')).toBe(false);
+    expect(totals.sandpiperGross).toBe(0); // direct sale excluded from POS agreement totals
   });
 });

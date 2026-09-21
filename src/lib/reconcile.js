@@ -247,12 +247,15 @@ export function reconcile(items, quailSales, range) {
     });
   }
 
+  // Sandpiper↔Quail agreement is a POS-channel question, so direct-channel
+  // sales (never expected in the register) are excluded from these totals.
+  const posSold = spSoldInRange.filter((i) => i.channelType !== 'direct');
   const totals = {
     quailSales: quailInRange.length,
-    sandpiperSales: spSoldInRange.length,
+    sandpiperSales: posSold.length,
     matched: matched.length,
     quailGross: quailInRange.reduce((a, s) => a + s.price, 0),
-    sandpiperGross: spSoldInRange.reduce((a, i) => a + (i.soldPrice || 0), 0)
+    sandpiperGross: posSold.reduce((a, i) => a + (i.soldPrice || 0), 0)
   };
   totals.grossDelta = totals.sandpiperGross - totals.quailGross;
   totals.matchRate = quailInRange.length ? matched.length / quailInRange.length : null;
