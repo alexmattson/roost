@@ -1,6 +1,6 @@
 import { DAY } from './analytics.js';
 import { money, int, pct } from './format.js';
-import { days, signClass, shortDate } from './format.js';
+import { signClass, shortDate } from './format.js';
 
 export const dateInputValue = (t) => {
   if (!t) return '';
@@ -15,18 +15,20 @@ export const centsFromText = (v) => {
 export const centsToText = (v) => (v == null ? '' : (v / 100).toFixed(2));
 
 /** Column definitions — same widths and renders as the vanilla table. */
+const boothLabel = (r) => (r.channelLabel && r.channelLabel !== 'Unassigned' ? r.channelLabel : '—');
+
 export const ITEM_COLUMNS = [
   { key: 'inv', title: '#', width: 7, render: (r) => r.inv || '—' },
-  { key: 'desc', title: 'Description', width: 17, cls: 'name', render: (r) => r.desc },
-  { key: 'category', title: 'Category', width: 9, render: (r) => r.category },
+  { key: 'desc', title: 'Description', width: 15, cls: 'name', render: (r) => r.desc },
+  { key: 'category', title: 'Category', width: 8, render: (r) => r.category },
+  { key: 'booth', title: 'Booth', width: 8, render: boothLabel, sortValue: (r) => (r.channelLabel === 'Unassigned' ? '' : r.channelLabel || '') },
   { key: 'acquired', title: 'Acquired', width: 11, num: true, render: (r) => (r.acquired ? shortDate(r.acquired) : '—') },
   { key: 'cost', title: 'Cost', width: 7, num: true, render: (r) => money(r.cost, { compact: true }) },
   { key: 'ask', title: 'Ask', width: 7, num: true, render: (r) => (r.ask ? money(r.ask, { compact: true }) : '—') },
   { key: 'sold', title: 'Sold on', width: 11, num: true, render: (r) => (r.sold ? shortDate(r.sold) : '—') },
   { key: 'soldPrice', title: 'Sold for', width: 7, num: true, render: (r) => (r.isSold ? money(r.soldPrice, { compact: true }) : null) },
   { key: 'profit', title: 'Profit', width: 7, num: true, cls: (r) => signClass(r.profit || 0), render: (r) => (r.profit == null ? '—' : money(r.profit, { compact: true })) },
-  { key: 'margin', title: 'Margin', width: 5, num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) },
-  { key: 'daysToSell', title: 'Days', width: 5, num: true, render: (r) => days(r.daysToSell) }
+  { key: 'margin', title: 'Margin', width: 5, num: true, render: (r) => (r.margin == null ? '—' : pct(r.margin, 0)) }
 ];
 export const ITEM_ACTS_W = 7;
 

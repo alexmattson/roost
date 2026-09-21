@@ -152,7 +152,7 @@ describe('Roost app', () => {
     fireEvent.click(screen.getByText('Label'));
     expect(await screen.findByText('2.4" × 1.1"')).toBeTruthy();
     // The Booth field is populated from the same venue data as the Venues tab.
-    expect(await screen.findByText('Booth')).toBeTruthy();
+    expect((await screen.findAllByText('Booth')).length).toBeGreaterThan(0);
     expect((await screen.findAllByRole('option', { name: 'A1' })).length).toBeGreaterThan(0);
   });
 

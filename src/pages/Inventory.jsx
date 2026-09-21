@@ -206,18 +206,19 @@ function EditorRow({ r, fields, setFields, boothOptions = [], onSave, onCancel }
       <td className="pick" />
       <td><input className="e-inv" value={fields.inv} onChange={set('inv')} aria-label="Inventory number" /></td>
       <td><input className="e-desc" autoFocus value={fields.desc} onChange={set('desc')} aria-label="Description" /></td>
+      <td className="muted">{r.category}</td>
       <td>{boothOptions.length
-        ? <select className="e-booth" value={fields.booth || ''} onChange={setBooth} aria-label="Channel">
+        ? <select className="e-booth" value={fields.booth || ''} onChange={setBooth} aria-label="Booth / channel">
             <option value="">Unassigned</option>
             {boothOptions.map((o) => <option key={o.id} value={o.id}>{o.label}{o.store ? ` · ${o.store}` : ''}</option>)}
           </select>
-        : <span className="muted">{r.category}</span>}</td>
+        : <span className="muted">—</span>}</td>
       <td><input type="date" className="e-acquired" value={fields.acquired} onChange={set('acquired')} aria-label="Acquired date" /></td>
       <td><input className="e-cost num" value={fields.cost} onChange={set('cost')} inputMode="decimal" aria-label="Cost" /></td>
       <td><input className="e-ask num" value={fields.ask} onChange={set('ask')} inputMode="decimal" aria-label="Asking price" /></td>
       <td><input type="date" className="e-sold" value={fields.sold} onChange={set('sold')} disabled={!r.isSold} aria-label="Sold date" /></td>
       <td><input className="e-soldPrice num" value={fields.soldPrice} onChange={set('soldPrice')} disabled={!r.isSold} inputMode="decimal" aria-label="Sold price" /></td>
-      <td colSpan={4} className="row-acts">
+      <td colSpan={3} className="row-acts">
         <button className="row-act act-save" onClick={onSave}>Save</button>
         <button className="row-act act-cancel" onClick={onCancel}>Cancel</button>
       </td>
