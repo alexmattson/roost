@@ -1582,3 +1582,10 @@ body.expanded .tabs { padding: 4px; }
   box-shadow: inset 0 1px 3px rgba(70,56,20,.08);
 }
 .rec-actions .btn { box-shadow: 0 2px 8px rgba(70,56,20,.08); }
+
+/* --- mode selector centered in the top bar (shrinks the header by a row) --- */
+.topbar { position: relative; }
+.topbar .modes {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  margin: 0;
+}

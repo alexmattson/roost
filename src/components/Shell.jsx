@@ -19,6 +19,7 @@ export function TopBar({ onRefresh, refreshing }) {
           <h1>Roost</h1>
         </div>
       </div>
+      <ModesNav />
       <div className="top-actions">
         {updated && <span className="fetch-when" title={`Data last fetched ${updated}`}>Updated {updated}</span>}
         <button className={`btn primary ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>

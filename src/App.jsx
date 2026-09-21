@@ -4,7 +4,7 @@ import { NavProvider, useNav } from './store/nav.jsx';
 import { ThemeProvider, useTheme } from './hooks/useTheme.jsx';
 import { ToastProvider, useToast } from './store/toast.jsx';
 import { LoginGate } from './pages/LoginGate.jsx';
-import { TopBar, ModesNav, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
+import { TopBar, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
 import { Home } from './pages/Home.jsx';
 import { Sync } from './pages/Sync.jsx';
 import { PosSales } from './pages/PosSales.jsx';
@@ -96,7 +96,6 @@ function Dashboard() {
   return (
     <>
       <TopBar onRefresh={doRefresh} refreshing={refreshing} />
-      <ModesNav />
       <Tabs />
       <RangeBar />
       <main id="main" key={theme}>
