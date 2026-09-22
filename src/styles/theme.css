@@ -1768,9 +1768,12 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   /* Sheets (Add stock, Manage channels, Print tags) go edge-to-edge. */
   .sheet-head { padding: 14px 14px 10px; }
   .sheet-head h2 { font-size: 15.5px; }
+  /* Only the FOOTER actions go full-width; the header .sheet-actions (the Close
+     button) must stay its natural size, right-aligned by the head's
+     space-between — scope these to .sheet-foot so they don't hit the header. */
   .sheet-foot { flex-wrap: wrap; gap: 10px; }
-  .sheet-actions { flex: 1 1 100%; }
-  .sheet-actions .btn { flex: 1; justify-content: center; }
+  .sheet-foot .sheet-actions { flex: 1 1 100%; }
+  .sheet-foot .sheet-actions .btn { flex: 1; justify-content: center; }
   .mc-body { padding: 14px; }
   .mc-booth { flex-wrap: wrap; }
   .mc-booth .mc-store-acts { margin-left: auto; }
