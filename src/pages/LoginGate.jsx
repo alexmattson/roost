@@ -67,7 +67,7 @@ export function LoginGate({ onEnter }) {
         </div>
       </div>
 
-      <aside className="auth-hero" aria-hidden="true" style={{ backgroundImage: `linear-gradient(165deg, rgba(255,255,255,.04) 0%, rgba(246,199,61,.15) 42%, rgba(198,138,24,.8) 100%), url(${heroImg})` }}>
+      <aside className="auth-hero" aria-hidden="true" style={{ backgroundImage: `linear-gradient(165deg, rgba(246,199,61,.16) 0%, rgba(243,190,55,.26) 46%, rgba(196,136,22,.84) 100%), url(${heroImg})` }}>
         <div className="hero-tag">Inventory &amp; register,<br />reconciled.</div>
 
         <div className="hero-card hero-a">
