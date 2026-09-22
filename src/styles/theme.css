@@ -915,15 +915,16 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .sys-status { font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--pill-bg); color: var(--faint); }
 .sys-status[data-state="on"] { background: rgba(46,158,107,.16); color: var(--green); }
 .sys-row.connected .sys-actions { display: none; }
-.sys-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sys-actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
 .sys-head + .sys-actions { margin-top: 11px; }
 .sys-actions input {
-  flex: 1 1 130px; min-width: 0; box-sizing: border-box;
+  flex: 1 1 100px; min-width: 0; box-sizing: border-box;
   background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
   border-radius: 12px; padding: 11px 14px; font: inherit; font-size: 13px;
 }
 .sys-actions input:focus { outline: none; border-color: var(--brass-dim); box-shadow: 0 0 0 3px rgba(246,199,61,.18); }
-.sys-actions .btn { border-radius: 999px; }
+/* Fixed width + centred so "Connect" → "Connecting…" doesn't reflow the row. */
+.sys-actions .btn { flex: none; border-radius: 999px; min-width: 112px; justify-content: center; white-space: nowrap; }
 .sys-row .btn.small { white-space: nowrap; }
 
 .auth-error {
