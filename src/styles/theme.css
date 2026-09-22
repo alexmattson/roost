@@ -1852,7 +1852,8 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
 .ef-field > span { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
 .ef-field input {
   background: var(--panel); border: 1px solid var(--border); color: var(--text);
-  border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 15px; width: 100%; box-sizing: border-box;
+  border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 15px;
+  width: 100%; min-width: 0; box-sizing: border-box;
 }
 .ef-field input:focus { outline: none; border-color: var(--brass); box-shadow: 0 0 0 2px var(--glow-a); }
 .ef-static { font-size: 14px; color: var(--muted); padding: 4px 0; }
@@ -1864,6 +1865,9 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
 .ef-select .sel-btn { width: 100%; max-width: none; padding: 11px 12px; font-size: 15px; border-radius: 10px; }
 .ef-sold { border-top: 1px solid var(--border-soft); padding-top: 12px; }
 .ef-sold-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 700; margin-bottom: 8px; }
+/* Sold date + price each get their own line — two date-sized inputs don't fit
+   side by side on a phone. */
+.ef-sold .ef-row { flex-direction: column; gap: 14px; }
 .ef-delete {
   align-self: flex-start; margin-top: 2px;
   background: none; border: 1px solid var(--border); color: var(--red);
