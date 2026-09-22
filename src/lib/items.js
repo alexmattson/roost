@@ -79,12 +79,20 @@ export function collectChanges(r, fields) {
   const ask = centsFromText(fields.ask);
   if (ask != null && ask !== r.ask) changes.push({ field: 'askingPrice', to: ask });
 
-  if (r.isSold) {
-    const sold = unixFromDateInput(fields.sold);
-    if (sold && sold !== Math.round(r.sold / 1000)) changes.push({ field: 'sold', to: sold });
-    const sp = centsFromText(fields.soldPrice);
-    if (sp != null && sp !== r.soldPrice) changes.push({ field: 'soldPrice', to: sp });
+  // Sold date / price are editable whether or not the item is already sold, so
+  // an on-hand item can be marked sold by entering a date (setting `sold`), and
+  // a sold item can be corrected or cleared back to on-hand. Compare the date
+  // as day-granular strings so re-saving an unchanged row (whose stored `sold`
+  // carries a time-of-day) doesn't push a spurious noon-snapped change.
+  const soldStr = fields.sold || '';
+  if (soldStr !== dateInputValue(r.sold)) {
+    changes.push({ field: 'sold', to: soldStr ? unixFromDateInput(soldStr) : 0 });
   }
+  // An empty price field means "leave it" — centsFromText('') is 0, not null,
+  // so guard the empty case or every on-hand edit would push soldPrice: 0.
+  const soldPriceStr = String(fields.soldPrice || '').trim();
+  const sp = soldPriceStr === '' ? null : centsFromText(soldPriceStr);
+  if (sp != null && sp !== r.soldPrice) changes.push({ field: 'soldPrice', to: sp });
 
   // Channel attribution: the sold booth/store the sale belongs to.
   if ('booth' in fields) {

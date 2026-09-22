@@ -67,6 +67,14 @@ export function Inventory() {
   const startEdit = (r) => { setEditingId(r.id); setFields(editFields(r)); };
   const cancelEdit = () => { setEditingId(null); setFields(null); };
 
+  // Esc cancels the in-progress row edit (deselects the editing row).
+  useEffect(() => {
+    if (!editingId) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); } };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [editingId]);
+
   const rowClick = (r, e) => {
     if (e.target.closest('button, input, select, a')) return;
     if (window.getSelection && String(window.getSelection()).length) return;
@@ -214,8 +222,8 @@ function EditorRow({ r, fields, setFields, boothOptions = [], onSave, onCancel }
       <td><input type="date" className="e-acquired" value={fields.acquired} onChange={set('acquired')} aria-label="Acquired date" /></td>
       <td><input className="e-cost num" value={fields.cost} onChange={set('cost')} inputMode="decimal" aria-label="Cost" /></td>
       <td><input className="e-ask num" value={fields.ask} onChange={set('ask')} inputMode="decimal" aria-label="Asking price" /></td>
-      <td><input type="date" className="e-sold" value={fields.sold} onChange={set('sold')} disabled={!r.isSold} aria-label="Sold date" /></td>
-      <td><input className="e-soldPrice num" value={fields.soldPrice} onChange={set('soldPrice')} disabled={!r.isSold} inputMode="decimal" aria-label="Sold price" /></td>
+      <td><input type="date" className="e-sold" value={fields.sold} onChange={set('sold')} aria-label="Sold date" /></td>
+      <td><input className="e-soldPrice num" value={fields.soldPrice} onChange={set('soldPrice')} inputMode="decimal" aria-label="Sold price" placeholder={r.isSold ? undefined : 'mark sold'} /></td>
       <td colSpan={3} className="row-acts">
         <button className="row-act act-save" onClick={onSave}>Save</button>
         <button className="row-act act-cancel" onClick={onCancel}>Cancel</button>
