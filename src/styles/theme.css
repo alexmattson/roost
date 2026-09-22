@@ -1677,7 +1677,117 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
 
 /* --- mode selector centered in the top bar (shrinks the header by a row) --- */
 .topbar { position: relative; }
+/* The wrapper is transparent to layout on desktop, so the pill nav can be
+   absolutely centered in the bar; the mobile layer turns it into its own row. */
+.topbar-modes { display: contents; }
 .topbar .modes {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   margin: 0;
+}
+
+/* ==================================================================
+   RESPONSIVE / MOBILE LAYER
+   The app was built for a fixed 780px popup and a wide web layout; these
+   breakpoints let the same views collapse gracefully down to phone width.
+   Appended last so it wins the cascade. Tablet ≤900, phone ≤600, small ≤430.
+   ================================================================== */
+
+/* ---- Tablet & down: loosen the wide-web gutters and dense grids ---- */
+@media (max-width: 900px) {
+  body.expanded #main { padding: 14px 18px 22px; }
+  /* Only the header rows carry gutters; .modes/.tabs are centered pill bars
+     whose padding is their own pill inset, so leave those alone. */
+  body.expanded .topbar,
+  body.expanded .rangebar { padding-left: 18px; padding-right: 18px; }
+  body.expanded .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---- Narrow: the absolutely-centered mode pills would start clipping the
+   action buttons, so wrap the header — brand + actions on one row, the mode
+   pills centered on their own row beneath. ---- */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; row-gap: 8px; padding-bottom: 8px; }
+  .brand { order: 0; }
+  .top-actions { order: 1; margin-left: auto; }
+  .topbar-modes { order: 2; flex-basis: 100%; display: flex; justify-content: center; }
+  .topbar .modes { position: static; transform: none; margin: 0; }
+}
+
+/* ---- Phone: single-column content, stacked toolbars ---- */
+@media (max-width: 600px) {
+  /* Gutters shrink to a comfortable phone margin. */
+  body.expanded #main { padding: 12px 12px 20px; }
+  body.expanded .topbar,
+  body.expanded .rangebar { padding-left: 12px; padding-right: 12px; }
+  .topbar { padding-top: 10px; }
+  .brand-text h1 { font-size: 20px; }
+
+  /* Fetch button becomes icon-only to keep the top row short (the button keeps
+     an aria-label, and the last-fetched chip is already hidden ≤640). */
+  .top-actions .btn.primary .btn-label { display: none; }
+  .top-actions .btn.primary { padding: 8px 10px; }
+
+  /* Tabs can scroll sideways rather than overflow the screen. */
+  .tabs {
+    max-width: 100%; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; justify-content: flex-start;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  /* Range bar: chips wrap, scope select drops full width beneath them. */
+  .rangebar { padding-top: 8px; padding-bottom: 8px; }
+  .venue-sel.sel { flex: 1 1 100%; }
+  .venue-sel .sel-btn { max-width: none; width: 100%; }
+
+  /* Analytics: one KPI pair per row, charts stack. */
+  body.expanded .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
+  .grid-2 { grid-template-columns: 1fr; }
+
+  /* Home hero + columns collapse (home-cols already 1-col ≤620). */
+  .home-take-num { font-size: 34px; }
+
+  /* Records toolbar stacks: filters take the full width, the action group sits
+     on its own row so the "cutout" never collides with the search pill. */
+  .records-card { padding: 12px 12px 6px; }
+  .rec-head { flex-wrap: wrap; gap: 8px; }
+  .rec-filters { flex-basis: 100%; flex-wrap: wrap; }
+  .rec-search { flex: 1 1 160px; }
+  /* Action group becomes a full-width row of equal, tappable buttons. */
+  .rec-actions { flex-basis: 100%; margin: 0; }
+  .rec-actions .btn { flex: 1; justify-content: center; }
+
+  /* Data tables stay legible by scrolling horizontally inside their card. */
+  .table-scroll { max-height: none; }
+
+  /* Sheets (Add stock, Manage channels, Print tags) go edge-to-edge. */
+  .sheet-head { padding: 14px 14px 10px; }
+  .sheet-head h2 { font-size: 15.5px; }
+  .sheet-foot { flex-wrap: wrap; gap: 10px; }
+  .sheet-actions { flex: 1 1 100%; }
+  .sheet-actions .btn { flex: 1; justify-content: center; }
+  .mc-body { padding: 14px; }
+  .mc-booth { flex-wrap: wrap; }
+  .mc-booth .mc-store-acts { margin-left: auto; }
+  .tagx-config { padding: 16px 14px 24px; }
+  .tagx-cards { grid-template-columns: 1fr 1fr; }
+
+  /* Login: connect each system by stacking email, password and the button so
+     nothing overflows or reflows on a narrow screen. */
+  .auth-side { padding: 28px 20px 26px; }
+  .sys-actions { flex-wrap: wrap; }
+  .sys-actions input { flex: 1 1 100%; }
+  .sys-actions .btn { flex: 1 1 100%; min-width: 0; }
+
+  /* Add-stock grid is too wide to squeeze; let it scroll sideways with the
+     inputs kept a usable size instead of collapsing them. */
+  .stock-grid { overflow-x: auto; }
+  .stock-head, .stock-row { min-width: 520px; }
+}
+
+/* ---- Small phones: give up the second KPI column where it gets cramped ---- */
+@media (max-width: 400px) {
+  .brand-text h1 { font-size: 18px; }
+  .kpi-value { font-size: 22px; }
+  .tagx-cards, .tagx-cards.two { grid-template-columns: 1fr; }
+  .home-take-num { font-size: 30px; }
 }

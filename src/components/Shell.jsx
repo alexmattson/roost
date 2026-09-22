@@ -21,12 +21,13 @@ export function TopBar({ onRefresh, refreshing }) {
           <h1>Roost</h1>
         </div>
       </div>
-      <ModesNav />
+      <div className="topbar-modes"><ModesNav /></div>
       <div className="top-actions">
         {updated && <span className="fetch-when" title={`Data last fetched ${updated}`}>Updated {updated}</span>}
-        <button className={`btn primary ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}>
+        <button className={`btn primary ${refreshing ? 'loading' : ''}`} onClick={onRefresh} disabled={refreshing}
+          aria-label={refreshing ? 'Fetching latest data' : 'Fetch latest data'}>
           <RefreshIcon />
-          <span>{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
+          <span className="btn-label">{refreshing ? 'Fetching…' : 'Fetch latest data'}</span>
         </button>
         <AccountMenu meta={meta} theme={theme} toggleTheme={toggle}
           onManage={openManageChannels} onSignOut={signOut} />
