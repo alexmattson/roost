@@ -884,95 +884,97 @@ html.pre-auth #main,
 html.pre-auth #banner { display: none; }
 html.pre-auth #login-gate[hidden] { display: grid; }
 
-.login-gate[hidden] { display: none; }   /* authored display beats [hidden] */
-.login-gate {
-  position: fixed; inset: 0; z-index: 80;
-  display: grid; place-items: center; padding: 24px;
-  overflow-y: auto;
-  background:
-    radial-gradient(900px 380px at 12% -8%, var(--glow-a), transparent 62%),
-    radial-gradient(700px 340px at 96% 4%, var(--glow-b), transparent 60%),
-    var(--bg);
-}
-.login-card {
-  width: 100%; max-width: 400px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 16px; padding: 26px 24px 20px; box-shadow: var(--shadow);
-}
-.login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
-.login-brand .mark { width: 34px; height: 34px; }
-.login-brand h1 {
-  margin: 0; font-size: 30px; line-height: 1;
-  font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  font-weight: 600; font-optical-sizing: auto; letter-spacing: -.005em;
-}
-.login-lead { margin: 0 0 18px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+/* ---------------------------------------------------------------- login
 
-/* One box per system, connected on its own. */
+   A Crextio-style split: a form panel on the warm wash beside a branded hero
+   with floating cards. */
+
+.auth {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; grid-template-columns: 1.05fr 1fr; overflow: hidden;
+  background:
+    radial-gradient(1000px 520px at 0% 115%, rgba(246,199,61,.28), transparent 60%),
+    linear-gradient(150deg, #f2eee5 0%, #f5efe1 46%, #f7ebcb 100%);
+}
+.auth-side { display: flex; flex-direction: column; padding: 38px clamp(28px, 6vw, 76px) 34px; overflow-y: auto; }
+.auth-brand { display: flex; align-items: center; gap: 10px; flex: none; }
+.auth-brand .mark { width: 30px; height: 30px; }
+.auth-brand span { font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif; font-weight: 600; font-size: 22px; letter-spacing: -.01em; }
+
+.auth-form { margin: auto 0; width: 100%; max-width: 400px; padding: 28px 0; }
+.auth-title { margin: 0 0 6px; font-size: 30px; font-weight: 640; letter-spacing: -.02em; color: var(--text); }
+.auth-sub { margin: 0 0 22px; font-size: 13px; color: var(--muted); }
+
+/* System blocks — big rounded fields on soft white cards. */
 .sys-row {
-  border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 13px; margin-bottom: 12px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 16px; padding: 13px 14px;
+  margin-bottom: 12px; background: var(--panel); box-shadow: 0 6px 18px rgba(70,56,20,.06);
 }
 .sys-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .sys-name { font-size: 13px; font-weight: 640; }
-.sys-status {
-  font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px;
-  background: var(--pill-bg); color: var(--faint);
-}
-.sys-status[data-state="on"] { background: rgba(52,211,153,.16); color: var(--green); }
-.sys-hint { margin: 7px 0 9px; font-size: 11.5px; line-height: 1.5; color: var(--muted); }
-
-/* Once a system is connected there is nothing left to do in its row, so it
-   collapses to the header line and its status. */
-.sys-row.connected { padding-bottom: 12px; }
-.sys-row.connected .sys-hint,
+.sys-status { font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--pill-bg); color: var(--faint); }
+.sys-status[data-state="on"] { background: rgba(46,158,107,.16); color: var(--green); }
 .sys-row.connected .sys-actions { display: none; }
-.sys-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
-/* A row goes straight from header to fields, so the status chip would otherwise
-   sit right on top of them. */
+.sys-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sys-head + .sys-actions { margin-top: 11px; }
 .sys-actions input {
   flex: 1 1 130px; min-width: 0; box-sizing: border-box;
-  background: var(--panel); color: var(--text);
-  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 12.5px;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 14px; font: inherit; font-size: 13px;
 }
-.sys-actions input:focus { outline: none; border-color: var(--brass); }
+.sys-actions input:focus { outline: none; border-color: var(--brass-dim); box-shadow: 0 0 0 3px rgba(246,199,61,.18); }
+.sys-actions .btn { border-radius: 999px; }
 .sys-row .btn.small { white-space: nowrap; }
 
-.login-set { border: 0; padding: 0; margin: 0 0 16px; }
-.login-set legend {
-  padding: 0; margin-bottom: 8px;
-  font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+.auth-error {
+  margin: 4px 0 12px; padding: 9px 12px; border-radius: 12px;
+  background: rgba(204,61,61,.1); border: 1px solid rgba(204,61,61,.35);
+  color: var(--banner-error-text); font-size: 12px; line-height: 1.45;
 }
-.login-set .req, .login-set .opt {
-  margin-left: 6px; padding: 1px 6px; border-radius: 999px;
-  font-size: 9.5px; letter-spacing: .02em; text-transform: none; vertical-align: middle;
+.auth-submit {
+  width: 100%; justify-content: center; padding: 13px; margin-top: 4px;
+  font-size: 14px; border-radius: 999px;
 }
-.login-set .req { background: rgba(240,180,41,.16); color: var(--brass); }
-.login-set .opt { background: var(--pill-bg); color: var(--faint); }
-.login-hint { margin: -2px 0 8px; font-size: 11px; line-height: 1.45; color: var(--faint); }
+.auth-submit[disabled] { opacity: .55; cursor: default; }
+.auth-foot { margin: 16px 0 0; font-size: 11px; line-height: 1.5; color: var(--faint); text-align: center; }
 
-.login-set input {
-  width: 100%; box-sizing: border-box; margin-bottom: 8px;
-  background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 9px;
-  padding: 10px 11px; font: inherit; font-size: 13px;
+/* --- the branded hero (right) --- */
+.auth-hero {
+  position: relative; margin: 16px; border-radius: 28px; overflow: hidden;
+  background: linear-gradient(150deg, #f8dc6d 0%, #f3c440 52%, #e7a71e 100%);
+  box-shadow: 0 30px 70px rgba(180,140,30,.28);
 }
-.login-set input:focus { outline: none; border-color: var(--brass); box-shadow: 0 0 0 2px var(--glow-a); }
+.hero-mark { position: absolute; top: 22px; left: 24px; opacity: .9; }
+.hero-mark .mark { width: 40px; height: 40px; }
+.hero-tag {
+  position: absolute; left: 26px; bottom: 26px; max-width: 62%;
+  font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  font-size: 34px; line-height: 1.08; font-weight: 600; letter-spacing: -.01em; color: #2a2205;
+}
+.hero-card {
+  position: absolute; background: var(--panel); border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(120,90,20,.24); padding: 14px 16px; min-width: 148px;
+}
+.hero-a { top: 15%; left: 12%; }
+.hero-label { font-size: 11px; color: var(--muted); }
+.hero-num { font-size: 26px; font-weight: 720; letter-spacing: -.02em; color: var(--text); margin: 2px 0 6px; }
+.hero-spark { width: 118px; height: 30px; display: block; }
+.hero-chip {
+  position: absolute; top: 44%; right: 13%;
+  background: #1d1d1b; color: #fff; padding: 9px 15px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 560; box-shadow: 0 14px 34px rgba(0,0,0,.28);
+}
+.hero-b { bottom: 15%; right: 9%; background: #1d1d1b; color: #fff; padding: 14px 16px; }
+.hero-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; padding: 3px 0; color: rgba(255,255,255,.82); }
+.hero-row b { margin-left: auto; color: #fff; font-variant-numeric: tabular-nums; }
+.hero-dot { width: 8px; height: 8px; border-radius: 50%; background: #f6c73d; }
+.hero-dot.alt { background: #7bb8ff; }
 
-/* An informational (non-error) note reuses the error box in a calmer colour. */
-.login-error.as-note {
-  background: rgba(96,165,250,.12); border-color: rgba(96,165,250,.4); color: var(--banner-info-text);
+@media (max-width: 880px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-hero { display: none; }
+  .auth-side { align-items: center; }
 }
-
-.login-error {
-  margin: 0 0 12px; padding: 8px 10px;
-  background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.4);
-  border-radius: 8px; color: var(--banner-error-text); font-size: 12px; line-height: 1.45;
-}
-.login-submit { width: 100%; justify-content: center; padding: 11px; font-size: 13.5px; }
-.login-submit[disabled] { opacity: .6; cursor: default; }
-.login-foot { margin: 16px 0 0; font-size: 10.5px; line-height: 1.5; color: var(--faint); text-align: center; }
 
 /* ------------------------------------------------------------------ Print tags
 

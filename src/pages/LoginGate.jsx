@@ -33,34 +33,58 @@ export function LoginGate({ onEnter }) {
   const onKey = (fn) => (e) => { if (e.key === 'Enter') { e.preventDefault(); fn(); } };
 
   return (
-    <section className="login-gate">
-      <div className="login-card">
-        <div className="login-brand"><Brand /><h1>Roost</h1></div>
-        <p className="login-lead">Connect your Sandpiper and Quail accounts to open your dashboard.</p>
+    <section className="auth">
+      <div className="auth-side">
+        <div className="auth-brand"><Brand /><span>Roost</span></div>
 
-        <SystemRow name="Sandpiper" connected={status.sandpiper.connected} who={status.sandpiper.user}>
-          <input type="email" placeholder="Email" autoComplete="username" aria-label="Sandpiper email"
-            value={sp.username} onChange={(e) => setSp({ ...sp, username: e.target.value })} onKeyDown={onKey(runSandpiper)} />
-          <input type="password" placeholder="Password" autoComplete="current-password" aria-label="Sandpiper password"
-            value={sp.password} onChange={(e) => setSp({ ...sp, password: e.target.value })} onKeyDown={onKey(runSandpiper)} />
-          <Button small onClick={runSandpiper} disabled={spBusy}>{spBusy ? 'Connecting…' : 'Connect'}</Button>
-        </SystemRow>
+        <div className="auth-form">
+          <h1 className="auth-title">Welcome to Roost</h1>
+          <p className="auth-sub">Connect Sandpiper and Quail to open your dashboard.</p>
 
-        <SystemRow name="Quail" connected={status.quail.connected} who={status.quail.email}>
-          <input type="email" placeholder="Vendor email" autoComplete="off" aria-label="Quail vendor email"
-            value={q.email} onChange={(e) => setQ({ ...q, email: e.target.value })} onKeyDown={onKey(runQuail)} />
-          <input type="password" placeholder="Password" autoComplete="off" aria-label="Quail password"
-            value={q.password} onChange={(e) => setQ({ ...q, password: e.target.value })} onKeyDown={onKey(runQuail)} />
-          <Button small onClick={runQuail} disabled={qBusy}>{qBusy ? 'Connecting…' : 'Connect'}</Button>
-        </SystemRow>
+          <SystemRow name="Sandpiper" connected={status.sandpiper.connected} who={status.sandpiper.user}>
+            <input type="email" placeholder="Email" autoComplete="username" aria-label="Sandpiper email"
+              value={sp.username} onChange={(e) => setSp({ ...sp, username: e.target.value })} onKeyDown={onKey(runSandpiper)} />
+            <input type="password" placeholder="Password" autoComplete="current-password" aria-label="Sandpiper password"
+              value={sp.password} onChange={(e) => setSp({ ...sp, password: e.target.value })} onKeyDown={onKey(runSandpiper)} />
+            <Button small onClick={runSandpiper} disabled={spBusy}>{spBusy ? 'Connecting…' : 'Connect'}</Button>
+          </SystemRow>
 
-        {error && <p className="login-error">{error}</p>}
-        <Button variant="primary" className="login-submit" disabled={!status.sandpiper.connected} onClick={onEnter}>
-          Enter Roost
-        </Button>
+          <SystemRow name="Quail" connected={status.quail.connected} who={status.quail.email}>
+            <input type="email" placeholder="Vendor email" autoComplete="off" aria-label="Quail vendor email"
+              value={q.email} onChange={(e) => setQ({ ...q, email: e.target.value })} onKeyDown={onKey(runQuail)} />
+            <input type="password" placeholder="Password" autoComplete="off" aria-label="Quail password"
+              value={q.password} onChange={(e) => setQ({ ...q, password: e.target.value })} onKeyDown={onKey(runQuail)} />
+            <Button small onClick={runQuail} disabled={qBusy}>{qBusy ? 'Connecting…' : 'Connect'}</Button>
+          </SystemRow>
 
-        <p className="login-foot">Roost talks to Sandpiper and Quail directly from your browser. It is not affiliated with either.</p>
+          {error && <p className="auth-error">{error}</p>}
+          <Button variant="primary" className="auth-submit" disabled={!status.sandpiper.connected} onClick={onEnter}>
+            Enter Roost
+          </Button>
+
+          <p className="auth-foot">Roost talks to Sandpiper and Quail directly from your browser — not affiliated with either.</p>
+        </div>
       </div>
+
+      <aside className="auth-hero" aria-hidden="true">
+        <div className="hero-mark"><Brand /></div>
+        <div className="hero-tag">Inventory &amp; register,<br />reconciled.</div>
+
+        <div className="hero-card hero-a">
+          <div className="hero-label">Taken home</div>
+          <div className="hero-num">$4,820</div>
+          <svg className="hero-spark" viewBox="0 0 120 34" preserveAspectRatio="none">
+            <path d="M2 26 C18 26 22 12 38 14 S64 30 78 20 100 6 118 9" fill="none" stroke="#2a2205" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+        </div>
+
+        <div className="hero-chip">✦ New sale · $65</div>
+
+        <div className="hero-card hero-b">
+          <div className="hero-row"><span className="hero-dot" />Booth AGM<b>92%</b></div>
+          <div className="hero-row"><span className="hero-dot alt" />Facebook<b>$1.2k</b></div>
+        </div>
+      </aside>
     </section>
   );
 }
