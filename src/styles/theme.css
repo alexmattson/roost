@@ -1385,35 +1385,48 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .topbar { border-bottom: none; background: transparent; }
 .rangebar { border-bottom: none; }
 
-/* --- modes: a centered white pill nav with a black active pill --- */
-.modes {
-  align-self: center; display: inline-flex; gap: 3px;
-  margin: 8px auto 2px; padding: 5px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 999px; box-shadow: var(--shadow);
+/* --- animated pill nav: one dark indicator that glides between options --- */
+/* Containers wear their outline as an inset box-shadow (not a layout border)
+   so a button's offsetLeft maps straight onto the indicator's translateX. */
+.pillnav { position: relative; align-self: center; display: inline-flex; gap: 2px; }
+.pillnav-ind {
+  position: absolute; left: 0; z-index: 0;
+  border-radius: 999px; background: var(--ink);
+  transition: transform .36s cubic-bezier(.5,.05,.15,1),
+              width .36s cubic-bezier(.5,.05,.15,1);
+  will-change: transform, width;
 }
-.modes button {
-  border: none; border-bottom: none; margin: 0;
-  border-radius: 999px; padding: 8px 18px; font-size: 13px; color: var(--muted);
+.pillnav-btn {
+  position: relative; z-index: 1;
+  border: none; border-bottom: none; margin: 0; background: none;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  border-radius: 999px; color: var(--muted);
+  transition: color .22s ease;
 }
-.modes button:hover { color: var(--text); }
-.modes button.active { background: var(--ink); color: #fff; border-bottom: none; }
-.modes button.active .mode-badge,
-.modes button.active .mode-badge.urgent { background: rgba(255,255,255,.22); color: #fff; }
+.pillnav-btn:hover { color: var(--text); }
+.pillnav-btn.on { color: #fff; }
+/* No transition before the first measurement (keeps it from sliding in from 0). */
+.pillnav:not(.ready) .pillnav-ind { transition: none; }
 
-/* --- tabs: a lighter centered pill row --- */
+/* modes: a centered white pill bar with a near-black gliding pill */
+.modes {
+  margin: 8px auto 2px; padding: 5px;
+  background: var(--panel); border: none; border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--border), var(--shadow);
+}
+.modes .pillnav-btn { padding: 8px 18px; font-size: 13px; font-weight: 600; border-bottom: none; margin: 0; }
+.modes .pillnav-ind { top: 5px; bottom: 5px; }
+.modes .pillnav-btn.on .mode-badge,
+.modes .pillnav-btn.on .mode-badge.urgent { background: rgba(255,255,255,.22); color: #fff; }
+
+/* tabs: a lighter, tighter pill row */
 .tabs {
-  align-self: center; display: inline-flex; gap: 3px;
   margin: 6px auto 4px; padding: 4px;
-  background: var(--panel-2); border: 1px solid var(--border);
-  border-radius: 999px; box-shadow: none;
+  background: var(--panel-2); border: none; border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--border);
 }
-.tabs button {
-  border: none; border-bottom: none; margin: 0;
-  border-radius: 999px; padding: 6px 14px; color: var(--muted); font-size: 12px;
-}
-.tabs button:hover { color: var(--text); }
-.tabs button.active { background: var(--ink); color: #fff; border-bottom: none; }
+.tabs .pillnav-btn { padding: 6px 14px; font-size: 12px; font-weight: 560; border-bottom: none; margin: 0; }
+.tabs .pillnav-ind { top: 4px; bottom: 4px; }
 
 /* --- bigger, bolder stat numbers --- */
 .kpi { border-radius: var(--radius); }

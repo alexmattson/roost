@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brand } from './Brand.jsx';
+import { PillNav } from './PillNav.jsx';
 import { useData } from '../store/data.jsx';
 import { useNav, MODES, modeById } from '../store/nav.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
@@ -72,20 +73,20 @@ function AccountMenu({ meta, theme, toggleTheme, onManage, onSignOut }) {
 export function ModesNav() {
   const { mode, selectMode } = useNav();
   const { badge } = useData();
-  return (
-    <nav className="modes" id="modes">
-      {MODES.map((m) => (
-        <button key={m.id} className={mode === m.id ? 'active' : ''} onClick={() => selectMode(m.id)}>
-          {m.label}
-          {m.id === 'records' && badge.count > 0 && (
-            <span className="mode-badge urgent" title={`${badge.count} high-priority to reconcile`}>
-              {badge.count > 99 ? '99+' : badge.count}
-            </span>
-          )}
-        </button>
-      ))}
-    </nav>
-  );
+  const items = MODES.map((m) => ({
+    id: m.id,
+    label: (
+      <>
+        {m.label}
+        {m.id === 'records' && badge.count > 0 && (
+          <span className="mode-badge urgent" title={`${badge.count} high-priority to reconcile`}>
+            {badge.count > 99 ? '99+' : badge.count}
+          </span>
+        )}
+      </>
+    )
+  }));
+  return <PillNav className="modes" size="mode" ariaLabel="Section" items={items} value={mode} onChange={selectMode} />;
 }
 
 export function RangeBar() {
@@ -151,16 +152,11 @@ export function Tabs() {
   const { mode, tab, active, selectTab } = useNav();
   const { badge } = useData();
   if (active.tabs.length < 2) return null;
-  return (
-    <nav className="tabs" id="tabs">
-      {active.tabs.map(([id, label]) => (
-        <button key={id} className={tab === id ? 'active' : ''} onClick={() => selectTab(id)}>
-          {label}
-          {id === 'review' && <SeverityPills sev={badge.sev} />}
-        </button>
-      ))}
-    </nav>
-  );
+  const items = active.tabs.map(([id, label]) => ({
+    id,
+    label: <>{label}{id === 'review' && <SeverityPills sev={badge.sev} />}</>
+  }));
+  return <PillNav className="tabs" size="tab" ariaLabel="View" items={items} value={tab} onChange={selectTab} />;
 }
 
 function SeverityPills({ sev }) {
