@@ -1710,7 +1710,10 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   .brand { order: 0; }
   .top-actions { order: 1; margin-left: auto; }
   .topbar-modes { order: 2; flex-basis: 100%; display: flex; justify-content: center; }
-  .topbar .modes { position: static; transform: none; margin: 0; }
+  /* Undo the desktop absolute-centering but KEEP position:relative — the pill
+     indicator is absolutely positioned within .modes, and letting it fall back
+     to static would anchor it to the whole topbar (a giant black blob). */
+  .topbar .modes { position: relative; left: auto; top: auto; transform: none; margin: 0; }
 }
 
 /* ---- Phone: single-column content, stacked toolbars ---- */
@@ -1756,8 +1759,11 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   .rec-actions { flex-basis: 100%; margin: 0; }
   .rec-actions .btn { flex: 1; justify-content: center; }
 
-  /* Data tables stay legible by scrolling horizontally inside their card. */
+  /* Data tables use percentage column widths, so on a narrow card every column
+     is crushed. Give them a floor width and let the card scroll horizontally,
+     which keeps each column readable. */
   .table-scroll { max-height: none; }
+  .records-card .table-scroll > table { min-width: 780px; }
 
   /* Sheets (Add stock, Manage channels, Print tags) go edge-to-edge. */
   .sheet-head { padding: 14px 14px 10px; }
