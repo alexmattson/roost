@@ -941,15 +941,20 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 /* --- the branded hero (right) --- */
 .auth-hero {
   position: relative; margin: 16px; border-radius: 28px; overflow: hidden;
-  background: linear-gradient(150deg, #f8dc6d 0%, #f3c440 52%, #e7a71e 100%);
-  box-shadow: 0 30px 70px rgba(180,140,30,.28);
+  background-color: #e7a71e; background-size: cover; background-position: center;
+  box-shadow: 0 30px 70px rgba(120,86,18,.32);
 }
-.hero-mark { position: absolute; top: 22px; left: 24px; opacity: .9; }
-.hero-mark .mark { width: 40px; height: 40px; }
+.hero-mark {
+  position: absolute; top: 22px; left: 24px;
+  width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+  background: rgba(255,255,255,.9); box-shadow: 0 8px 20px rgba(0,0,0,.18);
+}
+.hero-mark .mark { width: 30px; height: 30px; }
 .hero-tag {
-  position: absolute; left: 26px; bottom: 26px; max-width: 62%;
+  position: absolute; left: 26px; bottom: 26px; max-width: 66%;
   font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  font-size: 34px; line-height: 1.08; font-weight: 600; letter-spacing: -.01em; color: #2a2205;
+  font-size: 34px; line-height: 1.08; font-weight: 600; letter-spacing: -.01em;
+  color: #fff; text-shadow: 0 2px 18px rgba(30,20,0,.4);
 }
 .hero-card {
   position: absolute; background: var(--panel); border-radius: 18px;

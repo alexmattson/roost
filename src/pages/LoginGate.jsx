@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { Brand } from '../components/Brand.jsx';
 import { Button } from '../components/ui.jsx';
+import heroImg from '../assets/login-hero.jpg';
 
 /** Connect each system on its own, both with a plain email and password. */
 export function LoginGate({ onEnter }) {
@@ -66,7 +67,7 @@ export function LoginGate({ onEnter }) {
         </div>
       </div>
 
-      <aside className="auth-hero" aria-hidden="true">
+      <aside className="auth-hero" aria-hidden="true" style={{ backgroundImage: `linear-gradient(158deg, rgba(20,15,4,.18) 0%, rgba(246,199,61,.34) 44%, rgba(190,132,22,.82) 100%), url(${heroImg})` }}>
         <div className="hero-mark"><Brand /></div>
         <div className="hero-tag">Inventory &amp; register,<br />reconciled.</div>
 
