@@ -1331,12 +1331,14 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   --pill-fill: var(--accent-fill);
   --pill-on-text: var(--accent-ink);
   --pill-badge-bg: rgba(0,0,0,.18);
+  --pill-hover-veil: rgba(0,0,0,.10); /* slightly deepens the amber pill on hover */
 }
 
 :root[data-theme="light"] {
   --pill-fill:    var(--ink);
   --pill-on-text: #fff;
   --pill-badge-bg: rgba(255,255,255,.22);
+  --pill-hover-veil: rgba(255,255,255,.14); /* slightly lifts the near-black pill on hover */
   --bg:          #edeae2;
   --panel:       #ffffff;
   --panel-2:     #f7f3ea;
@@ -1412,10 +1414,12 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   border-radius: 999px; color: var(--muted);
   transition: color .22s ease, background-color .18s ease;
 }
-/* Inactive pills get a soft ground on hover rather than darkening their text
-   (darkening to the body colour read wrong in light mode). */
-.pillnav-btn:not(.on):hover { background: var(--pill-bg); }
 .pillnav-btn.on { color: var(--pill-on-text); }
+/* Hover shifts the background, never the text colour. Colours are pinned here
+   so the base `.modes/.tabs button:hover` rule (which carries :hover and would
+   otherwise recolour the label to the dark body text) can't win. */
+.pillnav-btn:not(.on):hover { color: var(--muted); background: var(--pill-bg); }
+.pillnav-btn.on:hover { color: var(--pill-on-text); background: var(--pill-hover-veil); }
 /* No transition before the first measurement (keeps it from sliding in from 0). */
 .pillnav:not(.ready) .pillnav-ind { transition: none; }
 
