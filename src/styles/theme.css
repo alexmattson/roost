@@ -640,7 +640,6 @@ button.health-row {
 /* An authored display beats the UA's [hidden] rule, so the attribute needs
    saying again here or the sheet is open the moment the popup loads. */
 .sheet[hidden] { display: none; }
-body.expanded .sheet { padding: 0 max(24px, calc((100vw - 1500px) / 2)); }
 
 .sheet-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
@@ -1426,8 +1425,8 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 
 /* Keep the pill nav compact even in the expanded web layout (the base
    body.expanded rule pads these to 28px for the full-width rows). */
-body.expanded .modes { padding: 5px; }
-body.expanded .tabs { padding: 4px; }
+body.expanded .modes { padding: 5px; margin-top: 8px; }
+body.expanded .tabs { padding: 4px; margin-top: 16px; }
 
 /* --- charts: integrate with the design system --- */
 /* Tooltip becomes a near-black rounded pill with light text (like the mock). */
