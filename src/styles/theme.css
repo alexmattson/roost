@@ -935,7 +935,7 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   width: 100%; justify-content: center; padding: 13px; margin-top: 4px;
   font-size: 14px; border-radius: 999px;
 }
-.auth-submit[disabled] { opacity: .55; cursor: default; }
+.auth-submit[disabled] { background: #efe3bd; color: #97873f; border-color: transparent; opacity: 1; cursor: default; }
 .auth-foot { margin: 16px 0 0; font-size: 11px; line-height: 1.5; color: var(--faint); text-align: center; }
 
 /* --- the branded hero (right) --- */
