@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brand } from './Brand.jsx';
 import { PillNav } from './PillNav.jsx';
+import { Select } from './Select.jsx';
 import { useData } from '../store/data.jsx';
 import { useNav, MODES, modeById } from '../store/nav.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
@@ -116,24 +117,14 @@ export function RangeBar() {
         ))}
       </div>
       {showScope && (
-        <select className="venue-select" aria-label="Channel scope"
+        <Select className="venue-sel" ariaLabel="Channel scope"
           value={venue.kind === 'all' ? 'all' : `${venue.kind}:${venue.id}`}
-          onChange={(e) => {
-            const v = e.target.value;
-            setVenue(v === 'all' ? { kind: 'all', id: null } : { kind: v.slice(0, v.indexOf(':')), id: v.slice(v.indexOf(':') + 1) });
-          }}>
-          <option value="all">All channels</option>
-          {channelList.booths.length > 0 && (
-            <optgroup label="Booths">
-              {channelList.booths.map((b) => <option key={b.id} value={`booth:${b.id}`}>{b.label}{b.type === 'direct' ? ' · direct' : ''}</option>)}
-            </optgroup>
-          )}
-          {channelList.stores.length > 0 && (
-            <optgroup label="Stores">
-              {channelList.stores.map((s) => <option key={s.id} value={`store:${s.id}`}>{s.label}{s.type === 'direct' ? ' · direct' : ''}</option>)}
-            </optgroup>
-          )}
-        </select>
+          onChange={(v) => setVenue(v === 'all' ? { kind: 'all', id: null } : { kind: v.slice(0, v.indexOf(':')), id: v.slice(v.indexOf(':') + 1) })}
+          options={[
+            { value: 'all', label: 'All channels' },
+            ...(channelList.booths.length ? [{ label: 'Booths', options: channelList.booths.map((b) => ({ value: `booth:${b.id}`, label: `${b.label}${b.type === 'direct' ? ' · direct' : ''}` })) }] : []),
+            ...(channelList.stores.length ? [{ label: 'Stores', options: channelList.stores.map((s) => ({ value: `store:${s.id}`, label: `${s.label}${s.type === 'direct' ? ' · direct' : ''}` })) }] : [])
+          ]} />
       )}
       {range.preset === 'custom' && (
         <div className="custom-range">

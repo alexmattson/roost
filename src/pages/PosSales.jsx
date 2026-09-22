@@ -46,10 +46,8 @@ export function PosSales() {
   return (
     <RecordsCard
       filters={
-        <FilterPill value={method} aria-label="Filter by payment method" onChange={(e) => setMethod(e.target.value)}>
-          <option value="all">All payments</option>
-          {methods.map((m) => <option key={m} value={m}>{m}</option>)}
-        </FilterPill>
+        <FilterPill value={method} ariaLabel="Filter by payment method" onChange={setMethod}
+          options={[{ value: 'all', label: 'All payments' }, ...methods.map((m) => ({ value: m, label: m }))]} />
       }
       search={<SearchPill placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />}
     >

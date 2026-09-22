@@ -5,10 +5,11 @@
  * group tucked into the top-right "cutout". Pages pass their filters/search/
  * actions and render their own table body as children.
  */
+import { Select } from './Select.jsx';
 
-/** A pill-shaped <select> for a table filter. */
-export function FilterPill({ children, className = '', ...props }) {
-  return <select className={`rec-pill ${className}`.trim()} {...props}>{children}</select>;
+/** A pill-shaped filter dropdown for a table toolbar (styled Select). */
+export function FilterPill({ className = '', ...props }) {
+  return <Select className={`rec-pill ${className}`.trim()} {...props} />;
 }
 
 const SearchGlyph = () => (

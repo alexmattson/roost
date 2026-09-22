@@ -135,17 +135,16 @@ export function Inventory() {
   return (
     <RecordsCard
       filters={<>
-        <FilterPill value={filter} aria-label="Filter items"
-          onChange={(e) => { setFilter(e.target.value); setInventoryFilter(e.target.value); }}>
-          {FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </FilterPill>
+        <FilterPill value={filter} ariaLabel="Filter items"
+          onChange={(v) => { setFilter(v); setInventoryFilter(v); }}
+          options={FILTERS.map(([v, l]) => ({ value: v, label: l }))} />
         {selected.size > 0 && boothOptions.length > 0 && (
-          <FilterPill value="" aria-label="Assign selected to a channel"
-            onChange={(e) => { bulkAssign(e.target.value); e.target.value = ''; }}>
-            <option value="">Assign channel…</option>
-            {boothOptions.map((o) => <option key={o.id} value={o.id}>{o.label}{o.store ? ` · ${o.store}` : ''}</option>)}
-            <option value="__unassign__">Unassigned</option>
-          </FilterPill>
+          <FilterPill value="" ariaLabel="Assign selected to a channel" placeholder="Assign channel…"
+            onChange={(v) => { if (v) bulkAssign(v); }}
+            options={[
+              ...boothOptions.map((o) => ({ value: o.id, label: `${o.label}${o.store ? ` · ${o.store}` : ''}` })),
+              { value: '__unassign__', label: 'Unassigned' }
+            ]} />
         )}
       </>}
       search={<SearchPill placeholder="Search description or #…" value={search} onChange={(e) => setSearch(e.target.value)} />}

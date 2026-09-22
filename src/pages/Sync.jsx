@@ -84,16 +84,15 @@ export function Sync() {
   return (
     <RecordsCard
       filters={<>
-        <FilterPill value={filters.severity} onChange={(e) => setFilters({ ...filters, severity: e.target.value })} aria-label="Filter by severity">
-          <option value="all">All severities</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-        </FilterPill>
-        <FilterPill value={filters.match} onChange={(e) => setFilters({ ...filters, match: e.target.value })} aria-label="Filter by match confidence">
-          <option value="all">All matches</option><option value="exact">Exact only</option><option value="probable">Probable only</option><option value="manual">Manual only</option>
-        </FilterPill>
-        <FilterPill value={types.includes(filters.type) ? filters.type : 'all'} onChange={(e) => setFilters({ ...filters, type: e.target.value })} aria-label="Filter by finding type">
-          <option value="all">All kinds</option>
-          {types.map((t) => <option key={t} value={t}>{FINDING_LABELS[t] || t}</option>)}
-        </FilterPill>
+        <FilterPill value={filters.severity} ariaLabel="Filter by severity"
+          onChange={(v) => setFilters({ ...filters, severity: v })}
+          options={[{ value: 'all', label: 'All severities' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }]} />
+        <FilterPill value={filters.match} ariaLabel="Filter by match confidence"
+          onChange={(v) => setFilters({ ...filters, match: v })}
+          options={[{ value: 'all', label: 'All matches' }, { value: 'exact', label: 'Exact only' }, { value: 'probable', label: 'Probable only' }, { value: 'manual', label: 'Manual only' }]} />
+        <FilterPill value={types.includes(filters.type) ? filters.type : 'all'} ariaLabel="Filter by finding type"
+          onChange={(v) => setFilters({ ...filters, type: v })}
+          options={[{ value: 'all', label: 'All kinds' }, ...types.map((t) => ({ value: t, label: FINDING_LABELS[t] || t }))]} />
       </>}
     >
       <FixBar
