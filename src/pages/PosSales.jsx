@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useData } from '../store/data.jsx';
 import { useNav } from '../store/nav.jsx';
 import { money, dateTime } from '../lib/format.js';
+import { useIsMobile } from '../hooks/useMediaQuery.js';
 import { RecordsCard, FilterPill, SearchPill } from '../components/RecordsCard.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 
@@ -30,6 +31,7 @@ const COLUMNS = [
 export function PosSales() {
   const { quailSales, venueInfo, meta } = useData();
   const { range, venue } = useNav();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState('all');
 
@@ -55,6 +57,8 @@ export function PosSales() {
         <div className="note">{meta && meta.quailError
           ? `No point-of-sale data: ${meta.quailError}`
           : 'No point-of-sale data yet. Sign in at vendor.quailhq.com, then fetch again.'}</div>
+      ) : isMobile ? (
+        <SaleCards rows={rows} />
       ) : (
         <div className="table-scroll">
           <SortableTable columns={COLUMNS} rows={rows} initialSort={{ key: 'soldAt', dir: -1 }}
@@ -62,5 +66,34 @@ export function PosSales() {
         </div>
       )}
     </RecordsCard>
+  );
+}
+
+/** Mobile: register sales as a read-only card list, newest first. */
+function SaleCards({ rows }) {
+  if (!rows.length) return <div className="empty-row">No register sales in this range</div>;
+  const shown = [...rows].sort((a, b) => b.soldAt - a.soldAt).slice(0, 500);
+  return (
+    <div className="rec-cards">
+      {shown.map((s, i) => (
+        <div className="rec-card" key={s.transactionId ?? `${s.inv}-${i}`}>
+          <div className="rc-main rc-static">
+            <div className="rc-line1">
+              <span className="rc-inv">#{s.inv || '—'}</span>
+              <span className="rc-title">{s.desc}</span>
+            </div>
+            <div className="rc-line2">{dateTime(s.soldAt)} · {s.method}</div>
+            <div className="rc-figs">
+              <span className="rc-fig"><i>Price</i><b>{money(s.price, { compact: true })}</b></span>
+              <span className="rc-fig"><i>Tax</i><b>{money(s.tax, { compact: true })}</b></span>
+              <span className="rc-fig"><i>Net</i><b>{money(s.net, { compact: true })}</b></span>
+            </div>
+          </div>
+        </div>
+      ))}
+      {rows.length > shown.length && (
+        <div className="empty-row">Showing first {shown.length} of {rows.length}</div>
+      )}
+    </div>
   );
 }

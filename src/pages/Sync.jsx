@@ -7,11 +7,13 @@ import { FINDING_LABELS, findingKey, matchOf } from '../lib/reconcile-ui.js';
 import { dayMonth } from '../lib/format.js';
 import { Card } from '../components/ui.jsx';
 import { RecordsCard, FilterPill } from '../components/RecordsCard.jsx';
+import { useIsMobile } from '../hooks/useMediaQuery.js';
 import { useToast } from '../store/toast.jsx';
 
 export function Sync() {
   const { items, quailSales, venueInfo, applyEdits } = useData();
   const toast = useToast();
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState({ severity: 'all', match: 'all', type: 'all' });
   const [selected, setSelected] = useState(() => new Set());
   const [pending, setPending] = useState(null); // { entries } awaiting confirm
@@ -104,49 +106,94 @@ export function Sync() {
         onApply={() => apply(pending.entries)}
       />
 
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th className="pick">
-                <input type="checkbox" checked={allPicked} disabled={!pickable.length}
-                  ref={(el) => { if (el) el.indeterminate = chosen.length > 0 && !allPicked; }}
-                  onChange={(e) => toggleAll(e.target.checked)} title="Select every fixable row in view" />
-              </th>
-              <th>Match</th><th>Severity</th><th>What</th><th>When</th><th>Detail</th><th className="act" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 && (
-              <tr><td colSpan={7}><div className="empty-row">{entries.length ? 'No anomalies match these filters.' : 'No anomalies — the two systems agree.'}</div></td></tr>
-            )}
-            {visible.map((e) => {
-              const m = matchOf(e);
-              return (
-                <tr key={e.key}>
-                  <td className="pick">{e.plan && (
-                    <input type="checkbox" checked={selected.has(e.key)} onChange={(ev) => toggle(e.key, ev.target.checked)} />
-                  )}</td>
-                  <td><span className={`pill ${m}`} data-match={m}>{m}</span></td>
-                  <td><span className={`pill ${e.finding.severity}`}>{e.finding.severity}</span></td>
-                  <td>{FINDING_LABELS[e.finding.type] || e.finding.type}</td>
-                  <td>{e.finding.soldAt ? dayMonth(e.finding.soldAt) : "—"}</td>
-                  <td className="wrap">
-                    <div className="finding-detail">{e.finding.detail}</div>
-                    {e.plan
-                      ? <div className="finding-note">Fix: {e.plan.summary}</div>
-                      : (e.finding.note && <div className="finding-note">{e.finding.note}</div>)}
-                  </td>
-                  <td className="act">{e.plan && (
-                    <button className="fix-btn" disabled={applying} onClick={() => apply([e])}>Fix</button>
-                  )}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {isMobile ? (
+        <FindingCards visible={visible} entries={entries} selected={selected} applying={applying}
+          onToggle={toggle} onFix={(e) => apply([e])} />
+      ) : (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th className="pick">
+                  <input type="checkbox" checked={allPicked} disabled={!pickable.length}
+                    ref={(el) => { if (el) el.indeterminate = chosen.length > 0 && !allPicked; }}
+                    onChange={(e) => toggleAll(e.target.checked)} title="Select every fixable row in view" />
+                </th>
+                <th>Match</th><th>Severity</th><th>What</th><th>When</th><th>Detail</th><th className="act" />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 && (
+                <tr><td colSpan={7}><div className="empty-row">{entries.length ? 'No anomalies match these filters.' : 'No anomalies — the two systems agree.'}</div></td></tr>
+              )}
+              {visible.map((e) => {
+                const m = matchOf(e);
+                return (
+                  <tr key={e.key}>
+                    <td className="pick">{e.plan && (
+                      <input type="checkbox" checked={selected.has(e.key)} onChange={(ev) => toggle(e.key, ev.target.checked)} />
+                    )}</td>
+                    <td><span className={`pill ${m}`} data-match={m}>{m}</span></td>
+                    <td><span className={`pill ${e.finding.severity}`}>{e.finding.severity}</span></td>
+                    <td>{FINDING_LABELS[e.finding.type] || e.finding.type}</td>
+                    <td>{e.finding.soldAt ? dayMonth(e.finding.soldAt) : "—"}</td>
+                    <td className="wrap">
+                      <div className="finding-detail">{e.finding.detail}</div>
+                      {e.plan
+                        ? <div className="finding-note">Fix: {e.plan.summary}</div>
+                        : (e.finding.note && <div className="finding-note">{e.finding.note}</div>)}
+                    </td>
+                    <td className="act">{e.plan && (
+                      <button className="fix-btn" disabled={applying} onClick={() => apply([e])}>Fix</button>
+                    )}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </RecordsCard>
+  );
+}
+
+/** Mobile: each reconcile finding as a card, with its Fix action inline. */
+function FindingCards({ visible, entries, selected, applying, onToggle, onFix }) {
+  if (visible.length === 0) {
+    return <div className="empty-row">{entries.length ? 'No anomalies match these filters.' : 'No anomalies — the two systems agree.'}</div>;
+  }
+  return (
+    <div className="rec-cards">
+      {visible.map((e) => {
+        const m = matchOf(e);
+        return (
+          <div className="rec-card" key={e.key}>
+            {e.plan && (
+              <label className="rc-check" onClick={(ev) => ev.stopPropagation()}>
+                <input type="checkbox" checked={selected.has(e.key)} onChange={(ev) => onToggle(e.key, ev.target.checked)} aria-label="Select finding" />
+              </label>
+            )}
+            <div className="rc-main rc-static">
+              <div className="rc-badges">
+                <span className={`pill ${m}`} data-match={m}>{m}</span>
+                <span className={`pill ${e.finding.severity}`}>{e.finding.severity}</span>
+                {e.finding.soldAt && <span className="rc-when">{dayMonth(e.finding.soldAt)}</span>}
+              </div>
+              <div className="rc-title">{FINDING_LABELS[e.finding.type] || e.finding.type}</div>
+              <div className="finding-detail">{e.finding.detail}</div>
+              {e.plan
+                ? <div className="finding-note">Fix: {e.plan.summary}</div>
+                : (e.finding.note && <div className="finding-note">{e.finding.note}</div>)}
+            </div>
+            {e.plan && (
+              <div className="rc-actions">
+                <button className="fix-btn" disabled={applying} onClick={() => onFix(e)}>Fix</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

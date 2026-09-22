@@ -4,11 +4,14 @@ import { useNav } from '../store/nav.jsx';
 import { takenNumbers, numberKey } from '../lib/stock.js';
 import { ITEM_COLUMNS, ITEM_ACTS_W, filterItems, collectChanges, editFields } from '../lib/items.js';
 import { makeVenueLabels } from '../lib/venues.js';
+import { money } from '../lib/format.js';
 import { useToast } from '../store/toast.jsx';
+import { useIsMobile } from '../hooks/useMediaQuery.js';
 import { Button } from '../components/ui.jsx';
 import { RecordsCard, FilterPill, SearchPill } from '../components/RecordsCard.jsx';
 import { SortableTable } from '../components/SortableTable.jsx';
 import { PrintTags } from './PrintTags.jsx';
+import { EditItemSheet } from './EditItemSheet.jsx';
 
 const FILTERS = [
   ['all', 'All items'], ['onhand', 'Unsold only'], ['sold', 'Sold only'], ['loss', 'Sold at a loss'],
@@ -18,6 +21,7 @@ const FILTERS = [
 export function Inventory() {
   const { items, applyEdits, deleteItems, venueInfo, venueNames } = useData();
   const { range, inventoryFilter, setInventoryFilter, openAddStock } = useNav();
+  const isMobile = useIsMobile();
 
   // Channels an item can be attributed to (Sandpiper booths + their store).
   const vl = useMemo(() => makeVenueLabels(venueInfo, venueNames), [venueInfo, venueNames]);
@@ -140,6 +144,10 @@ export function Inventory() {
     : <ItemRow key={r.id} r={r} checked={selected.has(r.id)} onToggle={() => toggleOne(r.id)}
         onClick={(e) => rowClick(r, e)} onDelete={() => setDeletePending([r.id])} />);
 
+  // On mobile a row is edited in a full-screen sheet rather than inline.
+  const editingItem = items.find((i) => i.id === editingId) || null;
+  const deleteFromSheet = () => { const id = editingId; cancelEdit(); doDelete([id]); };
+
   return (
     <RecordsCard
       filters={<>
@@ -164,14 +172,23 @@ export function Inventory() {
       <DeleteBar pending={deletePending} busy={busy} items={items}
         onCancel={() => setDeletePending(null)} onGo={() => doDelete(deletePending)} />
 
-      <div className="table-scroll">
-        <SortableTable
-          columns={ITEM_COLUMNS} rows={rows} fixed actsWidth={ITEM_ACTS_W} leadWidth={4}
-          initialSort={{ key: 'acquired', dir: -1 }} limit={400}
-          leadingHeader={<th className="pick"><SelectAll checked={allChecked} indeterminate={someChecked} onChange={toggleAll} /></th>}
-          trailingHeader={<th className="row-acts" />} renderRow={renderRow}
-          empty="No items match those filters" />
-      </div>
+      {isMobile ? (
+        <ItemCards rows={rows} selected={selected} onToggle={toggleOne} onOpen={startEdit} limit={400} />
+      ) : (
+        <div className="table-scroll">
+          <SortableTable
+            columns={ITEM_COLUMNS} rows={rows} fixed actsWidth={ITEM_ACTS_W} leadWidth={4}
+            initialSort={{ key: 'acquired', dir: -1 }} limit={400}
+            leadingHeader={<th className="pick"><SelectAll checked={allChecked} indeterminate={someChecked} onChange={toggleAll} /></th>}
+            trailingHeader={<th className="row-acts" />} renderRow={renderRow}
+            empty="No items match those filters" />
+        </div>
+      )}
+
+      {isMobile && editingItem && (
+        <EditItemSheet r={editingItem} fields={fields} setFields={setFields} boothOptions={boothOptions}
+          busy={busy} onSave={() => save(editingItem)} onCancel={cancelEdit} onDelete={deleteFromSheet} />
+      )}
 
       {showPrint && <PrintTags rows={printRows} onClose={() => setShowPrint(false)} />}
     </RecordsCard>
@@ -182,6 +199,48 @@ function SelectAll({ checked, indeterminate, onChange }) {
   const ref = useRef(null);
   useEffect(() => { if (ref.current) ref.current.indeterminate = indeterminate; }, [indeterminate]);
   return <input ref={ref} type="checkbox" checked={checked} onChange={onChange} aria-label="Select all shown items" />;
+}
+
+/** Mobile: each item is a tappable card (tap opens the edit sheet) instead of a
+ *  row in the wide, unusable desktop table. The checkbox still picks for print. */
+function ItemCards({ rows, selected, onToggle, onOpen, limit }) {
+  if (!rows.length) return <div className="empty-row">No items match those filters</div>;
+  const shown = limit ? rows.slice(0, limit) : rows;
+  return (
+    <div className="rec-cards">
+      {shown.map((r) => (
+        <ItemCard key={r.id} r={r} checked={selected.has(r.id)} onToggle={() => onToggle(r.id)} onOpen={() => onOpen(r)} />
+      ))}
+      {limit && rows.length > shown.length && (
+        <div className="empty-row">Showing first {shown.length} of {rows.length}</div>
+      )}
+    </div>
+  );
+}
+
+function ItemCard({ r, checked, onToggle, onOpen }) {
+  const channel = r.channelLabel && r.channelLabel !== 'Unassigned' ? r.channelLabel : null;
+  return (
+    <div className={`rec-card item-card${checked ? ' picked' : ''}`}>
+      <label className="rc-check" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Select #${r.inv || '—'}`} />
+      </label>
+      <button className="rc-main" onClick={onOpen}>
+        <div className="rc-line1">
+          <span className="rc-inv">#{r.inv || '—'}</span>
+          <span className="rc-title">{r.desc}</span>
+        </div>
+        <div className="rc-line2">{[r.category, channel].filter(Boolean).join(' · ') || '—'}</div>
+        <div className="rc-figs">
+          <span className="rc-fig"><i>Cost</i><b>{money(r.cost, { compact: true })}</b></span>
+          <span className="rc-fig"><i>Ask</i><b>{money(r.ask, { compact: true })}</b></span>
+          {r.isSold
+            ? <span className="rc-fig sold"><i>Sold</i><b>{money(r.soldPrice, { compact: true })}</b></span>
+            : <span className="pill hold">on hand</span>}
+        </div>
+      </button>
+    </div>
+  );
 }
 
 function ItemRow({ r, checked, onToggle, onClick, onDelete }) {

@@ -1797,3 +1797,81 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   .tagx-cards, .tagx-cards.two { grid-template-columns: 1fr; }
   .home-take-num { font-size: 30px; }
 }
+
+/* ==================================================================
+   MOBILE RECORD CARDS + EDIT SHEET
+   On phones the dense tables are replaced (in JS, ≤600) with a tappable
+   card list, and inventory rows are edited in a full-screen sheet.
+   ================================================================== */
+
+.rec-cards {
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1; min-height: 0; overflow-y: auto; padding: 2px 1px 10px;
+}
+.rec-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 11px 12px; box-shadow: 0 2px 8px rgba(70,56,20,.05);
+}
+.rec-card.picked { border-color: var(--brass-dim); background: rgba(246,199,61,.14); }
+.rec-card .rc-check { flex: none; display: flex; align-items: center; padding-top: 2px; }
+.rec-card .rc-check input { width: 17px; height: 17px; }
+.rc-main {
+  flex: 1; min-width: 0; background: none; border: 0; padding: 0; margin: 0;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.rc-line1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rc-inv { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); font-size: 12px; flex: none; }
+.rc-title { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-line2 { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-figs { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 2px; align-items: center; }
+.rc-fig { display: inline-flex; align-items: baseline; gap: 5px; font-size: 12px; }
+.rc-fig i { font-style: normal; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; }
+.rc-fig b { font-weight: 640; font-variant-numeric: tabular-nums; }
+.rc-fig.sold b { color: var(--green); }
+.rc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.rc-actions { display: flex; align-items: center; gap: 8px; flex: none; align-self: center; }
+
+/* --- item edit sheet --- */
+.edit-sheet .ef-body {
+  flex: 1; overflow-y: auto; padding: 16px 16px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+  max-width: 560px; width: 100%; margin: 0 auto;
+}
+.ef-field { display: flex; flex-direction: column; gap: 5px; }
+.ef-field > span { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.ef-field input {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 15px; width: 100%; box-sizing: border-box;
+}
+.ef-field input:focus { outline: none; border-color: var(--brass); box-shadow: 0 0 0 2px var(--glow-a); }
+.ef-static { font-size: 14px; color: var(--muted); padding: 4px 0; }
+.ef-row { display: flex; gap: 12px; }
+.ef-row .ef-field { flex: 1; min-width: 0; }
+.ef-money { position: relative; display: flex; align-items: center; }
+.ef-money i { position: absolute; left: 12px; color: var(--faint); font-style: normal; font-size: 14px; }
+.ef-money input { padding-left: 24px; }
+.ef-select .sel-btn { width: 100%; max-width: none; padding: 11px 12px; font-size: 15px; border-radius: 10px; }
+.ef-sold { border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.ef-sold-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 700; margin-bottom: 8px; }
+.ef-delete {
+  align-self: flex-start; margin-top: 2px;
+  background: none; border: 1px solid var(--border); color: var(--red);
+  border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 13px; font-weight: 560; cursor: pointer;
+}
+.ef-delete:hover { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.5); }
+.ef-del-confirm {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px;
+  border: 1px solid rgba(248,113,113,.4); background: rgba(248,113,113,.08);
+  border-radius: 12px; font-size: 12.5px; color: var(--text);
+}
+.ef-del-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.danger:hover { filter: brightness(1.06); }
+
+/* Read-only cards (POS sales, Sync findings) don't open on tap. */
+.rc-main.rc-static { cursor: default; }
+.rc-when { font-size: 10.5px; color: var(--faint); margin-left: auto; align-self: center; }
+.rec-card .finding-detail { font-size: 12.5px; line-height: 1.4; }
+.rec-card .finding-note { font-size: 11.5px; margin-top: 2px; }
