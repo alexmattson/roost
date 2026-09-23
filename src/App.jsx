@@ -13,7 +13,6 @@ import { Analyze } from './pages/Analyze.jsx';
 import { AddStock } from './pages/AddStock.jsx';
 import { ManageChannels } from './pages/ManageChannels.jsx';
 import { useTooltips } from './hooks/useTooltips.js';
-import { useIsMobile } from './hooks/useMediaQuery.js';
 import { useChromeCollapse } from './hooks/useChromeCollapse.js';
 
 export default function App() {
@@ -57,9 +56,9 @@ function Dashboard() {
   // series with the new colours.
   useTooltips();
   const { mode } = useNav();
-  const isMobile = useIsMobile();
-  // Home is the landing view — keep its nav fixed, no collapse/breadcrumb.
-  useChromeCollapse(isMobile && mode !== 'home');
+  // Collapse the tab/filter chrome on scroll (desktop + mobile); Home is the
+  // landing view, so keep its nav fixed with no collapse/breadcrumb.
+  useChromeCollapse(mode !== 'home');
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toast = useToast();
