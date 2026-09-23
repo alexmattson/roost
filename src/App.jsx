@@ -56,10 +56,8 @@ function Dashboard() {
   // (key) so every chart — even ones whose data didn't change — rebuilds its
   // series with the new colours.
   useTooltips();
-  const { mode } = useNav();
   const isMobile = useIsMobile();
-  // Home has no tab/filter chrome and a short page — leave it fixed.
-  useChromeCollapse(isMobile && mode !== 'home');
+  useChromeCollapse(isMobile);
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toast = useToast();
