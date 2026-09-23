@@ -1964,8 +1964,18 @@ body.scrolled .app-header {
    keep a fixed offset (the header's resting height) so content glides up behind
    the blur; records pages follow the live height so the card tucks up with the
    collapsing header instead of leaving a gap under it. */
-body.expanded #main { padding-top: var(--header-h-expanded, 150px); }
+body.expanded:not(.mode-home) #main { padding-top: var(--header-h-expanded, 150px); }
 body.expanded #main:has(> .records-card) { padding-top: var(--header-h, 150px); }
+
+/* Home is short and never collapses — keep its header in normal flow (no
+   floating overlay, no glass) so its spacing stays as designed. */
+body.mode-home .app-header {
+  position: static;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
 
 /* Mobile only: also fold the wrapped mode-pill row and tighten the top bar
    (on desktop the mode pills live inside the top bar, which stays put). */

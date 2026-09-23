@@ -60,6 +60,13 @@ function Dashboard() {
   // landing view, so keep its nav fixed with no collapse/breadcrumb.
   useChromeCollapse(mode !== 'home');
 
+  // Home keeps an in-flow header (no floating frosted overlay) — it's short and
+  // doesn't collapse, and the overlay left it with a gap/odd spacing.
+  useEffect(() => {
+    document.body.classList.toggle('mode-home', mode === 'home');
+    return () => document.body.classList.remove('mode-home');
+  }, [mode]);
+
   // Publish heights so the CSS can (a) animate the chrome collapse from its real
   // height (--chrome-h, no dead zone) and (b) offset the content under the
   // floating frosted header: --header-h is the live header height (records
