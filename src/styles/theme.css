@@ -1903,26 +1903,30 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
    and RangeBar spans full width, as they did as direct body children.
    Collapse uses max-height (reliable to a true zero everywhere) plus an
    opacity/slide so the motion reads smooth despite the fixed cap. */
+/* Nav collapse and breadcrumb reveal use the SAME duration + easing, and each
+   animates its real height (chrome from its measured --chrome-h, breadcrumb
+   from its fixed height) so there's no max-height dead zone and the two stay
+   perfectly in sync — no jump in the content below. */
 .app-chrome {
-  display: block; overflow: hidden; max-height: 400px;
-  transition: max-height .36s cubic-bezier(.4, 0, .2, 1), opacity .22s ease, transform .3s cubic-bezier(.4, 0, .2, 1);
+  display: block; overflow: hidden; max-height: var(--chrome-h, 320px);
+  transition: max-height .34s cubic-bezier(.4, 0, .2, 1), opacity .24s ease;
 }
 .app-chrome-inner { display: flex; flex-direction: column; }
-body.chrome-collapsed .app-chrome { max-height: 0; opacity: 0; transform: translateY(-10px); pointer-events: none; }
+body.chrome-collapsed .app-chrome { max-height: 0; opacity: 0; pointer-events: none; }
 
-/* Compact context strip that slides in where the chrome was. */
+/* Compact context strip that slides in where the chrome was — fixed height so
+   its reveal has no dead zone either. */
 .chrome-mini-wrap {
   display: block; overflow: hidden; max-height: 0; visibility: hidden;
-  transition: max-height .32s cubic-bezier(.4, 0, .2, 1), visibility .32s;
+  transition: max-height .34s cubic-bezier(.4, 0, .2, 1), visibility .34s;
 }
-body.chrome-collapsed .chrome-mini-wrap { max-height: 46px; visibility: visible; }
+body.chrome-collapsed .chrome-mini-wrap { max-height: 34px; visibility: visible; }
 .chrome-mini {
-  overflow: hidden; width: 100%; box-sizing: border-box;
+  height: 34px; box-sizing: border-box; width: 100%;
   display: flex; align-items: center; gap: 8px;
   padding: 0 16px; background: none; border: none; font: inherit; color: var(--muted);
-  text-align: left; cursor: pointer; transition: padding .3s ease;
+  text-align: left; cursor: pointer;
 }
-body.chrome-collapsed .chrome-mini { padding: 2px 16px 9px; }
 .cm-mode { font-weight: 660; color: var(--text); font-size: 12.5px; }
 .cm-item { position: relative; font-size: 12px; padding-left: 15px; white-space: nowrap; }
 .cm-item::before { content: '·'; position: absolute; left: 5px; color: var(--faint); }
@@ -1934,11 +1938,13 @@ body.chrome-collapsed .chrome-mini { padding: 2px 16px 9px; }
 /* Mobile only: also fold the wrapped mode-pill row and tighten the top bar
    (on desktop the mode pills live inside the top bar, which stays put). */
 @media (max-width: 600px) {
+  /* Tight cap (≈ the pill bar's real height) so the mode row folds in step with
+     the rest instead of snapping late. */
   .topbar-modes {
-    overflow: hidden; max-height: 60px;
+    overflow: hidden; max-height: 46px;
     transition: max-height .34s cubic-bezier(.4, 0, .2, 1), opacity .22s ease, margin .3s ease;
   }
   body.chrome-collapsed .topbar-modes { max-height: 0; opacity: 0; margin: 0; pointer-events: none; }
   body.chrome-collapsed .topbar { padding-bottom: 0; }
-  body.chrome-collapsed .chrome-mini { padding: 2px 12px 8px; }
+  .chrome-mini { padding: 0 12px; }
 }

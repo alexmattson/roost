@@ -59,6 +59,22 @@ function Dashboard() {
   // Collapse the tab/filter chrome on scroll (desktop + mobile); Home is the
   // landing view, so keep its nav fixed with no collapse/breadcrumb.
   useChromeCollapse(mode !== 'home');
+
+  // Publish the chrome's real height so the collapse animates from that exact
+  // height to 0 — no max-height dead zone — keeping it perfectly in step with
+  // the (fixed-height) breadcrumb reveal.
+  useEffect(() => {
+    const inner = document.querySelector('.app-chrome-inner');
+    if (!inner) return undefined;
+    const root = document.documentElement;
+    const measure = () => root.style.setProperty('--chrome-h', `${inner.offsetHeight}px`);
+    measure();
+    let ro;
+    if (typeof ResizeObserver !== 'undefined') { ro = new ResizeObserver(measure); ro.observe(inner); }
+    window.addEventListener('resize', measure);
+    return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
+
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toast = useToast();
