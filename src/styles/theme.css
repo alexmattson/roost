@@ -1973,8 +1973,9 @@ body.scrolled .app-header {
    keep a fixed offset (the header's resting height) so content glides up behind
    the blur; records pages follow the live height so the card tucks up with the
    collapsing header instead of leaving a gap under it. */
-body.expanded:not(.mode-home) #main { padding-top: var(--header-h-expanded, 150px); }
-body.expanded #main:has(> .records-card) { padding-top: var(--header-h, 150px); }
+/* Offset content by the header's LIVE height so the gap closes as it collapses
+   (no dead space above the content when folded). */
+body.expanded:not(.mode-home) #main { padding-top: var(--header-h, 150px); }
 
 /* Home is short and never collapses — keep its header in normal flow (no
    floating overlay, no glass) so its spacing stays as designed. */
