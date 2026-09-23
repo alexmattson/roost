@@ -9,7 +9,7 @@ import { useEffect } from 'react';
  * .table-scroll on records pages), so we listen in the capture phase on the
  * document — scroll events don't bubble, but capture still sees them all.
  */
-export function useChromeCollapse(enabled) {
+export function useChromeCollapse(enabled, sticky = false) {
   useEffect(() => {
     // Not enabled (Home) still tracks `scrolled` for the frosted background; it
     // just never collapses, so make sure any lingering collapse is cleared.
@@ -57,17 +57,29 @@ export function useChromeCollapse(enabled) {
         // At the very bottom the header resize clamps scrollTop; don't toggle
         // there or it flip-flops. Keep whatever state we arrived with.
         if (el.scrollHeight - (y + el.clientHeight) < 8) return;
-        if (y < 8) set(false);             // only right at the very top
-        else if (delta > 1) set(true);     // any scroll down → collapse at once
-        else if (delta < -2) set(false);   // a small scroll up → reveal
+        if (sticky) {
+          // Records/tables: collapse on scroll-down and STAY collapsed while
+          // navigating; only a click on the breadcrumb brings the nav back.
+          if (y > 8 && delta > 1) set(true);
+        } else {
+          if (y < 8) set(false);           // only right at the very top
+          else if (delta > 1) set(true);   // any scroll down → collapse at once
+          else if (delta < -2) set(false); // a small scroll up → reveal
+        }
       });
     };
 
+    // The breadcrumb (and anything else) can request an expand by event — this
+    // is the only way out of the collapsed state in sticky mode.
+    const onExpand = () => set(false);
+
     document.addEventListener('scroll', onScroll, true);
+    window.addEventListener('roost:chrome-expand', onExpand);
     return () => {
       document.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('roost:chrome-expand', onExpand);
       document.body.classList.remove('chrome-collapsed');
       document.body.classList.remove('scrolled');
     };
-  }, [enabled]);
+  }, [enabled, sticky]);
 }

@@ -99,11 +99,9 @@ export function ChromeMini() {
   const tabEntry = active.tabs && active.tabs.length > 1 ? active.tabs.find(([id]) => id === tab) : null;
   const presetEntry = mode !== 'home' && active.presets ? active.presets.find(([k]) => k === range.preset) : null;
 
-  const expand = () => {
-    document.querySelectorAll('#main, .rec-cards, .table-scroll').forEach((el) => {
-      if (el.scrollTo) el.scrollTo({ top: 0, behavior: 'smooth' }); else el.scrollTop = 0;
-    });
-  };
+  // Reopen the nav in place (works even in sticky/records mode, where scrolling
+  // back up no longer expands it).
+  const expand = () => window.dispatchEvent(new CustomEvent('roost:chrome-expand'));
 
   return (
     <div className="chrome-mini-wrap" aria-hidden="true">
