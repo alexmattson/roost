@@ -1946,10 +1946,19 @@ body.chrome-collapsed .topbar .modes { opacity: 0; pointer-events: none; }
 body.expanded { position: relative; }
 .app-header {
   position: absolute; top: 0; left: 0; right: 0; z-index: 40;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: background .28s ease, border-color .28s ease,
+              -webkit-backdrop-filter .28s ease, backdrop-filter .28s ease;
+}
+/* Frost only once the page is scrolled off the very top (Apple-style). */
+body.scrolled .app-header {
   background: var(--header-glass);
+  border-bottom-color: var(--border-soft);
   -webkit-backdrop-filter: blur(22px) saturate(1.7);
   backdrop-filter: blur(22px) saturate(1.7);
-  border-bottom: 1px solid var(--border-soft);
 }
 /* The header floats, so the scroll content is offset to clear it. Most pages
    keep a fixed offset (the header's resting height) so content glides up behind

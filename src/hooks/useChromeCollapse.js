@@ -11,10 +11,13 @@ import { useEffect } from 'react';
  */
 export function useChromeCollapse(enabled) {
   useEffect(() => {
-    if (!enabled) { document.body.classList.remove('chrome-collapsed'); return undefined; }
+    // Not enabled (Home) still tracks `scrolled` for the frosted background; it
+    // just never collapses, so make sure any lingering collapse is cleared.
+    if (!enabled) document.body.classList.remove('chrome-collapsed');
 
     let lastY = 0;
     let collapsed = false;
+    let scrolled = false;
     let ticking = false;
     let lockUntil = 0; // ignore state changes while a collapse/expand animates
 
@@ -26,6 +29,11 @@ export function useChromeCollapse(enabled) {
       // clamps scrollTop and fires scroll events with a reversed delta. Ignore
       // those for the length of the transition so it can't oscillate.
       lockUntil = Date.now() + 420;
+    };
+    const setScrolled = (next) => {
+      if (next === scrolled) return;
+      scrolled = next;
+      document.body.classList.toggle('scrolled', next);
     };
 
     const onScroll = (e) => {
@@ -41,6 +49,10 @@ export function useChromeCollapse(enabled) {
         const delta = y - lastY;
         lastY = y;                         // always track, even while locked
         ticking = false;
+        // The frosted background shows only once we're off the very top — this
+        // runs on every page (Home included), independent of the collapse.
+        setScrolled(y > 4);
+        if (!enabled) return;              // collapse only where enabled (not Home)
         if (Date.now() < lockUntil) return; // settling after a toggle
         // At the very bottom the header resize clamps scrollTop; don't toggle
         // there or it flip-flops. Keep whatever state we arrived with.
@@ -55,6 +67,7 @@ export function useChromeCollapse(enabled) {
     return () => {
       document.removeEventListener('scroll', onScroll, true);
       document.body.classList.remove('chrome-collapsed');
+      document.body.classList.remove('scrolled');
     };
   }, [enabled]);
 }
