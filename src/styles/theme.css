@@ -1712,10 +1712,12 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
    action buttons, so wrap the header — brand + actions on one row, the mode
    pills centered on their own row beneath. ---- */
 @media (max-width: 720px) {
-  .topbar { flex-wrap: wrap; row-gap: 8px; padding-bottom: 8px; }
+  /* No row-gap: the only wrapped row is the mode pills, and its spacing lives on
+     the mode row's own margin-top so it can collapse to a true zero height. */
+  .topbar { flex-wrap: wrap; padding-bottom: 8px; }
   .brand { order: 0; }
   .top-actions { order: 1; margin-left: auto; }
-  .topbar-modes { order: 2; flex-basis: 100%; display: flex; justify-content: center; }
+  .topbar-modes { order: 2; flex-basis: 100%; display: flex; justify-content: center; margin-top: 8px; }
   /* Undo the desktop absolute-centering but KEEP position:relative — the pill
      indicator is absolutely positioned within .modes, and letting it fall back
      to static would anchor it to the whole topbar (a giant black blob). */
