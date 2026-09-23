@@ -1962,6 +1962,9 @@ body.expanded { position: relative; }
   transition: background .28s ease, border-color .28s ease,
               -webkit-backdrop-filter .28s ease, backdrop-filter .28s ease;
 }
+/* When collapsed the whole bar reopens the nav, so hint it's clickable. */
+body.chrome-collapsed .app-header { cursor: pointer; }
+
 /* Frost only once the page is scrolled off the very top (Apple-style). */
 body.scrolled .app-header {
   background: var(--header-glass);

@@ -160,7 +160,12 @@ function Dashboard() {
 
   return (
     <>
-      <header className="app-header">
+      <header className="app-header" onClick={(e) => {
+        // Click anywhere on the collapsed header (not on a control) to reopen.
+        if (!document.body.classList.contains('chrome-collapsed')) return;
+        if (e.target.closest('button, a, input, select, [role="button"], .sel, .acct-menu')) return;
+        window.dispatchEvent(new CustomEvent('roost:chrome-expand'));
+      }}>
         <TopBar onRefresh={doRefresh} refreshing={refreshing} />
         <div className="app-chrome">
           <div className="app-chrome-inner">
