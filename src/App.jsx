@@ -57,9 +57,10 @@ function Dashboard() {
   useTooltips();
   const { mode } = useNav();
   // Collapse the tab/filter chrome on scroll (desktop + mobile); Home is the
-  // landing view, so keep its nav fixed. Records/tables stay collapsed once
-  // folded (only the breadcrumb reopens them) so scrolling rows isn't jumpy.
-  useChromeCollapse(mode !== 'home', mode === 'records');
+  // landing view, so keep its nav fixed. On the collapsing pages (Analyze,
+  // Records) the nav stays collapsed once folded — only the breadcrumb reopens
+  // it — so scrolling content isn't jumpy.
+  useChromeCollapse(mode !== 'home', mode !== 'home');
 
   // Home keeps an in-flow header (no floating frosted overlay) — it's short and
   // doesn't collapse, and the overlay left it with a gap/odd spacing.
