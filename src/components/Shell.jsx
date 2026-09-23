@@ -91,6 +91,32 @@ export function ModesNav() {
   return <PillNav className="modes" size="mode" ariaLabel="Section" items={items} value={mode} onChange={selectMode} />;
 }
 
+/** The compact stand-in shown (on mobile) when the chrome is collapsed on
+ *  scroll: mode · tab · range. Tapping it scrolls back to the top to reveal
+ *  the full nav again. */
+export function ChromeMini() {
+  const { mode, tab, active, range } = useNav();
+  const tabEntry = active.tabs && active.tabs.length > 1 ? active.tabs.find(([id]) => id === tab) : null;
+  const presetEntry = mode !== 'home' && active.presets ? active.presets.find(([k]) => k === range.preset) : null;
+
+  const expand = () => {
+    document.querySelectorAll('#main, .rec-cards, .table-scroll').forEach((el) => {
+      if (el.scrollTo) el.scrollTo({ top: 0, behavior: 'smooth' }); else el.scrollTop = 0;
+    });
+  };
+
+  return (
+    <div className="chrome-mini-wrap" aria-hidden="true">
+      <button type="button" className="chrome-mini" onClick={expand}>
+        <span className="cm-mode">{active.label}</span>
+        {tabEntry && <span className="cm-item">{tabEntry[1]}</span>}
+        {presetEntry && <span className="cm-item cm-range">{presetEntry[1]}</span>}
+        <svg className="cm-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+    </div>
+  );
+}
+
 export function RangeBar() {
   const { mode, tab, active, range, setPreset, setCustomRange, venue, setVenue } = useNav();
   const { channelList } = useData();

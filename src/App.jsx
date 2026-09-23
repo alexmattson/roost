@@ -4,7 +4,7 @@ import { NavProvider, useNav } from './store/nav.jsx';
 import { ThemeProvider, useTheme } from './hooks/useTheme.jsx';
 import { ToastProvider, useToast } from './store/toast.jsx';
 import { LoginGate } from './pages/LoginGate.jsx';
-import { TopBar, RangeBar, Tabs, LoadingState } from './components/Shell.jsx';
+import { TopBar, RangeBar, Tabs, ChromeMini, LoadingState } from './components/Shell.jsx';
 import { Home } from './pages/Home.jsx';
 import { Sync } from './pages/Sync.jsx';
 import { PosSales } from './pages/PosSales.jsx';
@@ -13,6 +13,8 @@ import { Analyze } from './pages/Analyze.jsx';
 import { AddStock } from './pages/AddStock.jsx';
 import { ManageChannels } from './pages/ManageChannels.jsx';
 import { useTooltips } from './hooks/useTooltips.js';
+import { useIsMobile } from './hooks/useMediaQuery.js';
+import { useChromeCollapse } from './hooks/useChromeCollapse.js';
 
 export default function App() {
   return (
@@ -54,6 +56,8 @@ function Dashboard() {
   // (key) so every chart — even ones whose data didn't change — rebuilds its
   // series with the new colours.
   useTooltips();
+  const isMobile = useIsMobile();
+  useChromeCollapse(isMobile);
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toast = useToast();
@@ -96,8 +100,13 @@ function Dashboard() {
   return (
     <>
       <TopBar onRefresh={doRefresh} refreshing={refreshing} />
-      <Tabs />
-      <RangeBar />
+      <div className="app-chrome">
+        <div className="app-chrome-inner">
+          <Tabs />
+          <RangeBar />
+        </div>
+      </div>
+      <ChromeMini />
       <main id="main" key={theme}>
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>

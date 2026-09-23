@@ -1888,3 +1888,58 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
 .rc-when { font-size: 10.5px; color: var(--faint); margin-left: auto; align-self: center; }
 .rec-card .finding-detail { font-size: 12.5px; line-height: 1.4; }
 .rec-card .finding-note { font-size: 11.5px; margin-top: 2px; }
+
+/* ==================================================================
+   COLLAPSING HEADER ON SCROLL (mobile)
+   On scroll-down the mode/tab/filter rows slide away to reclaim space and a
+   compact "mode · tab · range" strip takes their place; scroll-up brings them
+   back. Driven by body.chrome-collapsed (see useChromeCollapse).
+   ================================================================== */
+
+/* Desktop: the wrappers are transparent to layout so Tabs/RangeBar stay direct
+   flex children of <body> (keeps their centering); the mini strip is unused. */
+.app-chrome, .app-chrome-inner { display: contents; }
+.chrome-mini-wrap { display: none; }
+
+@media (max-width: 600px) {
+  /* Tabs + range bar collapse together. grid-template-rows 1fr->0fr animates
+     the real height smoothly (no max-height guesswork). */
+  .app-chrome {
+    display: grid; grid-template-rows: 1fr;
+    transition: grid-template-rows .34s cubic-bezier(.4, 0, .2, 1);
+  }
+  .app-chrome-inner {
+    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    transition: opacity .26s ease, transform .3s cubic-bezier(.4, 0, .2, 1);
+  }
+  body.chrome-collapsed .app-chrome { grid-template-rows: 0fr; }
+  body.chrome-collapsed .app-chrome-inner { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+
+  /* The mode pill row collapses the same way (it centers the pill bar inside a
+     one-row grid). */
+  .topbar-modes {
+    display: grid; grid-template-rows: 1fr; justify-items: center;
+    transition: grid-template-rows .34s cubic-bezier(.4, 0, .2, 1), opacity .24s ease, margin .3s ease;
+  }
+  .topbar-modes > .modes { min-height: 0; overflow: hidden; }
+  body.chrome-collapsed .topbar-modes { grid-template-rows: 0fr; opacity: 0; margin: 0; pointer-events: none; }
+
+  /* Compact context strip slides in where the chrome was. */
+  .chrome-mini-wrap {
+    display: grid; grid-template-rows: 0fr; visibility: hidden;
+    transition: grid-template-rows .32s cubic-bezier(.4, 0, .2, 1), visibility .32s;
+  }
+  body.chrome-collapsed .chrome-mini-wrap { grid-template-rows: 1fr; visibility: visible; }
+  .chrome-mini {
+    min-height: 0; overflow: hidden; width: 100%; box-sizing: border-box;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; background: none; border: none; font: inherit; color: var(--muted);
+    text-align: left; cursor: pointer; transition: padding .3s ease;
+  }
+  body.chrome-collapsed .chrome-mini { padding: 6px 12px 8px; }
+  .cm-mode { font-weight: 660; color: var(--text); font-size: 12.5px; }
+  .cm-item { position: relative; font-size: 12px; padding-left: 15px; white-space: nowrap; }
+  .cm-item::before { content: '·'; position: absolute; left: 5px; color: var(--faint); }
+  .cm-range { color: var(--brass); font-weight: 560; }
+  .cm-chev { width: 14px; height: 14px; margin-left: auto; color: var(--faint); flex: none; }
+}
