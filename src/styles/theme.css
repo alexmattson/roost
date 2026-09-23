@@ -1337,12 +1337,14 @@ html.pre-auth #login-gate[hidden] { display: grid; }
   --pill-fill: var(--accent-fill);
   --pill-on-text: var(--accent-ink);
   --pill-badge-bg: rgba(0,0,0,.18);
+  --header-glass: rgba(18, 20, 27, .58); /* translucent frosted header (dark) */
 }
 
 :root[data-theme="light"] {
   --pill-fill:    var(--ink);
   --pill-on-text: #fff;
   --pill-badge-bg: rgba(255,255,255,.22);
+  --header-glass: rgba(247, 244, 237, .68); /* translucent frosted header (light) */
   --bg:          #edeae2;
   --panel:       #ffffff;
   --panel-2:     #f7f3ea;
@@ -1939,6 +1941,22 @@ body.chrome-collapsed .chrome-mini-wrap { max-height: 34px; visibility: visible;
    and the bar reads cleaner. (On mobile the whole mode row also folds away.) */
 .topbar .modes { transition: opacity .26s ease; }
 body.chrome-collapsed .topbar .modes { opacity: 0; pointer-events: none; }
+
+/* ---- Frosted floating header: content scrolls up behind it (Apple-style) ---- */
+body.expanded { position: relative; }
+.app-header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 40;
+  background: var(--header-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  backdrop-filter: blur(22px) saturate(1.7);
+  border-bottom: 1px solid var(--border-soft);
+}
+/* The header floats, so the scroll content is offset to clear it. Most pages
+   keep a fixed offset (the header's resting height) so content glides up behind
+   the blur; records pages follow the live height so the card tucks up with the
+   collapsing header instead of leaving a gap under it. */
+body.expanded #main { padding-top: var(--header-h-expanded, 150px); }
+body.expanded #main:has(> .records-card) { padding-top: var(--header-h, 150px); }
 
 /* Mobile only: also fold the wrapped mode-pill row and tighten the top bar
    (on desktop the mode pills live inside the top bar, which stays put). */

@@ -60,17 +60,32 @@ function Dashboard() {
   // landing view, so keep its nav fixed with no collapse/breadcrumb.
   useChromeCollapse(mode !== 'home');
 
-  // Publish the chrome's real height so the collapse animates from that exact
-  // height to 0 — no max-height dead zone — keeping it perfectly in step with
-  // the (fixed-height) breadcrumb reveal.
+  // Publish heights so the CSS can (a) animate the chrome collapse from its real
+  // height (--chrome-h, no dead zone) and (b) offset the content under the
+  // floating frosted header: --header-h is the live header height (records
+  // content follows it) and --header-h-expanded is its resting height (other
+  // pages keep a fixed offset so content scrolls up behind the blur).
   useEffect(() => {
     const inner = document.querySelector('.app-chrome-inner');
-    if (!inner) return undefined;
+    const header = document.querySelector('.app-header');
     const root = document.documentElement;
-    const measure = () => root.style.setProperty('--chrome-h', `${inner.offsetHeight}px`);
+    const measure = () => {
+      if (inner) root.style.setProperty('--chrome-h', `${inner.offsetHeight}px`);
+      if (header) {
+        const h = header.offsetHeight;
+        root.style.setProperty('--header-h', `${h}px`);
+        if (!document.body.classList.contains('chrome-collapsed')) {
+          root.style.setProperty('--header-h-expanded', `${h}px`);
+        }
+      }
+    };
     measure();
     let ro;
-    if (typeof ResizeObserver !== 'undefined') { ro = new ResizeObserver(measure); ro.observe(inner); }
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(measure);
+      if (header) ro.observe(header);
+      if (inner) ro.observe(inner);
+    }
     window.addEventListener('resize', measure);
     return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', measure); };
   }, []);
@@ -116,14 +131,16 @@ function Dashboard() {
 
   return (
     <>
-      <TopBar onRefresh={doRefresh} refreshing={refreshing} />
-      <div className="app-chrome">
-        <div className="app-chrome-inner">
-          <Tabs />
-          <RangeBar />
+      <header className="app-header">
+        <TopBar onRefresh={doRefresh} refreshing={refreshing} />
+        <div className="app-chrome">
+          <div className="app-chrome-inner">
+            <Tabs />
+            <RangeBar />
+          </div>
         </div>
-      </div>
-      <ChromeMini />
+        <ChromeMini />
+      </header>
       <main id="main" key={theme}>
         {firstFetching && !hasData ? <LoadingState /> : <Page />}
       </main>
