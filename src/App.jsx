@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DataProvider, useData } from './store/data.jsx';
 import { NavProvider, useNav } from './store/nav.jsx';
 import { ThemeProvider, useTheme } from './hooks/useTheme.jsx';
@@ -66,6 +66,26 @@ function Dashboard() {
   useEffect(() => {
     document.body.classList.toggle('mode-home', mode === 'home');
     return () => document.body.classList.remove('mode-home');
+  }, [mode]);
+
+  // On a mode change the chrome's height jumps (empty on Home -> tabs+filters),
+  // which would animate the nav open. Set the height synchronously before paint
+  // with transitions suppressed, so the nav is simply *there*, already open.
+  useLayoutEffect(() => {
+    const inner = document.querySelector('.app-chrome-inner');
+    const header = document.querySelector('.app-header');
+    const root = document.documentElement;
+    document.body.classList.add('no-chrome-anim');
+    if (inner) root.style.setProperty('--chrome-h', `${inner.offsetHeight}px`);
+    if (header) {
+      const h = header.offsetHeight;
+      root.style.setProperty('--header-h', `${h}px`);
+      if (!document.body.classList.contains('chrome-collapsed')) {
+        root.style.setProperty('--header-h-expanded', `${h}px`);
+      }
+    }
+    const id = requestAnimationFrame(() => document.body.classList.remove('no-chrome-anim'));
+    return () => cancelAnimationFrame(id);
   }, [mode]);
 
   // Publish heights so the CSS can (a) animate the chrome collapse from its real

@@ -1942,6 +1942,15 @@ body.chrome-collapsed .chrome-mini-wrap { max-height: 34px; visibility: visible;
 .topbar .modes { transition: opacity .26s ease; }
 body.chrome-collapsed .topbar .modes { opacity: 0; pointer-events: none; }
 
+/* Suppress the header animations for one frame after a mode change, so the
+   chrome appears already open instead of animating up from Home's zero height. */
+body.no-chrome-anim .app-chrome,
+body.no-chrome-anim .app-chrome-inner,
+body.no-chrome-anim .topbar-modes,
+body.no-chrome-anim .chrome-mini-wrap,
+body.no-chrome-anim .app-header,
+body.no-chrome-anim .topbar .modes { transition: none !important; }
+
 /* ---- Frosted floating header: content scrolls up behind it (Apple-style) ---- */
 body.expanded { position: relative; }
 .app-header {
