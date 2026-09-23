@@ -1935,6 +1935,11 @@ body.chrome-collapsed .chrome-mini-wrap { max-height: 34px; visibility: visible;
 
 .topbar { transition: padding-bottom .3s ease; }
 
+/* On collapse, fade the mode pills out too — the breadcrumb carries the context
+   and the bar reads cleaner. (On mobile the whole mode row also folds away.) */
+.topbar .modes { transition: opacity .26s ease; }
+body.chrome-collapsed .topbar .modes { opacity: 0; pointer-events: none; }
+
 /* Mobile only: also fold the wrapped mode-pill row and tighten the top bar
    (on desktop the mode pills live inside the top bar, which stays put). */
 @media (max-width: 600px) {

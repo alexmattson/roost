@@ -45,9 +45,9 @@ export function useChromeCollapse(enabled) {
         // At the very bottom the header resize clamps scrollTop; don't toggle
         // there or it flip-flops. Keep whatever state we arrived with.
         if (el.scrollHeight - (y + el.clientHeight) < 8) return;
-        if (y < 40) set(false);            // always show near the top
-        else if (delta > 6) set(true);     // scrolling down → collapse
-        else if (delta < -6) set(false);   // scrolling up → reveal
+        if (y < 16) set(false);            // always show right at the top
+        else if (delta > 3) set(true);     // a little scroll down → collapse
+        else if (delta < -3) set(false);   // a little scroll up → reveal
       });
     };
 
