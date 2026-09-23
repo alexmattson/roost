@@ -56,8 +56,10 @@ function Dashboard() {
   // (key) so every chart — even ones whose data didn't change — rebuilds its
   // series with the new colours.
   useTooltips();
+  const { mode } = useNav();
   const isMobile = useIsMobile();
-  useChromeCollapse(isMobile);
+  // Home is the landing view — keep its nav fixed, no collapse/breadcrumb.
+  useChromeCollapse(isMobile && mode !== 'home');
   const [firstFetching, setFirstFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toast = useToast();

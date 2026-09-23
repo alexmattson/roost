@@ -1920,9 +1920,10 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   }
   body.chrome-collapsed .topbar-modes { max-height: 0; opacity: 0; margin: 0; pointer-events: none; }
 
-  /* Compact context strip slides in where the chrome was. */
+  /* Compact context strip slides in where the chrome was. (display must be
+     restored here — the desktop base rule sets it to none.) */
   .chrome-mini-wrap {
-    overflow: hidden; max-height: 0; visibility: hidden;
+    display: block; overflow: hidden; max-height: 0; visibility: hidden;
     transition: max-height .32s cubic-bezier(.4, 0, .2, 1), visibility .32s;
   }
   body.chrome-collapsed .chrome-mini-wrap { max-height: 46px; visibility: visible; }
