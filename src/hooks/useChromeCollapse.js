@@ -16,11 +16,16 @@ export function useChromeCollapse(enabled) {
     let lastY = 0;
     let collapsed = false;
     let ticking = false;
+    let lockUntil = 0; // ignore state changes while a collapse/expand animates
 
     const set = (next) => {
       if (next === collapsed) return;
       collapsed = next;
       document.body.classList.toggle('chrome-collapsed', next);
+      // Collapsing/expanding resizes the scroll container, which at the bottom
+      // clamps scrollTop and fires scroll events with a reversed delta. Ignore
+      // those for the length of the transition so it can't oscillate.
+      lockUntil = Date.now() + 420;
     };
 
     const onScroll = (e) => {
@@ -34,11 +39,15 @@ export function useChromeCollapse(enabled) {
       ticking = true;
       requestAnimationFrame(() => {
         const delta = y - lastY;
+        lastY = y;                         // always track, even while locked
+        ticking = false;
+        if (Date.now() < lockUntil) return; // settling after a toggle
+        // At the very bottom the header resize clamps scrollTop; don't toggle
+        // there or it flip-flops. Keep whatever state we arrived with.
+        if (el.scrollHeight - (y + el.clientHeight) < 8) return;
         if (y < 40) set(false);            // always show near the top
         else if (delta > 6) set(true);     // scrolling down → collapse
         else if (delta < -6) set(false);   // scrolling up → reveal
-        lastY = y;
-        ticking = false;
       });
     };
 

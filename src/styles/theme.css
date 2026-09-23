@@ -1920,6 +1920,11 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
   }
   body.chrome-collapsed .topbar-modes { max-height: 0; opacity: 0; margin: 0; pointer-events: none; }
 
+  /* When the mode row is gone the topbar's bottom breathing room is just a gap
+     above the breadcrumb — drop it so the breadcrumb sits right under the bar. */
+  .topbar { transition: padding-bottom .3s ease; }
+  body.chrome-collapsed .topbar { padding-bottom: 0; }
+
   /* Compact context strip slides in where the chrome was. (display must be
      restored here — the desktop base rule sets it to none.) */
   .chrome-mini-wrap {
@@ -1933,7 +1938,7 @@ body.expanded .tabs { padding: 4px; margin-top: 16px; }
     padding: 0 12px; background: none; border: none; font: inherit; color: var(--muted);
     text-align: left; cursor: pointer; transition: padding .3s ease;
   }
-  body.chrome-collapsed .chrome-mini { padding: 6px 12px 8px; }
+  body.chrome-collapsed .chrome-mini { padding: 2px 12px 8px; }
   .cm-mode { font-weight: 660; color: var(--text); font-size: 12.5px; }
   .cm-item { position: relative; font-size: 12px; padding-left: 15px; white-space: nowrap; }
   .cm-item::before { content: '·'; position: absolute; left: 5px; color: var(--faint); }
