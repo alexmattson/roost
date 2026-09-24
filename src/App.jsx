@@ -14,6 +14,9 @@ import { AddStock } from './pages/AddStock.jsx';
 import { ManageChannels } from './pages/ManageChannels.jsx';
 import { useTooltips } from './hooks/useTooltips.js';
 import { useChromeCollapse } from './hooks/useChromeCollapse.js';
+import { normalizeQuailSales } from './lib/quail.js';
+import { money } from './lib/format.js';
+import { notifyNewSales } from './lib/notify.js';
 
 export default function App() {
   return (
@@ -150,6 +153,8 @@ function Dashboard() {
       } else {
         toast('ok', `Synced ${res.meta.count} items${res.quail ? ` · ${res.quail.sales.length} POS sales` : ''}.`);
       }
+      // If sale alerts are on, notify about any sales newer than last seen.
+      if (res.quail) notifyNewSales(normalizeQuailSales(res.quail.sales), money);
     } catch (e) {
       toast('error', e.message || String(e), 0);
     } finally {

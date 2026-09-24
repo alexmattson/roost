@@ -5,7 +5,9 @@ import { Select } from './Select.jsx';
 import { useData } from '../store/data.jsx';
 import { useNav, MODES, modeById } from '../store/nav.jsx';
 import { useTheme } from '../hooks/useTheme.jsx';
+import { useToast } from '../store/toast.jsx';
 import { relativeTime } from '../lib/format.js';
+import { notifySupported, alertsOn, enableSaleAlerts, disableSaleAlerts } from '../lib/notify.js';
 
 export function TopBar({ onRefresh, refreshing }) {
   const { meta, signOut } = useData();
@@ -38,6 +40,9 @@ export function TopBar({ onRefresh, refreshing }) {
 
 function AccountMenu({ meta, theme, toggleTheme, onManage, onSignOut }) {
   const [open, setOpen] = useState(false);
+  const [alerts, setAlerts] = useState(() => alertsOn());
+  const { quailSales } = useData();
+  const toast = useToast();
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -47,6 +52,23 @@ function AccountMenu({ meta, theme, toggleTheme, onManage, onSignOut }) {
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [open]);
+
+  const toggleAlerts = async () => {
+    if (alerts) {
+      disableSaleAlerts(); setAlerts(false);
+      toast('info', 'Sale alerts off.');
+      return;
+    }
+    const res = await enableSaleAlerts(quailSales);
+    if (res.ok) {
+      setAlerts(true);
+      toast('ok', 'Sale alerts on — you’ll be notified of new sales while Roost is open.');
+    } else if (res.reason === 'unsupported') {
+      toast('info', 'Add Roost to your home screen first, then turn on alerts.', 0);
+    } else {
+      toast('error', 'Notifications are blocked — allow them in your device settings.', 0);
+    }
+  };
 
   return (
     <div className="acct-menu" ref={ref}>
@@ -59,6 +81,11 @@ function AccountMenu({ meta, theme, toggleTheme, onManage, onSignOut }) {
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
             <span>{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
           </button>
+          {notifySupported() && (
+            <button role="menuitem" className="acct-item" onClick={toggleAlerts}>
+              <BellIcon /><span>{alerts ? 'Sale alerts on' : 'Turn on sale alerts'}</span>
+            </button>
+          )}
           <button role="menuitem" className="acct-item" onClick={() => { setOpen(false); onManage(); }}>
             <ChannelsIcon /><span>Manage channels</span>
           </button>
@@ -201,5 +228,6 @@ const SunIcon = () => <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" f
 const MoonIcon = () => <svg viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>;
 const SignOutIcon = () => <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const ChannelsIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2M3 8h18l-1.2 3.2a2 2 0 0 1-3.8-.7 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-3.8.7L3 8zM5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const BellIcon = () => <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const MenuIcon = () => <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.7" fill="currentColor" /><circle cx="12" cy="12" r="1.7" fill="currentColor" /><circle cx="12" cy="19" r="1.7" fill="currentColor" /></svg>;
 const RefreshIcon = () => <svg className="spin-target" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;

@@ -15,3 +15,11 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>
 );
+
+// Register the service worker so Roost installs as a PWA (home-screen icon,
+// standalone shell) and can receive web push once a backend is wired up.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+  });
+}
