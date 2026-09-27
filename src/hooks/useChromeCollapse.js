@@ -73,9 +73,22 @@ export function useChromeCollapse(enabled, sticky = false) {
     // is the only way out of the collapsed state in sticky mode.
     const onExpand = () => set(false);
 
+    // Returning to an already-scrolled page fires no scroll event, so sync the
+    // classes from the current position — otherwise the header shows its
+    // top-of-page (transparent, expanded) state over scrolled content.
+    const syncFromPosition = () => {
+      let y = 0;
+      document.querySelectorAll('#main, .rec-cards, .table-scroll').forEach((el) => { y = Math.max(y, el.scrollTop || 0); });
+      lastY = y;
+      setScrolled(y > 4);
+      if (enabled && y > 24) set(true); // arrived scrolled-down → collapsed
+    };
+    const raf = requestAnimationFrame(syncFromPosition);
+
     document.addEventListener('scroll', onScroll, true);
     window.addEventListener('roost:chrome-expand', onExpand);
     return () => {
+      cancelAnimationFrame(raf);
       document.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('roost:chrome-expand', onExpand);
       document.body.classList.remove('chrome-collapsed');

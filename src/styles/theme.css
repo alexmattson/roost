@@ -311,7 +311,7 @@ body.expanded .table-scroll { max-height: none; }
 /* ----------------------------------------------------------------- kpi */
 
 .kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;
 }
 .kpi {
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -381,8 +381,11 @@ body.expanded .table-scroll { max-height: none; }
 
 .card {
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 11px 13px 12px; margin-bottom: 10px;
+  padding: 11px 13px 12px; margin-bottom: 12px;
 }
+/* Cards inside a grid get their spacing from the grid gap — don't add a margin
+   on top of it (that's what made section spacing uneven). */
+.grid-2 > .card, .home-cols > .card { margin-bottom: 0; }
 .card-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px;
 }
@@ -393,7 +396,7 @@ body.expanded .table-scroll { max-height: none; }
 .card-head .hint.source { margin-right: auto; }
 /* A $/units (or similar) toggle always sits at the far right of the card head. */
 .card-head .toggle { margin-left: auto; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .chart-box { width: 100%; min-height: 40px; }
 .chart-empty {
   display: grid; place-items: center; height: 150px; color: var(--faint); font-size: 12px;
@@ -1128,7 +1131,7 @@ html.pre-auth #login-gate[hidden] { display: grid; }
 .home-actions .btn.ghost { margin-left: auto; color: var(--muted); }
 .home-actions .btn.ghost:hover { color: var(--text); }
 
-.home-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.home-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; align-items: start; }
 @media (max-width: 620px) { .home-cols { grid-template-columns: 1fr; } }
 .home-card { padding: 12px 13px 13px; }
 
@@ -1955,6 +1958,9 @@ body.no-chrome-anim .topbar .modes { transition: none !important; }
 body.expanded { position: relative; }
 .app-header {
   position: absolute; top: 0; left: 0; right: 0; z-index: 40;
+  /* Extend under the iOS status bar (viewport-fit=cover) so the app colour
+     reaches the very top; pad the content back out of the safe area. */
+  padding-top: env(safe-area-inset-top);
   background: transparent;
   border-bottom: 1px solid transparent;
   -webkit-backdrop-filter: blur(0px);
@@ -1994,9 +2000,10 @@ body.mode-home .app-header {
    (on desktop the mode pills live inside the top bar, which stays put). */
 @media (max-width: 600px) {
   /* Tight cap (≈ the pill bar's real height) so the mode row folds in step with
-     the rest instead of snapping late. */
+     the rest instead of snapping late. overflow stays visible so the pill bar's
+     drop shadow isn't clipped — the collapse hides it via max-height + opacity. */
   .topbar-modes {
-    overflow: hidden; max-height: 46px;
+    overflow: visible; max-height: 46px;
     transition: max-height .34s cubic-bezier(.4, 0, .2, 1), opacity .22s ease, margin .3s ease;
   }
   body.chrome-collapsed .topbar-modes { max-height: 0; opacity: 0; margin: 0; pointer-events: none; }
